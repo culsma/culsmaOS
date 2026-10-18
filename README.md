@@ -83,6 +83,15 @@ python -m tests.acceptance.resident --output-dir run-artifacts/resident-acceptan
 
 [Evidence](docs/evidence/mixed-resident-protocols-20261018.json) · [Workspace contract](design/program-workspace-contract.json) · [Submission sequence](diagrams/modules/program_manager_sequences-1.svg) · [Flowchart](diagrams/modules/program_manager_flowcharts-3.svg) · [Manifest](design/resident-acceptance-suite.json). Checkpoints retain compiled plans and configuration snapshots; recovery does not reload program source. Restart still requires matching station and service configuration.
 
-Validation runs locally by default. GitHub Actions workflows do not run on pushes or pull requests; manual runs require an explicit request.
+Validation and package builds run locally. This repository contains no GitHub Actions workflows. GitHub stores source and prebuilt release assets; it does not run simulator suites or build packages.
+
+```sh
+python tools/check_public_tree.py
+python -m pytest tests/architecture/test_distribution.py tests/architecture/test_preview_artifacts.py tests/architecture/test_dependency_bundle.py tests/architecture/test_public_text.py -q
+python -m build --no-isolation
+python tools/check_distribution.py --directory dist
+```
+
+Full runtime validation remains a local acceptance step: `python -m pytest -q`. Upload verified local artifacts separately when a release is requested.
 
 [Runtime contract](design/framework-baseline.json) · [Review map](docs/review/framework-functional-review.md).
