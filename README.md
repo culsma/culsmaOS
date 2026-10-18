@@ -83,4 +83,6 @@ python -m tests.acceptance.resident --output-dir run-artifacts/resident-acceptan
 
 [Evidence](docs/evidence/mixed-resident-protocols-20261018.json) · [Workspace contract](design/program-workspace-contract.json) · [Submission sequence](diagrams/modules/program_manager_sequences-1.svg) · [Flowchart](diagrams/modules/program_manager_flowcharts-3.svg) · [Manifest](design/resident-acceptance-suite.json). Checkpoints retain compiled plans and configuration snapshots; recovery does not reload program source. Restart still requires matching station and service configuration.
 
+Validation runs locally by default. GitHub Actions workflows do not run on pushes or pull requests; manual runs require an explicit request.
+
 [Runtime contract](design/framework-baseline.json) · [Review map](docs/review/framework-functional-review.md).
