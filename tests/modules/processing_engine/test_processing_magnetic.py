@@ -40,6 +40,10 @@ class TestMagneticProcessing:
             attempts=app.client.lifecycle.evidence.attempts_for_run(identity)
             releases=[a for a in attempts if a.context['description'].get('system_effect')=='condition_release']
             assert len(releases)==1 and not app.host.material.registered(releases[0].effect_id)
+            conditions = app.client.lifecycle.conditions
+            assert conditions.is_release_attempt(releases[0])
+            assert not conditions.is_release_attempt(replace(releases[0], run_id='unrelated-run'))
+            assert not conditions.is_release_attempt(replace(releases[0], effect_id='unrelated-effect'))
         finally:app.close()
 
     @pytest.mark.parametrize('kind',['bound','other-program','no-duration','extra-duration','no-field','no-hold-target','collateral','no-module','whole-source','source-partition'])

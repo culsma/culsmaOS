@@ -85,3 +85,17 @@ class TestCarrierCompatibility:
         assert first.revision!=second.revision
         assert first.bindings[0].carrier_instance_id==old
 
+
+    def test_lookup_requires_typed_identity_and_stays_run_local(self, tmp_path):
+        from culsma_os.workspace_manager.models import ResolvedContainerRef
+        _, state, steps, space = CarrierCompatibilityFixture().build(tmp_path)
+        first = space.bind('first', state, steps)
+        space.bind('second', {'containers': {}}, ())
+        reference = first.bindings[0].reference
+        assert space.locate('first', reference) == first.bindings[0]
+        with pytest.raises(TypeError, match='Typed reference required'):
+            space.locate('first', reference.container_id)
+        with pytest.raises(StopIteration):
+            space.locate('second', reference)
+        with pytest.raises(StopIteration):
+            space.locate('first', ResolvedContainerRef('missing'))
