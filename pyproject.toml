@@ -3,15 +3,15 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "culsma-os"
-version = "0.1.0"
+version = "0.1.1"
 description = "Evidence-aware laboratory execution host with a resident program queue"
 readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 requires-python = ">=3.11,<3.13"
 dependencies = ["culsma==1.0.8+gca7a0984d0b5"]
 [project.optional-dependencies]
-simulator = ["culsma-opentrons-simulator==0.1.0+gec4420b00bdc"]
+simulator = ["culsma-opentrons-simulator==0.1.0+g1e7159477c8d"]
 dev = ["pytest>=8,<9", "coverage==7.10.7", "pytest-cov==7.0.0"]
 [project.scripts]
 culsma-os = "culsma_os.cli:CulsmaOSCLI.main"

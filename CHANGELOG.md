@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.1 — Public experimental preview
+
+- Redact local filesystem paths from published evidence and repository history.
+- Add an introductory README, functional architecture overview and copyable simulator examples.
+- Document resident readiness, simulator defaults and saved material results.
+- Add software citation metadata and contributor, security and dependency notices.
+- Publish compatible installation artifacts together with the OS release.
+- Preserve the 0.1.0 runtime behavior; this release prepares distribution and documentation.
+
 ## 0.1.0 — First source preview
 
 License: Apache-2.0.

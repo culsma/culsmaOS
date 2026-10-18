@@ -31,4 +31,13 @@ For instrumented simulator runs, use `CULSMA_OS_TEST_TIMEOUT_MULTIPLIER=3 python
 | Python 3.11 / 3.12 base sdist | CLI help and independent language execution passed without simulator |
 | Packaging-only CI profile | 25 checks passed on each Python version, without core/plugin installed |
 
-[Installation evidence](../docs/evidence/distribution-20261018.json). These are selected installed-profile checks, not a full Python 3.12 suite. Compatible dependency wheels are now available through the authenticated internal prerelease; hosted runtime CI results remain pending.
+[Installation evidence](../docs/evidence/distribution-20261018.json). These are selected installed-profile checks, not a full Python 3.12 suite. Compatible dependency wheels are now available through the authenticated internal prerelease; historical hosted checks are retired; all release validation is performed locally.
+
+## 0.1.1 local acceptance
+
+Fresh Python 3.12 ordinary-wheel profile: **967 passed, 10 optional skips**
+(977 collected, 956.69 seconds). Optional Hamilton and paired PyLabRobot profiles
+were not installed. The final simulator wheel adds license metadata with all
+33 runtime files unchanged. A separate fresh Python 3.11 installation passed
+`pip check`, one-shot Transfer and resident readiness/submission/completion/stop.
+[Evidence](../docs/evidence/public-preview-011-20261018.json).

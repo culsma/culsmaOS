@@ -1,4 +1,4 @@
-include README.md index.html LICENSE CHANGELOG.md
+include README.md index.html LICENSE CHANGELOG.md CITATION.cff THIRD_PARTY_NOTICES.md CONTRIBUTING.md SECURITY.md
 recursive-include examples *.culs *.json *.svg *.mmd *.md
 recursive-include tests *.py *.culs *.json *.md
 recursive-include design *.json *.md

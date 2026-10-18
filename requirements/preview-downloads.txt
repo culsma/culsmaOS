@@ -1,4 +1,3 @@
-# Anonymous-only download profile, reserved until the repository is public.
-# For the private preview use authenticated gh release downloads from README.md.
-culsma @ https://github.com/culsma/culsmaOS/releases/download/internal-os-dependencies-20261018/culsma-1.0.8%2Bgca7a0984d0b5-py3-none-any.whl#sha256=c2ff1df7b928be1b9d8ec60f25d974769caad2a7bec420c57ff9001f76bb2b62
-culsma-opentrons-simulator @ https://github.com/culsma/culsmaOS/releases/download/internal-os-dependencies-20261018/culsma_opentrons_simulator-0.1.0%2Bgec4420b00bdc-py3-none-any.whl#sha256=b694e5a73d900f46b0aafc6ef40034afa8a9090093a7cfe7a2fd5242443b0a7a
+# Fixed compatibility wheels for the public 0.1.1 preview.
+culsma @ https://github.com/culsma/culsmaOS/releases/download/0.1.1/culsma-1.0.8%2Bgca7a0984d0b5-py3-none-any.whl#sha256=c2ff1df7b928be1b9d8ec60f25d974769caad2a7bec420c57ff9001f76bb2b62
+culsma-opentrons-simulator @ https://github.com/culsma/culsmaOS/releases/download/0.1.1/culsma_opentrons_simulator-0.1.0%2Bg1e7159477c8d-py3-none-any.whl#sha256=ae748ab4d887c9131ade8d4a7c1d3d35a724edd6bfeee971488f0fc274bb6945
