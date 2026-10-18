@@ -101,6 +101,8 @@ class ResidentAcceptanceSuite:
         sources = set(self.manifest['inputs'])
         sources.update(g['selector'].split('::')[0] for g in self.manifest['groups'])
         sources.update(str(p.relative_to(self.root)) for p in (self.root/'src').rglob('*.py'))
+        sources.update(str(p.relative_to(self.root)) for p in (self.root/'tests/support').rglob('*.py'))
+        if (self.root/'tests/conftest.py').is_file(): sources.add('tests/conftest.py')
         inputs = []
         for relative in sorted(sources):
             content = self.source(relative).read_bytes(); target = output/'inputs'/relative

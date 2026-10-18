@@ -53,7 +53,7 @@ Use a new output directory. `summary.json`, JUnit, logs, input snapshots, run st
 Resident full-protocol acceptance covers OT-2/Flex continuity, tip-rack exhaustion, unknown-outcome blocking, cancellation finalization and successor execution (5 tests). Each station reuses one device session; material inputs remain independent per run.
 
 ```sh
-python -m pytest tests/test_resident_protocols.py -q
+python -m pytest tests/integration/test_resident_protocols.py -q
 ```
 
 [Contract](design/resident-protocol-acceptance.json) · [Evidence](docs/evidence/resident-protocols-20261018.json).
