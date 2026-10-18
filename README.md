@@ -205,7 +205,7 @@ culsma-os run examples/magnetic-buffer-exchange/protocol.culs \
 
 Transfer, temperature control, shaking, magnetic separation and plate movement
 are integrated for restricted device profiles. Plate centrifugation is validated
-through third-party protocol simulation. See the [capability map](design/instrument-capability-map.json)
+through third-party protocol simulation. See the [capability map](docs/reference/instrument-capability-map.json)
 for exact coverage.
 
 The preview has no GUI, parallel execution, general manual reconciliation or
@@ -217,7 +217,7 @@ baseline.
 - [Architecture and module diagrams](docs/module/README.md)
 - [Functional review](docs/review/framework-functional-review.md)
 - [Development and acceptance](docs/development.md) · [Test organization](tests/README.md)
-- [Release notes](CHANGELOG.md) · [Compatible dependency versions](design/distribution-contract.json)
+- [Release notes](CHANGELOG.md) · [Compatible dependency versions](tools/distribution/manifest.json)
 
 ## How to cite
 

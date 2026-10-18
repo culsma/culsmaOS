@@ -1,0 +1,95 @@
+{
+  "schema": "culsma_resident_acceptance_suite_v1",
+  "status": "frozen_for_final_acceptance",
+  "scope": "One fixed official OT-2 station for unchanged PCR and bead programs; complementary Flex continuity and fault/recovery coverage",
+  "groups": [
+    {
+      "selector": "tests/modules/program_manager/test_program_workspaces.py::TestProgramWorkspaces",
+      "expected_tests": [
+        "test_identical_local_step_ids_have_run_scoped_bindings",
+        "test_admitted_workspace_survives_source_and_catalog_deletion",
+        "test_invalid_catalog_rejects_before_run_admission[missing-binding]",
+        "test_invalid_catalog_rejects_before_run_admission[extra-binding]",
+        "test_invalid_catalog_rejects_before_run_admission[duplicate-address]",
+        "test_invalid_catalog_rejects_before_run_admission[bad-route]",
+        "test_invalid_catalog_rejects_before_run_admission[other-labware]",
+        "test_invalid_catalog_rejects_before_run_admission[unknown-field]",
+        "test_ambiguous_and_unregistered_programs_reject",
+        "test_frozen_checkpoint_tampering_rejects[workspace]",
+        "test_frozen_checkpoint_tampering_rejects[workspace_fingerprint]",
+        "test_frozen_checkpoint_tampering_rejects[plan]",
+        "test_frozen_checkpoint_tampering_rejects[group_execution]",
+        "test_frozen_checkpoint_tampering_rejects[outer-schema]",
+        "test_legacy_run_and_program_checkpoint_remain_readable",
+        "test_station_address_whitelist_cannot_be_expanded_by_a_profile",
+        "test_group_envelope_is_preserved_under_schema_four",
+        "test_one_shot_uses_the_same_catalog_without_changing_legacy_entry",
+        "test_frozen_flex_routes_override_global_driver_routes[configured]",
+        "test_frozen_flex_routes_override_global_driver_routes[empty]"
+      ]
+    },
+    {
+      "selector": "tests/integration/test_mixed_resident_protocols.py::TestMixedResidentProtocols",
+      "expected_tests": [
+        "test_complete_pcr_and_beads_share_one_fixed_station",
+        "test_unknown_batch_blocks_successors_across_restart[thermal]",
+        "test_unknown_batch_blocks_successors_across_restart[magnetic]",
+        "test_cancel_pcr_at_boundary_allows_full_bead_protocol_after_cleanup",
+        "test_graceful_restart_continues_saved_program_without_repeating_prefix",
+        "test_incompatible_program_binding_rejects_without_poisoning_next_job",
+        "test_public_cli_runs_beads_then_pcr_in_one_resident_process"
+      ]
+    },
+    {
+      "selector": "tests/integration/test_resident_protocols.py::TestResidentProtocols",
+      "expected_tests": [
+        "test_complete_protocols_share_station_without_sharing_program_state[ot2]",
+        "test_complete_protocols_share_station_without_sharing_program_state[flex]",
+        "test_exhausted_rack_is_not_reset_by_the_next_program",
+        "test_unknown_second_protocol_retains_station_and_blocks_third",
+        "test_cancel_finalizes_field_before_the_next_complete_protocol"
+      ]
+    },
+    {
+      "selector": "tests/architecture/test_architecture.py::TestArchitecture",
+      "expected_tests": [
+        "test_architecture_boundaries",
+        "test_module_diagram_participants_and_paths",
+        "test_vendor_boundary_is_thin",
+        "test_external_cli_has_only_adapter_responsibilities",
+        "test_semantic_adapter_uses_public_language_boundary",
+        "test_language_core_has_only_generic_execution_contracts",
+        "test_control_plane_does_not_construct_device_sessions",
+        "test_material_registration_has_no_vendor_result_codes"
+      ]
+    }
+  ],
+  "inputs": [
+    "tests/architecture/module-map.json",
+    "examples/magnetic-buffer-exchange/deck-flex.json",
+    "examples/magnetic-buffer-exchange/deck.json",
+    "examples/magnetic-buffer-exchange/expected.json",
+    "examples/magnetic-buffer-exchange/protocol.culs",
+    "examples/pcr-benchmark/expected.json",
+    "examples/pcr-benchmark/protocol.culs",
+    "examples/resident-station/deck.json",
+    "examples/resident-station/expected.json",
+    "examples/resident-station/workspaces.json",
+    "tests/architecture/test_architecture.py",
+    "tests/integration/test_mixed_resident_protocols.py",
+    "tests/modules/program_manager/test_program_workspaces.py",
+    "tests/integration/test_resident_docking.py",
+    "tests/integration/test_resident_host.py",
+    "tests/integration/test_resident_protocols.py"
+  ],
+  "expected_audit_bundles": 15,
+  "command": "python -m tests.acceptance.resident --output-dir run-artifacts/resident-acceptance/<new-directory>",
+  "limits": [
+    "Run-local independent simulated inputs, no PCR-to-bead sample handoff",
+    "No physical reagent inventory or real-device result",
+    "Public dependency/version release is a separate readiness gate"
+  ],
+  "references": [
+    "docs/contracts/program-workspace-contract.json"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "decision": "DISTRIBUTION-20261018",
+  "status": "local_acceptance_verified_publication_pending",
+  "scope": "Public 0.1.1 experimental distribution; immutable language snapshot and separately licensed external simulator plugin; no PyPI publication",
+  "invariants": [
+    "The published Culsma 1.0.8 wheel must not satisfy the OS dependency",
+    "Compatibility wheels have PEP 440 local version labels derived from exact source commits",
+    "Snapshot builds use immutable committed sources and change distribution metadata only",
+    "OS tests own all required test inputs; installed plugins need no sibling source checkout",
+    "Clean runs import from non-editable wheels, with no PYTHONPATH or source-path injection",
+    "The wheel, sdist, entry points, and Python 3.11/3.12 profiles must be verified separately",
+    "Validation runs locally, with no GitHub Actions; the public release provides anonymous download URLs and fixed hashes"
+  ],
+  "sources": {
+    "core": {
+      "distribution": "culsma",
+      "source_version": "1.0.8",
+      "revision": "ca7a0984d0b5b0d47a63c39725d8f70529961687",
+      "artifact_version": "1.0.8+gca7a0984d0b5",
+      "repository": "https://github.com/culsma/culsma",
+      "public_artifact_available": false,
+      "artifact": "culsma-1.0.8+gca7a0984d0b5-py3-none-any.whl",
+      "artifact_sha256": "c2ff1df7b928be1b9d8ec60f25d974769caad2a7bec420c57ff9001f76bb2b62",
+      "download_url": "https://github.com/culsma/culsmaOS/releases/download/0.1.1/culsma-1.0.8%2Bgca7a0984d0b5-py3-none-any.whl",
+      "authenticated_artifact_available": false
+    },
+    "simulator": {
+      "distribution": "culsma-opentrons-simulator",
+      "source_version": "0.1.0",
+      "revision": "1e7159477c8dafb20fa40e3f161e2cace2d8790b",
+      "artifact_version": "0.1.0+g1e7159477c8d",
+      "repository": null,
+      "public_artifact_available": false,
+      "artifact": "culsma_opentrons_simulator-0.1.0+g1e7159477c8d-py3-none-any.whl",
+      "artifact_sha256": "ae748ab4d887c9131ade8d4a7c1d3d35a724edd6bfeee971488f0fc274bb6945",
+      "download_url": "https://github.com/culsma/culsmaOS/releases/download/0.1.1/culsma_opentrons_simulator-0.1.0%2Bg1e7159477c8d-py3-none-any.whl",
+      "authenticated_artifact_available": false
+    }
+  },
+  "conformance": {
+    "metadata": "tests/architecture/test_distribution.py",
+    "immutable_snapshot": "tests/architecture/test_preview_artifacts.py",
+    "installed_cli": "tests/integration/test_cli_simulator.py",
+    "language_handoff": "tests/integration/test_language_cli.py",
+    "checkpoint_and_resource_safety": "tests/integration/test_main_chain.py"
+  },
+  "evidence": "docs/evidence/public-preview-011-20261018.json",
+  "release": {
+    "repository": "culsma/culsmaOS",
+    "tag": "0.1.1",
+    "kind": "experimental_release",
+    "status": "prepared_not_published_user_owned",
+    "scope": "OS wheel and source archive plus independent compatibility wheels; no PyPI publication",
+    "page_url": "https://github.com/culsma/culsmaOS/releases/tag/0.1.1",
+    "api_access": "dedicated release credential; publication pending",
+    "anonymous_access": "pending publication",
+    "repository_visibility": "PRIVATE"
+  }
+}

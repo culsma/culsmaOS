@@ -12,8 +12,8 @@ from tests.acceptance.resident import ResidentAcceptanceSuite
 class ResidentRunnerFixture:
     def suite(self, directory):
         root = directory/'source'; root.mkdir()
-        content = (ROOT/'design/resident-acceptance-suite.json').read_bytes()
-        path = root/'design/resident-acceptance-suite.json'; path.parent.mkdir(); path.write_bytes(content)
+        content = (ROOT/'tests/acceptance/manifests/resident.json').read_bytes()
+        path = root/'tests/acceptance/manifests/resident.json'; path.parent.mkdir(parents=True); path.write_bytes(content)
         manifest = json.loads(content)
         inputs = {*manifest['inputs'], *(g['selector'].split('::')[0] for g in manifest['groups'])}
         for relative in inputs:

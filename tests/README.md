@@ -9,6 +9,9 @@
 | `support/<module>/` | Shared fixtures, fake ports and scenario harnesses; no collected test cases |
 | `fixtures/<module>/` | Static input data |
 
+Acceptance runners read their manifests from `tests/acceptance/manifests/`.
+`tests/architecture/module-map.json` owns the expected component and diagram mapping.
+
 Test cases do not import other test modules. Shared fixtures have explicit imports. `support/paths.py` owns the checkout root, so moving a test does not alter fixture discovery.
 
 Run `python -m pytest tests/modules/program_manager -q` for an owning module, or `python -m pytest -q` for the full suite. Optional external backend requirements are explicit skips. Installed profile verification is recorded separately below.

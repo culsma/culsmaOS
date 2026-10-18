@@ -14,7 +14,7 @@ class ProtocolAcceptanceSuite:
 
     def __init__(self, root=None, manifest=None):
         self.root = Path(root or Path(__file__).resolve().parents[2]).resolve()
-        self.manifest_path = Path(manifest or self.root / 'design/protocol-acceptance-suite.json')
+        self.manifest_path = Path(manifest or self.root / 'tests/acceptance/manifests/protocols.json')
         self.manifest_content = self.manifest_path.read_bytes()
         self.manifest = json.loads(self.manifest_content)
         self.validate_manifest()

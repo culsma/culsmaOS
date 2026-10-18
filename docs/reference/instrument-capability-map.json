@@ -1,0 +1,296 @@
+{
+  "date": "2026-10-17",
+  "platform": "Official Opentrons SDK8.8.2, OT-2/Flex API2.20 virtual protocols; alternative PLR centrifuge listed separately",
+  "language_repository": "unchanged",
+  "capabilities": [
+    {
+      "instrument": "Temperature Module GEN2",
+      "language": [
+        "with env scalar hold",
+        "Incubate scalar temperature"
+      ],
+      "status": "verified",
+      "limits": "integral 4-95C, configured compatible labware, positive duration"
+    },
+    {
+      "instrument": "Thermocycler GEN2",
+      "language": [
+        "with env scalar hold",
+        "Incubate scalar temperature"
+      ],
+      "status": "verified",
+      "limits": "integral 4-99C; known working volumes0-100uL; NEST100uL or Opentrons200uL PCR plate; optional explicit heated lid37-110C and closed idle lid between scalar holds. No native thermal_program or measured amplification",
+      "benchmark": "examples/pcr-benchmark/expected.json"
+    },
+    {
+      "instrument": "Heater-Shaker",
+      "language": [
+        "agit shake/orbital",
+        "with env scalar hold",
+        "Incubate scalar temperature"
+      ],
+      "status": "verified",
+      "limits": "Thermal 37-95C or orbital 200-3000rpm as separate operations; single-channel and fixed adapter/NEST flat plate. Flex whole-plate docking with authorized latch access; no concurrent heat+shake or measured physical result",
+      "docking_contract": "docs/contracts/heater-shaker-docking-contract.json",
+      "docking_evidence": "docs/evidence/heater-shaker-docking-20261017.json"
+    },
+    {
+      "instrument": "Magnetic Module GEN2",
+      "language": [
+        "sep magnetic_program",
+        "typed flowthrough Transfer"
+      ],
+      "status": "verified_restricted",
+      "limits": "single selected well; journaled in-run and terminal release; repeated static washes verified"
+    },
+    {
+      "instrument": "Centrifuge",
+      "language": [
+        "agit centrifuge",
+        "sep centrifuge_program"
+      ],
+      "status": "unavailable_on_current_official_platform",
+      "limits": "no centrifuge module in official module list or installed SDK model enumeration; requests reject before centrifuge actions",
+      "alternate_candidate": {
+        "instrument": "HighRes MicroSpin via PyLabRobot",
+        "status": "restricted_agitation_and_separation_verified_simulation",
+        "evidence": "docs/evidence/microspin-feasibility-20261017.json",
+        "device_class": "two-bucket microplate centrifuge",
+        "simulation_origin": "PyLabRobot project protocol mock; not manufacturer simulator",
+        "contract": "docs/contracts/processing-centrifuge-contract.json",
+        "scope": "agit and scalar in-place centrifuge_program with explicit method profile; no thermal conditions, loading or physical Transfer on loaded buckets",
+        "future_device": "BioNex HiG can map to the same OS intent through an independent adapter; not validated here",
+        "integration_evidence": "docs/evidence/processing-centrifuge-20261017.json",
+        "separation_contract": "docs/contracts/processing-centrifuge-separation-contract.json",
+        "separation_evidence": "docs/evidence/processing-centrifuge-separation-20261017.json"
+      }
+    },
+    {
+      "instrument": "CO2/humidity incubator",
+      "language": [
+        "additional env dimensions"
+      ],
+      "status": "unavailable_on_current_profile",
+      "limits": "temperature incubation does not imply atmosphere control"
+    },
+    {
+      "instrument": "Flex Absorbance Plate Reader",
+      "language": [
+        "readout"
+      ],
+      "status": "deferred_by_user",
+      "limits": "requires Flex profile and separate acquisition/result contract"
+    },
+    {
+      "instrument": "Flex Gripper",
+      "language": [
+        "OS-configured carrier positioning; no language statement"
+      ],
+      "status": "verified_restricted_simulation",
+      "limits": "Compatible plates between vacant Flex slots; Temperature Module/Heater-Shaker NEST flat plate or Magnetic Block NEST 2mL deep plate; scalar Transfer/env_hold/agit/sep routes and terminal condition removal",
+      "contract": "docs/contracts/labware-motion-contract.json",
+      "evidence": "docs/evidence/labware-motion-20261017.json",
+      "docking_contract": "docs/contracts/module-docking-contract.json",
+      "docking_evidence": "docs/evidence/module-docking-20261017.json",
+      "station_contract": "docs/contracts/station-workspace-contract.json"
+    },
+    {
+      "instrument": "Flex Stacker",
+      "language": [
+        "OS-managed labware storage and loading"
+      ],
+      "status": "not_connected",
+      "limits": "Separate module-loading and storage contract; excluded from the empty-deck Flex movement profile"
+    },
+    {
+      "instrument": "Flex Magnetic Block",
+      "language": [
+        "sep magnetic_program",
+        "typed flowthrough Transfer"
+      ],
+      "status": "verified_restricted_simulation",
+      "limits": "Named-module Flex profile and NEST2mL deep plate, single selected well and channel; repeated dock/dwell/flowthrough/removal with registered placement; no measured capture",
+      "contract": "docs/contracts/magnetic-block-contract.json",
+      "evidence": "docs/evidence/magnetic-block-20261017.json"
+    }
+  ],
+  "next_instrument_work": [
+    "Additional module-specific access, lids and stacker after Temperature Module and Heater-Shaker docking",
+    "centrifuge environment requirements and physical supernatant adapter",
+    "thermal_program execution contract"
+  ],
+  "sources": [
+    "https://docs.opentrons.com/python-api/modules/",
+    "https://docs.opentrons.com/python-api/modules/heater-shaker/",
+    "https://docs.opentrons.com/flex/modules/magnetic-block/",
+    "https://docs.opentrons.com/python-api/modules/magnetic-block/"
+  ],
+  "language_coverage": [
+    {
+      "family": "Transfer",
+      "operations": [
+        "Mutation",
+        "MutationGroup"
+      ],
+      "status": "partial",
+      "implemented": [
+        "Liquid volume and language-resolved carrier volume",
+        "Typed tube/plate wells, selections and grouped submission",
+        "Restricted eight-channel column/plate waves"
+      ],
+      "missing": [
+        "Arbitrary mass-to-volume conversion",
+        "General liquid-method constraints and arbitrary container bindings"
+      ],
+      "owner": "transfer_engine",
+      "evidence": "docs/evidence/transfer-matrix-20261014.json"
+    },
+    {
+      "family": "Environment",
+      "operations": [
+        "env_hold"
+      ],
+      "status": "partial",
+      "implemented": [
+        "Scalar temperature hold and temperature incubation",
+        "Temperature Module, Thermocycler, Heater-Shaker",
+        "Explicit Thermocycler heated lid configuration"
+      ],
+      "missing": [
+        "thermal_program execution",
+        "CO2 and relative humidity",
+        "General nested field/environment lifecycle",
+        "Concurrent heat and shake"
+      ],
+      "owner": "processing_engine",
+      "evidence": "docs/evidence/processing-instrument-extension-20261017.json"
+    },
+    {
+      "family": "Agitation",
+      "operations": [
+        "agit"
+      ],
+      "status": "partial",
+      "implemented": [
+        "shake/orbital",
+        "centrifuge via third-party MicroSpin protocol fixture"
+      ],
+      "implemented_modes": [
+        "shake",
+        "centrifuge"
+      ],
+      "missing_modes": [
+        "vortex",
+        "invert",
+        "flick",
+        "stir",
+        "rotation"
+      ],
+      "missing_shake_motions": [
+        "linear",
+        "rock",
+        "rotation"
+      ],
+      "owner": "processing_engine",
+      "evidence": "docs/evidence/processing-centrifuge-20261017.json"
+    },
+    {
+      "family": "Separation",
+      "operations": [
+        "sep"
+      ],
+      "status": "partial",
+      "implemented": [
+        "Restricted magnetic_program",
+        "Restricted in-place centrifuge_program"
+      ],
+      "missing": [
+        "filtration_program",
+        "disrupt_program",
+        "Temperature-controlled centrifugation",
+        "Physical supernatant transfer on MicroSpin/HiG"
+      ],
+      "owner": "processing_engine",
+      "evidence": "docs/evidence/processing-centrifuge-separation-20261017.json"
+    },
+    {
+      "family": "Fractionation",
+      "operations": [
+        "frac"
+      ],
+      "status": "not_connected",
+      "implemented": [],
+      "missing": [
+        "density_gradient_program",
+        "chromatography_program",
+        "Fraction collection and device feedback"
+      ],
+      "owner": "processing_engine"
+    },
+    {
+      "family": "Readout",
+      "operations": [
+        "img",
+        "ecp",
+        "phy"
+      ],
+      "status": "deferred_by_user",
+      "implemented": [],
+      "missing": [
+        "Image, electrophysiology and physical readout acquisition",
+        "Acquisition/result contracts and scientific interpretation"
+      ],
+      "owner": "reserved MeasurementSystem; no implementation package"
+    }
+  ],
+  "framework_profile": {
+    "status": "scope_frozen_simulation",
+    "modules": "12 implemented software modules; incomplete instrument and language coverage",
+    "host": "One station, one worker, fixed named-module device configuration; one-shot or resident FIFO",
+    "state": "Run-local program/material/evidence; station-owned catalog, placement, pending motion, reservations and usage",
+    "boundaries": [
+      "No physical Hamilton/HiG acceptance",
+      "No measured biological result",
+      "No manual unknown-effect adjudication",
+      "No concurrent device execution or hard real-time guarantee"
+    ]
+  },
+  "local_sources": [
+    "external:Culsma/src/culsma/pipeline/operation_specs.py",
+    "external:Culsma/src/culsma/domains/agitation/contracts.py",
+    "external:Culsma/src/culsma/pipeline/validate/environment.py",
+    "src/culsma_os/program_manager/interactors/semantics.py",
+    "src/culsma_os/processing_engine/interactors/preparation.py",
+    "src/culsma_os/processing_engine/interactors/centrifuge.py"
+  ],
+  "flex_workstation": {
+    "status": "verified_restricted_simulation",
+    "contract": "docs/contracts/flex-workstation-contract.json",
+    "evidence": "docs/evidence/flex-workstation-20261017.json",
+    "fixture": "examples/flex-workstation",
+    "purpose": "Condition a magnetic-bead suspension, collect 40uL liquid phase and retain beads; engineering acceptance, not validated immunoprecipitation",
+    "scope": "One flat plate between Heater-Shaker and Temperature Module; liquid transfer to a deep plate, Magnetic Block separation and removal; one worker and explicit routes",
+    "next": "Complete PCR and scoped static magnetic buffer exchange verified; further capability work remains requirement-driven"
+  },
+  "transfer_constraints": {
+    "scope": "single-channel managed simulator session",
+    "high_precision": "explicit versioned pipette/operating-range/flow method",
+    "low_carryover": "fresh tip for every physical aspiration",
+    "evidence": "configured method and actual command flow settings; no measured accuracy/carryover",
+    "contract": "docs/contracts/transfer-constraint-contract.json"
+  },
+  "magnetic_buffer_exchange": {
+    "status": "verified_static_exchange_scope",
+    "contract": "docs/contracts/magnetic-buffer-exchange-contract.json",
+    "fixture": "examples/magnetic-buffer-exchange",
+    "scope": "OT-2 single well, capture and two static washes, in-run field release before wash additions, typed flowthrough low_carryover",
+    "not_covered": "Full Module05, resuspension, vortex/rotation, cold handling or measured recovery",
+    "evidence": "docs/evidence/magnetic-buffer-exchange-20261017.json",
+    "flex": {
+      "status": "verified_passive_block_scope",
+      "configuration": "examples/magnetic-buffer-exchange/deck-flex.json",
+      "evidence": "docs/evidence/flex-buffer-exchange-20261018.json",
+      "scope": "Unchanged protocol; six gripper moves,9 material versions and3 verified passive-condition releases"
+    }
+  }
+}

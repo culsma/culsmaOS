@@ -11,7 +11,7 @@ from tests.support.paths import ROOT
 class TestDistribution:
     def test_metadata_requires_exact_committed_snapshots(self):
         project=tomllib.loads((ROOT/'pyproject.toml').read_text())['project']
-        contract=json.loads((ROOT/'design/distribution-contract.json').read_text())
+        contract=json.loads((ROOT/'tools/distribution/manifest.json').read_text())
         core,simulator=contract['sources']['core'],contract['sources']['simulator']
         assert project['dependencies']==[core['distribution']+'=='+core['artifact_version']]
         assert project['optional-dependencies']['simulator']==[simulator['distribution']+'=='+simulator['artifact_version']]

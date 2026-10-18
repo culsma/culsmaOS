@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 class ResidentAcceptanceSuite:
     def __init__(self, root=None, manifest=None):
         self.root = Path(root or Path(__file__).resolve().parents[2]).resolve()
-        self.path = Path(manifest or self.root/'design/resident-acceptance-suite.json')
+        self.path = Path(manifest or self.root/'tests/acceptance/manifests/resident.json')
         self.manifest_bytes = self.path.read_bytes()
         self.manifest = json.loads(self.manifest_bytes)
         self.validate()

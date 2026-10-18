@@ -4,6 +4,7 @@
 
 - Redact local filesystem paths from published evidence and repository history.
 - Add an introductory README, functional architecture overview and copyable simulator examples.
+- Separate build/test manifests from documentation and organize references, contracts and preparation records.
 - Document resident readiness, simulator defaults and saved material results.
 - Add software citation metadata and contributor, security and dependency notices.
 - Publish compatible installation artifacts together with the OS release.

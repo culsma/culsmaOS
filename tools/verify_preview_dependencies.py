@@ -38,7 +38,7 @@ class CompatibilityBundleAudit:
         parser = argparse.ArgumentParser(description=__doc__)
         parser.add_argument('--directory', type=Path, required=True)
         args = parser.parse_args()
-        contract = Path(__file__).resolve().parents[1] / 'design/distribution-contract.json'
+        contract = Path(__file__).resolve().parents[1] / 'tools/distribution/manifest.json'
         sources = json.loads(contract.read_text())['sources']
         print(json.dumps(cls().inspect(args.directory, sources), indent=2))
 

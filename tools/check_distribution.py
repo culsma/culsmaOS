@@ -11,7 +11,10 @@ import zipfile
 
 class DistributionAudit:
     required_inputs = ('pyproject.toml', 'requirements/preview-constraints.txt',
-                       'design/distribution-contract.json', 'tests/conftest.py',
+                       'tools/distribution/manifest.json',
+                       'tests/acceptance/manifests/protocols.json',
+                       'tests/acceptance/manifests/resident.json',
+                       'tests/architecture/module-map.json', 'tests/conftest.py',
                        'tests/support/paths.py', 'tools/build_preview_dependencies.py',
                        'examples/transfer/transfer.culs', 'examples/transfer/deck.json',
                        'tests/fixtures/driver_framework/opentrons/transfer.culs')
@@ -46,7 +49,7 @@ class DistributionAudit:
                 member = archive.extractfile(prefix + 'src/' + path)
                 if member is None or member.read() != payload:
                     raise ValueError('DISTRIBUTION_CODE_MISMATCH')
-            contract = json.load(archive.extractfile(prefix + 'design/distribution-contract.json'))
+            contract = json.load(archive.extractfile(prefix + 'tools/distribution/manifest.json'))
         dependencies = metadata.get_all('Requires-Dist') or []
         core = contract['sources']['core']
         required = core['distribution'] + '==' + core['artifact_version']

@@ -12,8 +12,8 @@ from tests.acceptance.protocols import ProtocolAcceptanceSuite
 class AcceptanceRunnerFixture:
     def suite(self,directory):
         source=directory/'source';source.mkdir()
-        manifest=json.loads((ROOT/'design/protocol-acceptance-suite.json').read_text())
-        target=source/'design/protocol-acceptance-suite.json';target.parent.mkdir()
+        manifest=json.loads((ROOT/'tests/acceptance/manifests/protocols.json').read_text())
+        target=source/'tests/acceptance/manifests/protocols.json';target.parent.mkdir(parents=True)
         target.write_text(json.dumps(manifest))
         for profile in manifest['profiles']:
             paths=[profile[key] for key in ('program','configuration','expected')]

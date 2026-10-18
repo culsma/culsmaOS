@@ -3,6 +3,16 @@
 Run commands from the repository root. User installation and the first simulator
 example are in the [README](../README.md#installation).
 
+## Repository layout
+
+| Location | Purpose |
+| --- | --- |
+| `diagrams/`, `docs/module/` | Architecture diagrams and module call chains |
+| `docs/reference/`, `docs/contracts/` | Human-readable scope and behavioral agreements |
+| `docs/archive/`, `docs/release/` | Historical preparation records and current release readiness |
+| `tests/acceptance/manifests/`, `tests/architecture/module-map.json` | Executable acceptance and architecture-check inputs |
+| `tools/distribution/manifest.json` | Exact dependency artifacts used by build and verification tools |
+
 ## Local development
 
 After installing the public release as described in the README:
@@ -29,7 +39,7 @@ python -m tests.acceptance.protocols \
   --output-dir run-artifacts/protocol-acceptance/first-run
 ```
 
-Use a new output directory. [Manifest](../design/protocol-acceptance-suite.json)
+Use a new output directory. [Manifest](../tests/acceptance/manifests/protocols.json)
 · [Recorded evidence](evidence/protocol-acceptance-20261018.json).
 
 ## Resident acceptance
@@ -42,7 +52,7 @@ python -m tests.acceptance.resident \
   --output-dir run-artifacts/resident-acceptance/first-run
 ```
 
-Use a new output directory. [Manifest](../design/resident-acceptance-suite.json)
+Use a new output directory. [Manifest](../tests/acceptance/manifests/resident.json)
 · [Recorded evidence](evidence/mixed-resident-protocols-20261018.json).
 
 Different complete programs share the [fixed station](../examples/resident-station/deck.json)
@@ -89,9 +99,9 @@ Build and verify artifacts locally before uploading a release.
 
 ## Design contracts
 
-- [Runtime baseline](../design/framework-baseline.json)
+- [Runtime baseline](reference/framework-baseline.json)
 - [Station state ownership](evidence/station-workspace-20261017.json)
-- [Program workspace bindings](../design/program-workspace-contract.json)
-- [Resident acceptance contract](../design/resident-protocol-acceptance.json)
-- [Distribution and exact dependency snapshots](../design/distribution-contract.json)
-- [Public preview preparation](../design/public-preview-contract.json)
+- [Program workspace bindings](contracts/program-workspace-contract.json)
+- [Resident acceptance contract](contracts/resident-protocol-acceptance.json)
+- [Distribution and exact dependency snapshots](../tools/distribution/manifest.json)
+- [Public preview preparation](release/preview-readiness.json)

@@ -1,10 +1,9 @@
 include README.md index.html LICENSE CHANGELOG.md CITATION.cff THIRD_PARTY_NOTICES.md CONTRIBUTING.md SECURITY.md
 recursive-include examples *.culs *.json *.svg *.mmd *.md
 recursive-include tests *.py *.culs *.json *.md
-recursive-include design *.json *.md
 recursive-include docs *.md *.mmd *.json
 recursive-include diagrams *.svg *.png *.puml
-recursive-include tools *.py *.sh
+recursive-include tools *.py *.sh *.json
 recursive-include requirements *.txt
 prune run-artifacts
 prune build

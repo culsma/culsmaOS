@@ -1,0 +1,865 @@
+{
+  "schema": "culsma_source_components_v1",
+  "modules": [
+    {
+      "module": "ProgramManager",
+      "directory": "src/culsma_os/program_manager/",
+      "components": [
+        {
+          "component": "TaskInteractor",
+          "path": "src/culsma_os/program_manager/interactors/runs.py"
+        },
+        {
+          "component": "TaskRepository",
+          "path": "src/culsma_os/program_manager/repositories/runs.py"
+        },
+        {
+          "component": "PreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/preparation.py"
+        },
+        {
+          "component": "RunRequest",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ExecutionHostInteractor",
+          "path": "src/culsma_os/program_manager/interactors/execution.py"
+        },
+        {
+          "component": "RunStateInteractor",
+          "path": "src/culsma_os/program_manager/interactors/run_state.py"
+        },
+        {
+          "component": "RunRecord",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "SemanticHostPort",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "RunStateEvent",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "RunConflict",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "SqliteTaskRepository",
+          "path": "src/culsma_os/program_manager/repositories/runs.py"
+        },
+        {
+          "component": "OSRunHostInteractor",
+          "path": "src/culsma_os/program_manager/interactors/host.py"
+        },
+        {
+          "component": "ProgramRunInteractor",
+          "path": "src/culsma_os/program_manager/interactors/command.py"
+        },
+        {
+          "component": "HostedRuntimeInteractor",
+          "path": "src/culsma_os/program_manager/interactors/semantics.py"
+        },
+        {
+          "component": "ReplayEffectInteractor",
+          "path": "src/culsma_os/program_manager/interactors/replay.py"
+        },
+        {
+          "component": "RuntimeCheckpointCodecInteractor",
+          "path": "src/culsma_os/program_manager/interactors/codec.py"
+        },
+        {
+          "component": "CommandRequest",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "PreparedRuntimeStep",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "PendingEffect",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "EffectResolution",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "RecordedEffect",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "HostedRunResult",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "HostBuildContext",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "LanguageProgramInteractor",
+          "path": "src/culsma_os/program_manager/interactors/language_entry.py"
+        },
+        {
+          "component": "LanguageProgramExecutorFactory",
+          "path": "src/culsma_os/bootstrap.py"
+        },
+        {
+          "component": "GroupProjectionInteractor",
+          "path": "src/culsma_os/program_manager/interactors/projection.py"
+        },
+        {
+          "component": "ProjectedMaterialEffect",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "RunSafetyInteractor",
+          "path": "src/culsma_os/program_manager/interactors/safety.py"
+        },
+        {
+          "component": "RunControlInteractor",
+          "path": "src/culsma_os/program_manager/interactors/control.py"
+        },
+        {
+          "component": "RunControlRequest",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "RunInspectionInteractor",
+          "path": "src/culsma_os/program_manager/interactors/control.py"
+        },
+        {
+          "component": "RunReportInteractor",
+          "path": "src/culsma_os/program_manager/interactors/host.py"
+        },
+        {
+          "component": "CheckpointVerificationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/verification.py"
+        },
+        {
+          "component": "RunFinalizationProof",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "CompilationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/compilation.py"
+        },
+        {
+          "component": "ResidentCommandInteractor",
+          "path": "src/culsma_os/program_manager/interactors/resident.py"
+        },
+        {
+          "component": "ResidentWorkerInteractor",
+          "path": "src/culsma_os/program_manager/interactors/resident.py"
+        },
+        {
+          "component": "RunQueueRepository",
+          "path": "src/culsma_os/program_manager/repositories/queue.py"
+        },
+        {
+          "component": "SqliteRunQueueRepository",
+          "path": "src/culsma_os/program_manager/repositories/queue.py"
+        },
+        {
+          "component": "CompiledProgram",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "QueueSubmission",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "QueuedRun",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ResidentCommand",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ProgramPreflightInteractor",
+          "path": "src/culsma_os/program_manager/interactors/preflight.py"
+        },
+        {
+          "component": "PreflightEffectInteractor",
+          "path": "src/culsma_os/program_manager/interactors/preflight.py"
+        },
+        {
+          "component": "ProgramPreflightPort",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "OperationPreflightPort",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ConditionPreflightPort",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ProgramWorkspaceCatalogInteractor",
+          "path": "src/culsma_os/program_manager/interactors/workspace.py"
+        },
+        {
+          "component": "WorkspaceCheckpointInteractor",
+          "path": "src/culsma_os/program_manager/interactors/workspace.py"
+        },
+        {
+          "component": "RunWorkspaceInteractor",
+          "path": "src/culsma_os/program_manager/interactors/workspace.py"
+        },
+        {
+          "component": "WorkspaceCatalogRepository",
+          "path": "src/culsma_os/program_manager/repositories/workspace.py"
+        },
+        {
+          "component": "FileWorkspaceCatalogRepository",
+          "path": "src/culsma_os/program_manager/repositories/workspace.py"
+        }
+      ]
+    },
+    {
+      "module": "Scheduler",
+      "directory": "src/culsma_os/scheduler/",
+      "components": [
+        {
+          "component": "RunSchedulerInteractor",
+          "path": "src/culsma_os/scheduler/interactors.py"
+        },
+        {
+          "component": "OperationSchedulerInteractor",
+          "path": "src/culsma_os/scheduler/interactors.py"
+        },
+        {
+          "component": "OperationRepository",
+          "path": "src/culsma_os/scheduler/repository.py"
+        },
+        {
+          "component": "OperationRequest",
+          "path": "src/culsma_os/scheduler/models.py"
+        },
+        {
+          "component": "SqliteOperationRepository",
+          "path": "src/culsma_os/scheduler/repository.py"
+        },
+        {
+          "component": "GroupOperationInteractor",
+          "path": "src/culsma_os/scheduler/interactors.py"
+        },
+        {
+          "component": "LogicalEffectInteractor",
+          "path": "src/culsma_os/scheduler/interactors.py"
+        },
+        {
+          "component": "MotionSchedulerInteractor",
+          "path": "src/culsma_os/scheduler/interactors.py"
+        },
+        {
+          "component": "OperationConditionPort",
+          "path": "src/culsma_os/scheduler/models.py"
+        }
+      ]
+    },
+    {
+      "module": "MaterialSystem",
+      "directory": "src/culsma_os/material_system/",
+      "components": [
+        {
+          "component": "MaterialInteractor",
+          "path": "src/culsma_os/material_system/interactors.py"
+        },
+        {
+          "component": "MaterialRepository",
+          "path": "src/culsma_os/material_system/repositories/__init__.py"
+        },
+        {
+          "component": "LocalMaterialRepository",
+          "path": "src/culsma_os/material_system/repositories/local.py"
+        },
+        {
+          "component": "MaterialCommitReceipt",
+          "path": "src/culsma_os/material_system/models.py"
+        },
+        {
+          "component": "ReconciliationResult",
+          "path": "src/culsma_os/material_system/models.py"
+        }
+      ]
+    },
+    {
+      "module": "WorkspaceManager",
+      "directory": "src/culsma_os/workspace_manager/",
+      "components": [
+        {
+          "component": "SpaceBinding",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "SpaceInteractor",
+          "path": "src/culsma_os/workspace_manager/interactors.py"
+        },
+        {
+          "component": "SpaceRepository",
+          "path": "src/culsma_os/workspace_manager/repository.py"
+        },
+        {
+          "component": "LayoutSnapshot",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "WorkspaceAccessPort",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "SqliteSpaceRepository",
+          "path": "src/culsma_os/workspace_manager/repository.py"
+        },
+        {
+          "component": "ResolvedContainerRef",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "CarrierRef",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "LabwareMoveIntent",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "MotionDevicePort",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "LabwareMotionInteractor",
+          "path": "src/culsma_os/workspace_manager/interactors.py"
+        },
+        {
+          "component": "LabwarePositionRepository",
+          "path": "src/culsma_os/workspace_manager/repository.py"
+        },
+        {
+          "component": "SqliteLabwarePositionRepository",
+          "path": "src/culsma_os/workspace_manager/repository.py"
+        },
+        {
+          "component": "ProcessingPlacementPort",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "WorkspaceInspectionInteractor",
+          "path": "src/culsma_os/workspace_manager/interactors.py"
+        },
+        {
+          "component": "WorkspaceInspectionRepository",
+          "path": "src/culsma_os/workspace_manager/repository.py"
+        },
+        {
+          "component": "SqliteWorkspaceInspectionRepository",
+          "path": "src/culsma_os/workspace_manager/repository.py"
+        },
+        {
+          "component": "WorkspaceProfileInteractor",
+          "path": "src/culsma_os/workspace_manager/interactors.py"
+        },
+        {
+          "component": "WorkspaceAddress",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "ProgramWorkspacePort",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        }
+      ]
+    },
+    {
+      "module": "TransferEngine",
+      "directory": "src/culsma_os/transfer_engine/",
+      "components": [
+        {
+          "component": "TransferInteractor",
+          "path": "src/culsma_os/transfer_engine/interactors.py"
+        },
+        {
+          "component": "TransferRequest",
+          "path": "src/culsma_os/transfer_engine/models.py"
+        },
+        {
+          "component": "TransferAliquot",
+          "path": "src/culsma_os/transfer_engine/models.py"
+        },
+        {
+          "component": "TransferIntent",
+          "path": "src/culsma_os/transfer_engine/models.py"
+        },
+        {
+          "component": "TransferExecutionDecision",
+          "path": "src/culsma_os/transfer_engine/models.py"
+        },
+        {
+          "component": "MagneticTransferInteractor",
+          "path": "src/culsma_os/transfer_engine/interactors.py"
+        },
+        {
+          "component": "MagneticFlowthroughTransferIntent",
+          "path": "src/culsma_os/transfer_engine/models.py"
+        },
+        {
+          "component": "TransferSelectionPort",
+          "path": "src/culsma_os/transfer_engine/models.py"
+        },
+        {
+          "component": "CentrifugeTransferInteractor",
+          "path": "src/culsma_os/transfer_engine/interactors.py"
+        },
+        {
+          "component": "CentrifugeSupernatantTransferIntent",
+          "path": "src/culsma_os/transfer_engine/models.py"
+        },
+        {
+          "component": "TransferConstraintInteractor",
+          "path": "src/culsma_os/transfer_engine/interactors.py"
+        }
+      ]
+    },
+    {
+      "module": "ProcessingEngine",
+      "directory": "src/culsma_os/processing_engine/",
+      "components": [
+        {
+          "component": "ProcessingInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
+        },
+        {
+          "component": "ThermalHoldIntent",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "ProcessingArgumentsInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
+        },
+        {
+          "component": "ThermalHoldPreparationInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
+        },
+        {
+          "component": "AgitationPreparationInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
+        },
+        {
+          "component": "OrbitalShakeIntent",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "ProcessingIntentPort",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "MagneticPreparationInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
+        },
+        {
+          "component": "MagneticEnvironmentInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
+        },
+        {
+          "component": "ProcessingConditionInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/conditions.py"
+        },
+        {
+          "component": "MagneticSeparationIntent",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "MagneticReleaseIntent",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "ProcessingMaterialVolumeInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/material_volume.py"
+        },
+        {
+          "component": "ProcessingMaterialVolume",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "OrbitalShakePreparationInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
+        },
+        {
+          "component": "CentrifugePreparationInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
+        },
+        {
+          "component": "CentrifugeIntent",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "SeparationPreparationInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
+        },
+        {
+          "component": "CentrifugeSeparationPreparationInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
+        },
+        {
+          "component": "CentrifugeMethodBindingInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
+        },
+        {
+          "component": "ProcessingIntentBindingPort",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "CentrifugeSeparationIntent",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "ProcessingMethodProfile",
+          "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "ProcessingConditionProjectionInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/conditions.py"
+        },
+        {
+          "component": "ProjectedConditionRelease",
+          "path": "src/culsma_os/processing_engine/models.py"
+        }
+      ]
+    },
+    {
+      "module": "ResourceManager",
+      "directory": "src/culsma_os/resource_manager/",
+      "components": [
+        {
+          "component": "ResourceInteractor",
+          "path": "src/culsma_os/resource_manager/interactors.py"
+        },
+        {
+          "component": "ConsumableInteractor",
+          "path": "src/culsma_os/resource_manager/interactors.py"
+        },
+        {
+          "component": "ResourceRepository",
+          "path": "src/culsma_os/resource_manager/repository.py"
+        },
+        {
+          "component": "ExecutionPermit",
+          "path": "src/culsma_os/resource_manager/models.py"
+        },
+        {
+          "component": "ResourceConflict",
+          "path": "src/culsma_os/resource_manager/models.py"
+        },
+        {
+          "component": "SqliteResourceRepository",
+          "path": "src/culsma_os/resource_manager/repository.py"
+        },
+        {
+          "component": "RunReservation",
+          "path": "src/culsma_os/resource_manager/models.py"
+        },
+        {
+          "component": "RunReservationInteractor",
+          "path": "src/culsma_os/resource_manager/interactors.py"
+        },
+        {
+          "component": "RunReservationRepository",
+          "path": "src/culsma_os/resource_manager/repository.py"
+        },
+        {
+          "component": "SqliteRunReservationRepository",
+          "path": "src/culsma_os/resource_manager/repository.py"
+        },
+        {
+          "component": "StationUsageInteractor",
+          "path": "src/culsma_os/resource_manager/interactors.py"
+        },
+        {
+          "component": "RunReleaseConfirmation",
+          "path": "src/culsma_os/resource_manager/models.py"
+        },
+        {
+          "component": "StationPathInteractor",
+          "path": "src/culsma_os/resource_manager/interactors.py"
+        },
+        {
+          "component": "ResourceInspectionInteractor",
+          "path": "src/culsma_os/resource_manager/interactors.py"
+        },
+        {
+          "component": "ResourceInspectionRepository",
+          "path": "src/culsma_os/resource_manager/repository.py"
+        },
+        {
+          "component": "SqliteResourceInspectionRepository",
+          "path": "src/culsma_os/resource_manager/repository.py"
+        }
+      ]
+    },
+    {
+      "module": "DeviceManager",
+      "directory": "src/culsma_os/device_manager/",
+      "components": [
+        {
+          "component": "DeviceInteractor",
+          "path": "src/culsma_os/device_manager/interactors.py"
+        },
+        {
+          "component": "DeviceRepository",
+          "path": "src/culsma_os/device_manager/repository.py"
+        },
+        {
+          "component": "DeviceConfigurationSnapshot",
+          "path": "src/culsma_os/device_manager/models.py"
+        },
+        {
+          "component": "DeviceReadinessPort",
+          "path": "src/culsma_os/device_manager/models.py"
+        },
+        {
+          "component": "DeviceAccessPort",
+          "path": "src/culsma_os/device_manager/models.py"
+        },
+        {
+          "component": "SqliteDeviceRepository",
+          "path": "src/culsma_os/device_manager/repository.py"
+        },
+        {
+          "component": "ExecutionFeedbackCapabilities",
+          "path": "src/culsma_os/device_manager/models.py"
+        },
+        {
+          "component": "DeviceInspectionInteractor",
+          "path": "src/culsma_os/device_manager/interactors.py"
+        },
+        {
+          "component": "DeviceInspectionRepository",
+          "path": "src/culsma_os/device_manager/repository.py"
+        },
+        {
+          "component": "SqliteDeviceInspectionRepository",
+          "path": "src/culsma_os/device_manager/repository.py"
+        }
+      ]
+    },
+    {
+      "module": "DriverFramework",
+      "directory": "src/culsma_os/driver_framework/",
+      "components": [
+        {
+          "component": "DriverGatewayInteractor",
+          "path": "src/culsma_os/driver_framework/interactors.py"
+        },
+        {
+          "component": "DeviceExecutionPort",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "OpentronsExecutionAdapter",
+          "path": "src/culsma_os/driver_framework/adapters/opentrons.py"
+        },
+        {
+          "component": "PlanContext",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "PreparedDevicePlan",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "CompilationEvidence",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "CompilationPort",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "DeviceReceipt",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "DeviceReceiptMapper",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "DriverGatewayPort",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "HamiltonCompilationInteractor",
+          "path": "src/culsma_os/driver_framework/interactors.py"
+        },
+        {
+          "component": "NormalizedReceiptInteractor",
+          "path": "src/culsma_os/driver_framework/interactors.py"
+        },
+        {
+          "component": "HamiltonCompilationAdapter",
+          "path": "src/culsma_os/driver_framework/adapters/hamilton.py"
+        },
+        {
+          "component": "DriverLoaderInteractor",
+          "path": "src/culsma_os/driver_framework/interactors.py"
+        },
+        {
+          "component": "DriverBuildContext",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "DriverFactory",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "DriverLoadError",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "DevicePreparationError",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "OperationPreparationRequest",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "OperationPreparationPort",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "ProcessingExecutionPort",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "FeedbackContractInteractor",
+          "path": "src/culsma_os/driver_framework/interactors.py"
+        }
+      ]
+    },
+    {
+      "module": "EventJournal",
+      "directory": "src/culsma_os/event_journal/",
+      "components": [
+        {
+          "component": "RunEventRepository",
+          "path": "src/culsma_os/event_journal/repositories/events.py"
+        },
+        {
+          "component": "EvidenceInteractor",
+          "path": "src/culsma_os/event_journal/interactors/evidence.py"
+        },
+        {
+          "component": "EvidenceRepository",
+          "path": "src/culsma_os/event_journal/repositories/evidence.py"
+        },
+        {
+          "component": "ExecutionEvidence",
+          "path": "src/culsma_os/event_journal/models.py"
+        },
+        {
+          "component": "AttemptRecord",
+          "path": "src/culsma_os/event_journal/models.py"
+        },
+        {
+          "component": "SqliteRunEventRepository",
+          "path": "src/culsma_os/event_journal/repositories/events.py"
+        },
+        {
+          "component": "SqliteEvidenceRepository",
+          "path": "src/culsma_os/event_journal/repositories/evidence.py"
+        },
+        {
+          "component": "LogicalCompletion",
+          "path": "src/culsma_os/event_journal/models.py"
+        },
+        {
+          "component": "EvidenceInspectionInteractor",
+          "path": "src/culsma_os/event_journal/interactors/inspection.py"
+        },
+        {
+          "component": "EvidenceInspectionRepository",
+          "path": "src/culsma_os/event_journal/repositories/inspection.py"
+        },
+        {
+          "component": "SqliteEvidenceInspectionRepository",
+          "path": "src/culsma_os/event_journal/repositories/inspection.py"
+        },
+        {
+          "component": "AttemptObservation",
+          "path": "src/culsma_os/event_journal/models.py"
+        },
+        {
+          "component": "DeviceEvidenceObservation",
+          "path": "src/culsma_os/event_journal/models.py"
+        }
+      ]
+    },
+    {
+      "module": "RecoveryManager",
+      "directory": "src/culsma_os/recovery_manager/",
+      "components": [
+        {
+          "component": "RecoveryInteractor",
+          "path": "src/culsma_os/recovery_manager/interactors.py"
+        },
+        {
+          "component": "RecoveryDecision",
+          "path": "src/culsma_os/recovery_manager/models.py"
+        }
+      ]
+    },
+    {
+      "module": "LifecycleManager",
+      "directory": "src/culsma_os/lifecycle_manager/",
+      "components": [
+        {
+          "component": "LifecycleInteractor",
+          "path": "src/culsma_os/lifecycle_manager/interactors.py"
+        },
+        {
+          "component": "LifecycleState",
+          "path": "src/culsma_os/lifecycle_manager/models.py"
+        },
+        {
+          "component": "RunFinalizationInteractor",
+          "path": "src/culsma_os/lifecycle_manager/interactors.py"
+        },
+        {
+          "component": "ResidentHostInteractor",
+          "path": "src/culsma_os/lifecycle_manager/interactors.py"
+        },
+        {
+          "component": "ResidentStatusInteractor",
+          "path": "src/culsma_os/lifecycle_manager/interactors.py"
+        },
+        {
+          "component": "ResidentConfigurationInteractor",
+          "path": "src/culsma_os/lifecycle_manager/interactors.py"
+        },
+        {
+          "component": "HostOwnershipInteractor",
+          "path": "src/culsma_os/lifecycle_manager/interactors.py"
+        },
+        {
+          "component": "HostLeasePathInteractor",
+          "path": "src/culsma_os/lifecycle_manager/interactors.py"
+        },
+        {
+          "component": "ResidentHostSettings",
+          "path": "src/culsma_os/lifecycle_manager/models.py"
+        },
+        {
+          "component": "LocalHostLeaseRepository",
+          "path": "src/culsma_os/lifecycle_manager/repository.py"
+        },
+        {
+          "component": "SqliteResidentConfigurationRepository",
+          "path": "src/culsma_os/lifecycle_manager/repository.py"
+        }
+      ]
+    }
+  ]
+}

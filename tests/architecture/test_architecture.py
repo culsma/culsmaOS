@@ -67,7 +67,7 @@ class TestArchitecture:
         )
 
     def test_module_diagram_participants_and_paths(self):
-        index = json.loads((ROOT / "design/architecture-module-map.json").read_text())
+        index = json.loads((ROOT / "tests/architecture/module-map.json").read_text())
         for module in index["modules"]:
             if module["phase_one"] != "minimal_implementation":
                 continue

@@ -1,0 +1,91 @@
+{
+  "schema": "culsma_protocol_acceptance_suite_v1",
+  "status": "implemented_simulation",
+  "scope": "Three official simulator profiles, two purposeful protocols; nine outcome cells and 35 test cases",
+  "invariants": [
+    "Reuse the owning protocol tests, including material/reference equivalence and resource settlement assertions",
+    "Normal cases use the saved program and semantically identical device configuration",
+    "Known rejection must precede all device commands and material registration",
+    "Unknown cases retain isolation and never replay actions after restart",
+    "Expected-outcome assertion success is separate from the simulated program outcome",
+    "Any failed, skipped, missing, duplicate or unexpected test, collection error or nonzero runner exit fails the suite",
+    "A fresh output directory retains JUnit, logs, original input snapshots and isolated per-test run/station stores; previous output is never deleted",
+    "Input files must remain unchanged across execution; no language, vendor or production OS code changes"
+  ],
+  "profiles": [
+    {
+      "id": "pcr-ot2",
+      "program": "examples/pcr-benchmark/protocol.culs",
+      "configuration": "examples/pcr-benchmark/deck.json",
+      "expected": "examples/pcr-benchmark/expected.json",
+      "cases": [
+        {
+          "outcome": "completed",
+          "test": "tests/integration/test_pcr_benchmark.py::TestPCRBenchmark::test_complete_protocol",
+          "expected_cases": 1
+        },
+        {
+          "outcome": "rejected_before_actions",
+          "test": "tests/integration/test_pcr_benchmark.py::TestPCRBenchmark::test_missing_precision_method_rejects_before_commands",
+          "expected_cases": 1
+        },
+        {
+          "outcome": "unknown_isolated",
+          "test": "tests/integration/test_pcr_benchmark.py::TestPCRBenchmark::test_unknown_blocks_following_hold_and_restart",
+          "expected_cases": 3
+        }
+      ]
+    },
+    {
+      "id": "bead-exchange-ot2",
+      "program": "examples/magnetic-buffer-exchange/protocol.culs",
+      "configuration": "examples/magnetic-buffer-exchange/deck.json",
+      "expected": "examples/magnetic-buffer-exchange/expected.json",
+      "cases": [
+        {
+          "outcome": "completed",
+          "test": "tests/integration/test_magnetic_buffer_exchange.py::TestBufferExchange::test_complete_protocol",
+          "expected_cases": 1
+        },
+        {
+          "outcome": "rejected_before_actions",
+          "test": "tests/integration/test_magnetic_buffer_exchange.py::TestBufferExchange::test_missing_field_capability_rejects_before_actions",
+          "expected_cases": 1
+        },
+        {
+          "outcome": "unknown_isolated",
+          "test": "tests/integration/test_magnetic_buffer_exchange.py::TestBufferExchange::test_unknown_stops_later_washes",
+          "expected_cases": 12
+        }
+      ]
+    },
+    {
+      "id": "bead-exchange-flex",
+      "program": "examples/magnetic-buffer-exchange/protocol.culs",
+      "configuration": "examples/magnetic-buffer-exchange/deck-flex.json",
+      "expected": "examples/magnetic-buffer-exchange/expected.json",
+      "cases": [
+        {
+          "outcome": "completed",
+          "test": "tests/integration/test_flex_buffer_exchange.py::TestFlexBufferExchange::test_same_program_and_materials",
+          "expected_cases": 1
+        },
+        {
+          "outcome": "rejected_before_actions",
+          "test": "tests/integration/test_flex_buffer_exchange.py::TestFlexBufferExchange::test_invalid_route_rejects_before_actions",
+          "expected_cases": 3
+        },
+        {
+          "outcome": "unknown_isolated",
+          "test": "tests/integration/test_flex_buffer_exchange.py::TestFlexBufferExchange::test_unknown_motion_stops_and_survives_restart",
+          "expected_cases": 12
+        }
+      ]
+    }
+  ],
+  "runner": "tests/acceptance/protocols.py",
+  "test_hooks": [
+    "tests/acceptance/test_protocol_acceptance_runner.py"
+  ],
+  "command": "python -m tests.acceptance.protocols --output-dir run-artifacts/protocol-acceptance/<new-directory>"
+}

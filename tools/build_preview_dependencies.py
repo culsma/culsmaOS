@@ -78,7 +78,7 @@ class PreviewDependencyBuilder:
         parser.add_argument('--simulator', type=Path, required=True)
         parser.add_argument('--output', type=Path, required=True)
         args = parser.parse_args()
-        contract = Path(__file__).resolve().parents[1] / 'design/distribution-contract.json'
+        contract = Path(__file__).resolve().parents[1] / 'tools/distribution/manifest.json'
         specs = json.loads(contract.read_text())['sources']
         cls().build({'core': args.core, 'simulator': args.simulator}, specs, args.output)
 
