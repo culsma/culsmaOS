@@ -96,7 +96,7 @@ class TestRunReservation:
         code = """
 import json, sys
 from pathlib import Path
-from tests.support import FakeSessionFactory, ProgramFixture
+from tests.support.common import FakeSessionFactory, ProgramFixture
 factory = FakeSessionFactory()
 app = factory.open(Path(sys.argv[1]))
 try:
@@ -288,7 +288,7 @@ class TestRunControl:
         script = """
 import sys
 from culsma_os.bootstrap import OSApplicationFactory
-from tests.support import FakeSessionFactory
+from tests.support.common import FakeSessionFactory
 import culsma_os.cli as cli
 cli.OSApplicationFactory = lambda: OSApplicationFactory({'fake': FakeSessionFactory()})
 cli.CulsmaOSCLI.main(sys.argv[1:])
