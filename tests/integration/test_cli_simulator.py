@@ -1,4 +1,3 @@
-from tests.support.paths import ROOT
 from pathlib import Path
 import hashlib
 import json
@@ -13,7 +12,7 @@ from culsma.pipeline.plan import lower_ir_to_plan
 from culsma.pipeline.typecheck import typecheck
 from culsma.pipeline.validate import validate
 from culsma_opentrons.support import validate_plan_support
-from tests.support.integration.cli_simulator import culsma_opentrons, ROOT, compile_example
+from tests.support.integration.cli_simulator import culsma_opentrons, SIMULATOR_FIXTURES, compile_example
 
 
 def test_standard_cli_installed_driver(tmp_path):
@@ -26,11 +25,11 @@ def test_standard_cli_installed_driver(tmp_path):
             "-m",
             "culsma_os.cli",
             "driver-run",
-            str(ROOT / "examples/transfer.culs"),
+            str(SIMULATOR_FIXTURES / "transfer.culs"),
             "--driver",
             "opentrons-simulator",
             "--driver-config",
-            str(ROOT / "examples/deck.json"),
+            str(SIMULATOR_FIXTURES / "deck.json"),
             "--artifacts-dir",
             str(tmp_path / "artifacts"),
         ],
@@ -95,8 +94,8 @@ CulsmaOSCLI.main()
             "-c",
             script,
             str(artifacts),
-            str(ROOT / "examples/transfer.culs"),
-            str(ROOT / "examples/deck.json"),
+            str(SIMULATOR_FIXTURES / "transfer.culs"),
+            str(SIMULATOR_FIXTURES / "deck.json"),
         ],
         capture_output=True,
         text=True,
@@ -129,11 +128,11 @@ def test_benchmark_examples(name, strokes, tmp_path):
             "-m",
             "culsma_os.cli",
             "driver-run",
-            str(ROOT / "examples" / name / "protocol.culs"),
+            str(SIMULATOR_FIXTURES / name / "protocol.culs"),
             "--driver",
             "opentrons-simulator",
             "--driver-config",
-            str(ROOT / "examples" / name / "deck.json"),
+            str(SIMULATOR_FIXTURES / name / "deck.json"),
             "--artifacts-dir",
             str(artifact_dir),
         ],
@@ -142,7 +141,7 @@ def test_benchmark_examples(name, strokes, tmp_path):
     )
     assert result.returncode == 0, result.stdout + result.stderr
     artifact = json.loads((artifact_dir / "run.json").read_text())
-    expected = json.loads((ROOT / "examples" / name / "expected.json").read_text())
+    expected = json.loads((SIMULATOR_FIXTURES / name / "expected.json").read_text())
     containers = artifact["state"]["artifacts"]["material_state"]["containers"]
     assert sorted(c["volume_uL"] for c in containers.values()) == pytest.approx(
         sorted(expected["volumes_uL"])
@@ -207,11 +206,11 @@ def test_separation_preflight(tmp_path):
             "-m",
             "culsma_os.cli",
             "driver-run",
-            str(ROOT / "examples/unsupported-separation/protocol.culs"),
+            str(SIMULATOR_FIXTURES / "unsupported-separation/protocol.culs"),
             "--driver",
             "opentrons-simulator",
             "--driver-config",
-            str(ROOT / "examples/unsupported-separation/deck.json"),
+            str(SIMULATOR_FIXTURES / "unsupported-separation/deck.json"),
             "--artifacts-dir",
             str(artifact_dir),
         ],
@@ -234,11 +233,11 @@ def test_external_os_cli_main_chain(tmp_path):
             "-m",
             "culsma_os.cli",
             "run",
-            str(ROOT / "examples/transfer.culs"),
+            str(SIMULATOR_FIXTURES / "transfer.culs"),
             "--driver",
             "opentrons-simulator",
             "--driver-config",
-            str(ROOT / "examples/deck.json"),
+            str(SIMULATOR_FIXTURES / "deck.json"),
             "--artifacts-dir",
             str(artifact_dir),
         ],

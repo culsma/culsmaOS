@@ -1,0 +1,4 @@
+let first=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="FIRST"):200uL]);
+let second=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="SECOND"):300uL]);
+let mixture=tube(capacity=2000uL);
+mixture << [first:50uL, second:100uL];

@@ -1,0 +1,27 @@
+{
+  "robot_type": "OT-2",
+  "api_level": "2.20",
+  "pipette": "p300_single_gen2",
+  "mount": "right",
+  "tiprack": {
+    "load_name": "opentrons_96_tiprack_300ul",
+    "slot": "2"
+  },
+  "labware": {
+    "tubes": {
+      "load_name": "opentrons_24_tuberack_eppendorf_2ml_safelock_snapcap",
+      "slot": "1"
+    }
+  },
+  "bindings": {
+    "entry.s0::alloc": {
+      "labware": "tubes",
+      "well": "A1"
+    }
+  },
+  "schema_version": 1,
+  "transfer_policy": {
+    "tip_policy": "fresh_per_stroke",
+    "stroke_mode": "single"
+  }
+}

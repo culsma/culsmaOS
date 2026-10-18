@@ -1,0 +1,3 @@
+let source=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="BUFFER"):1000uL]);
+let destination=tube(capacity=2000uL);
+destination << [source:610uL];

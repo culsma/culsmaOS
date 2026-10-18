@@ -18,12 +18,12 @@ from culsma_opentrons.support import validate_plan_support
 culsma_opentrons = pytest.importorskip("culsma_opentrons")
 
 
-ROOT = Path(culsma_opentrons.__file__).resolve().parents[2]
+SIMULATOR_FIXTURES = ROOT / 'tests/fixtures/driver_framework/opentrons'
 
 
 def compile_example(name):
     compiled = compile_ast(
-        resolve_files([ROOT / "examples" / name / "protocol.culs"]).prepared_program
+        resolve_files([SIMULATOR_FIXTURES / name / "protocol.culs"]).prepared_program
     )
     validated = validate(compiled.ir, analysis=compiled.analysis, enforce_binding=True)
     typed = typecheck(validated.ir, analysis=compiled.analysis)

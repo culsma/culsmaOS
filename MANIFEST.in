@@ -1,0 +1,12 @@
+include README.md index.html
+recursive-include examples *.culs *.json *.svg *.mmd *.md
+recursive-include tests *.py *.culs *.json *.md
+recursive-include design *.json *.md
+recursive-include docs *.md *.mmd *.json
+recursive-include diagrams *.svg *.png *.puml
+recursive-include tools *.py *.sh
+recursive-include requirements *.txt
+prune run-artifacts
+prune build
+prune dist
+global-exclude __pycache__ *.py[cod] .DS_Store

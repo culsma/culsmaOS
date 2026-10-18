@@ -1,0 +1,74 @@
+{
+  "source_revision": "ec4420b00bdca5e4dfc8fc1edaab21ee5d14f841",
+  "scope": "Fixed test inputs; no driver implementation copied",
+  "files": [
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/deck.json",
+      "sha256": "cdf0dd13adb5cdce741b6670a0fa69609456d784fb394f470ba3a4ef1ee9f2db"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/low-volume-recipe/deck.json",
+      "sha256": "d893d8c31dffa3ace04b080e9d941991b7c2c4193489ea57d4f6f6f2bb6752b6"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/low-volume-recipe/expected.json",
+      "sha256": "eb8fcb7e1b930867727e92a88af6bd2dded74298cee206fe2a0f8844e8b5d75d"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/low-volume-recipe/protocol.culs",
+      "sha256": "86cac55feb15eeaaff309264282e28c3f2cc2031f238fa2cbec5c8d96527b19c"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/multi-source/deck.json",
+      "sha256": "37bf4e7ed43e30e8d52d31754a1f4af3d432167ad1d401e411bb5ca1423172d2"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/multi-source/expected.json",
+      "sha256": "23cf0836e5e3d106df2a5272d687f85d657afc7a6ccee4946fda06ccccee566d"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/multi-source/protocol.culs",
+      "sha256": "54509b21f27eeb5353c603422d4cbd5f0376b67f0f418e8087f033868cc0404d"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/serial-dilution/deck.json",
+      "sha256": "37bf4e7ed43e30e8d52d31754a1f4af3d432167ad1d401e411bb5ca1423172d2"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/serial-dilution/expected.json",
+      "sha256": "b1c3b9e5be2bab8304b98208977d13c540054cee52bbdc69225d89ab58105bd1"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/serial-dilution/protocol.culs",
+      "sha256": "12347b07b9060596a0984c1e8afc0b025f0b53a7ec9b378f07160aab6153c644"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/split-transfer/deck.json",
+      "sha256": "2bbf82072d31c352d5a49befdf5f7f590b7c59ca05229dbdee9bc1551827db5b"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/split-transfer/expected.json",
+      "sha256": "e27498fde0df6c1c1f742815b2afaa8b5ea581d0eff1acd829d2507e4a4c7bb4"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/split-transfer/protocol.culs",
+      "sha256": "ec1fb41e03cf6d7d2f9374c64fe4a849e7f11f22f7475d36269ba9b1f3c35f35"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/transfer.culs",
+      "sha256": "2b12762db4eb008c9586dc55029df6bb58fc4a07299e37a606eb6cca7dc24da9"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/unsupported-separation/deck.json",
+      "sha256": "879cefcadeeba347c31e59f87248bd1a64996d1630b3476a56248721d1cfacbc"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/unsupported-separation/expected.json",
+      "sha256": "4d28c6a276481af2f41341da4048baae2acc6f57c640f187a212c71b732b27f5"
+    },
+    {
+      "path": "tests/fixtures/driver_framework/opentrons/unsupported-separation/protocol.culs",
+      "sha256": "1e430c660210940ab96a18951d10bc0300534888936c3a910d0ea3e4df0d8a0e"
+    }
+  ]
+}

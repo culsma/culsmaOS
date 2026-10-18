@@ -1,0 +1,6 @@
+let cas9=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="CAS9"):4uL]);
+let rna1=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="RNA1"):4uL]);
+let rna2=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="RNA2"):4uL]);
+let buffer=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="BUFFER"):8uL]);
+let reaction=tube(capacity=2000uL);
+reaction << [cas9:2uL, rna1:2uL, rna2:2uL, buffer:4uL];

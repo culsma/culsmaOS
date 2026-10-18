@@ -2,7 +2,7 @@
 
 **Scope: one station, one worker, fixed configuration, simulator validation. Runtime modules have minimal implementations; device and language coverage remains partial.**
 
-Installation currently requires the development Culsma interfaces. Public dependency versions and clean installation are not yet finalized. [Public preview preparation](design/public-preview-contract.json).
+Source preview: the compatible core and simulator snapshots are not published on a package index. Public Culsma `1.0.8` is incompatible. The [dependency contract](design/distribution-contract.json) pins private wheels to exact commits; it does not publish or modify either dependency repository. [Preparation status](design/public-preview-contract.json).
 
 [Architecture](diagrams/abstract-machine-os-functional-units-v1.svg) · [Runtime overview](diagrams/modules/phase_one_framework_flowcharts-2.svg) · [Execution sequence](diagrams/modules/phase_one_framework_sequences-1.svg) · [Module diagrams](docs/module/README.md) · [Acceptance evidence](docs/evidence/station-workspace-20261017.json)
 
@@ -30,7 +30,13 @@ Installation currently requires the development Culsma interfaces. Public depend
 | Entry points | One-shot run or resident serve; submit, status, pause/resume/cancel and device-status |
 
 ```sh
-python -m pip install -e <HOME>/VsCodeProjects/labword-theroy/Culsma -e ../opentrons-simulator -e .
+# Set CULSMA_CORE_SOURCE and CULSMA_SIMULATOR_SOURCE to the matching source checkouts.
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements/build.txt
+python tools/build_preview_dependencies.py --core "$CULSMA_CORE_SOURCE" --simulator "$CULSMA_SIMULATOR_SOURCE" --output run-artifacts/dependency-wheels
+python -m build --no-isolation
+python -m pip install --find-links run-artifacts/dependency-wheels --constraint requirements/preview-constraints.txt 'dist/culsma_os-0.1.0-py3-none-any.whl[simulator,dev]'
 culsma-os run examples/heater-shaker-docking/protocol.culs --station-id bench-a --host-db run-artifacts/once.sqlite3 --driver-config examples/heater-shaker-docking/deck.json --artifacts-dir run-artifacts/once
 culsma-os serve --station-id bench-a --socket /tmp/culsma-os.sock --host-db run-artifacts/host.sqlite3 --driver-config examples/heater-shaker-docking/deck.json --artifacts-dir run-artifacts/host
 culsma-os submit examples/heater-shaker-docking/protocol.culs --socket /tmp/culsma-os.sock

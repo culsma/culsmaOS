@@ -1,0 +1,5 @@
+let stock=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="STOCK"):400uL]);
+let first=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="DILUENT"):200uL]);
+let second=tube(capacity=2000uL,load=[content(kind=ContentKind.FORMULATION,type=ContentType.BUFFER,code="DILUENT"):200uL]);
+first << [stock:100uL];
+second << [first:100uL];
