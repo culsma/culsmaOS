@@ -2,7 +2,7 @@
 
 **Scope: one station, one worker, fixed configuration, simulator validation. Runtime modules have minimal implementations; device and language coverage remains partial.**
 
-Source preview: the compatible core and simulator snapshots are not published on a package index. Public Culsma `1.0.8` is incompatible. The [dependency contract](design/distribution-contract.json) pins private wheels to exact commits; it does not publish or modify either dependency repository. [Preparation status](design/public-preview-contract.json).
+Private source preview: compatible core and simulator wheels are available in the [internal dependency prerelease](https://github.com/culsma/culsmaOS/releases/tag/internal-os-dependencies-20261018) to readers with repository access. Public Culsma `1.0.8` is incompatible. The [dependency contract](design/distribution-contract.json) pins exact commits and hashes; stable language/PyPI releases remain unchanged. [Preparation status](design/public-preview-contract.json).
 
 [Architecture](diagrams/abstract-machine-os-functional-units-v1.svg) · [Runtime overview](diagrams/modules/phase_one_framework_flowcharts-2.svg) · [Execution sequence](diagrams/modules/phase_one_framework_sequences-1.svg) · [Module diagrams](docs/module/README.md) · [Acceptance evidence](docs/evidence/station-workspace-20261017.json)
 
@@ -30,11 +30,12 @@ Source preview: the compatible core and simulator snapshots are not published on
 | Entry points | One-shot run or resident serve; submit, status, pause/resume/cancel and device-status |
 
 ```sh
-# Set CULSMA_CORE_SOURCE and CULSMA_SIMULATOR_SOURCE to the matching source checkouts.
+# Requires GitHub CLI authentication with read access to culsma/culsmaOS.
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements/build.txt
-python tools/build_preview_dependencies.py --core "$CULSMA_CORE_SOURCE" --simulator "$CULSMA_SIMULATOR_SOURCE" --output run-artifacts/dependency-wheels
+gh release download internal-os-dependencies-20261018 --repo culsma/culsmaOS --pattern '*.whl' --dir run-artifacts/dependency-wheels
+python tools/verify_preview_dependencies.py --directory run-artifacts/dependency-wheels
 python -m build --no-isolation
 python -m pip install --find-links run-artifacts/dependency-wheels --constraint requirements/preview-constraints.txt 'dist/culsma_os-0.1.0-py3-none-any.whl[simulator,dev]'
 culsma-os run examples/heater-shaker-docking/protocol.culs --station-id bench-a --host-db run-artifacts/once.sqlite3 --driver-config examples/heater-shaker-docking/deck.json --artifacts-dir run-artifacts/once

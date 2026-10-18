@@ -31,4 +31,4 @@ For instrumented simulator runs, use `CULSMA_OS_TEST_TIMEOUT_MULTIPLIER=3 python
 | Python 3.11 / 3.12 base sdist | CLI help and independent language execution passed without simulator |
 | Packaging-only CI profile | 25 checks passed on each Python version, without core/plugin installed |
 
-[Installation evidence](../docs/evidence/distribution-20261018.json). These are selected installed-profile checks, not a full Python 3.12 suite. Compatible dependency artifacts are still unavailable publicly; hosted runtime CI remains pending.
+[Installation evidence](../docs/evidence/distribution-20261018.json). These are selected installed-profile checks, not a full Python 3.12 suite. Compatible dependency wheels are now available through the authenticated internal prerelease; hosted runtime CI results remain pending.
