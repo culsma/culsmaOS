@@ -1,0 +1,8 @@
+let stock = tube(capacity=2000uL, load=[content(kind=formulation, type=buffer, code="BUFFER"):200uL]);
+let p = plate(format="96well", capacity=100uL);
+let w = p[A1];
+
+w << [stock:50uL];
+Incubate(sample=w[0], temp=37C, duration=1s);
+stock << [w[0]:20uL];
+Incubate(sample=w[0], temp=37C, duration=1s);

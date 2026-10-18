@@ -1,0 +1,45 @@
+{
+  "schema": "culsma_cross_platform_transfer_v1",
+  "profiles": {
+    "ot2": "opentrons-simulator",
+    "star": "pylabrobot-star-simulator"
+  },
+  "scenarios": [
+    {
+      "name": "continuous-transfer",
+      "protocol": "scalar",
+      "fail_dispense": null
+    },
+    {
+      "name": "unequal-eight-wells",
+      "protocol": "unequal-column",
+      "fail_dispense": null
+    },
+    {
+      "name": "layout-splitting",
+      "protocol": "horizontal",
+      "fail_dispense": null
+    },
+    {
+      "name": "below-p300-minimum",
+      "protocol": "unequal-column-small",
+      "fail_dispense": null,
+      "expected_ot2_rejection": "DRV_OT_VOLUME_RANGE"
+    },
+    {
+      "name": "first-dispense-fails",
+      "protocol": "scalar",
+      "fail_dispense": 1
+    },
+    {
+      "name": "second-dispense-fails",
+      "protocol": "scalar",
+      "fail_dispense": 2
+    },
+    {
+      "name": "second-group-batch-fails",
+      "protocol": "horizontal",
+      "fail_dispense": 2
+    }
+  ]
+}

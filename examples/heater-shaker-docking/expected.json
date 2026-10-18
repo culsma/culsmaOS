@@ -1,0 +1,16 @@
+{
+  "mode": "simulation",
+  "status": "completed",
+  "final_volumes_uL": {
+    "Stock": 70,
+    "Assay_A1": 30
+  },
+  "final_placement": {
+    "assay": "D1"
+  },
+  "position_revision": 2,
+  "material_version": 4,
+  "attempts": 6,
+  "motion_registrations": 2,
+  "resource_locks": 0
+}

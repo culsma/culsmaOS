@@ -1,0 +1,10 @@
+flowchart LR
+    input["Beads + buffer<br/>90 uL input"] --> load["Transfer to preparation plate"]
+    load --> shake["Gripper to Heater-Shaker<br/>orbital mixing"]
+    shake --> heat["Gripper to Temperature Module<br/>37 C hold"]
+    heat --> transfer["Return plate to deck<br/>transfer to deep plate"]
+    transfer --> magnetic["Gripper to Magnetic Block<br/>separate and collect 40 uL liquid"]
+    magnetic --> finish["Remove deep plate<br/>verify release and finalization"]
+    shake -.-> unknown["Unknown outcome<br/>retain isolation, block downstream"]
+    heat -.-> unknown
+    magnetic -.-> unknown

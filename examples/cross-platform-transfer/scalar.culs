@@ -1,0 +1,4 @@
+let source=tube(label="Source",capacity=300uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):200uL]);
+let destination=tube(label="Destination",capacity=300uL);
+destination << [source:50uL];
+destination << [source:50uL];

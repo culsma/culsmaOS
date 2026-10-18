@@ -1,0 +1,1 @@
+let stock=tube(label="Stock",capacity=2000uL,load=[content(kind = formulation, type = buffer, code = "BUFFER"):1000uL]); let assay=plate(label="Assay",format="96well",capacity=200uL); assay[A1:H1] << [stock:20uL];

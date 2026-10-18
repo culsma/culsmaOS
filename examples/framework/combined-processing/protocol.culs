@@ -1,0 +1,24 @@
+let shaking_plate = plate(format="96well", capacity=200uL);
+let shaking = shaking_plate[A1];
+let heating_plate = plate(format="96well", capacity=100uL);
+let heated = heating_plate[A1];
+let magnetic_plate = plate(format="96well", capacity=100uL);
+let captured = magnetic_plate[A1];
+let stock = tube(capacity=2000uL, load=[
+  content(kind=particulate, type=beads, code="BEADS", attrs={bead_property:magnetic}):10uL,
+  content(kind=formulation, type=buffer, code="BUFFER"):80uL
+]);
+let collection = tube(capacity=2000uL);
+
+shaking << [stock];
+agit(sample=shaking[0], mode=shake, motion=orbital, rate=500rpm, duration=30s);
+heated << [shaking[0]];
+with env(thermal=37C, duration=30s) {
+  hold(sample=heated);
+}
+captured << [heated[0]];
+with env(field=magnetic_rack) {
+  hold(sample=captured);
+  sep(sample=captured[0], program=magnetic_program(duration=5min));
+  collection << [captured[0].contents[1]:40uL];
+}

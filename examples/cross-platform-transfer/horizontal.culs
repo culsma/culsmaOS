@@ -1,0 +1,27 @@
+let s0=tube(label="S0",capacity=300uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):100uL]);
+let s1=tube(label="S1",capacity=300uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):100uL]);
+let s2=tube(label="S2",capacity=300uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):100uL]);
+let s3=tube(label="S3",capacity=300uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):100uL]);
+let s4=tube(label="S4",capacity=300uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):100uL]);
+let s5=tube(label="S5",capacity=300uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):100uL]);
+let s6=tube(label="S6",capacity=300uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):100uL]);
+let s7=tube(label="S7",capacity=300uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):100uL]);
+let d0=tube(label="D0",capacity=300uL);
+let d1=tube(label="D1",capacity=300uL);
+let d2=tube(label="D2",capacity=300uL);
+let d3=tube(label="D3",capacity=300uL);
+let d4=tube(label="D4",capacity=300uL);
+let d5=tube(label="D5",capacity=300uL);
+let d6=tube(label="D6",capacity=300uL);
+let d7=tube(label="D7",capacity=300uL);
+let targets=group([d0,d1,d2,d3,d4,d5,d6,d7]);
+targets << [
+  series(s0,[20uL,0uL,0uL,0uL,0uL,0uL,0uL,0uL]),
+  series(s1,[0uL,20uL,0uL,0uL,0uL,0uL,0uL,0uL]),
+  series(s2,[0uL,0uL,20uL,0uL,0uL,0uL,0uL,0uL]),
+  series(s3,[0uL,0uL,0uL,20uL,0uL,0uL,0uL,0uL]),
+  series(s4,[0uL,0uL,0uL,0uL,20uL,0uL,0uL,0uL]),
+  series(s5,[0uL,0uL,0uL,0uL,0uL,20uL,0uL,0uL]),
+  series(s6,[0uL,0uL,0uL,0uL,0uL,0uL,20uL,0uL]),
+  series(s7,[0uL,0uL,0uL,0uL,0uL,0uL,0uL,20uL])
+];

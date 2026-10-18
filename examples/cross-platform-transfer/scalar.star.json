@@ -1,0 +1,31 @@
+{
+  "schema": "culsma_plr_star_v1",
+  "device_id": "pylabrobot-star",
+  "plates": [
+    "source",
+    "destination"
+  ],
+  "channels": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "bindings": {
+    "entry.s0::alloc": {
+      "labware": "source",
+      "well": "A1"
+    },
+    "entry.s1::alloc": {
+      "labware": "destination",
+      "well": "A1"
+    }
+  },
+  "initial_volumes": {
+    "source:A1": 200
+  }
+}

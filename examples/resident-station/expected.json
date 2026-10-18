@@ -1,0 +1,70 @@
+{
+  "purpose": "Shared-station scheduling of independent complete PCR and magnetic-bead buffer-exchange jobs; no sample handoff or measured biology",
+  "programs": [
+    "../pcr-benchmark/protocol.culs",
+    "../magnetic-buffer-exchange/protocol.culs"
+  ],
+  "source_modifications": null,
+  "robot": "OT-2",
+  "pipette": "p20_single_gen2",
+  "modules": [
+    "Thermocycler GEN2",
+    "Magnetic Module GEN2"
+  ],
+  "pcr": {
+    "holds": 92,
+    "language_effects": 93,
+    "attempts": 93,
+    "tips": 6,
+    "product_uL": 50
+  },
+  "beads": {
+    "captures": 3,
+    "releases": 3,
+    "language_effects": 9,
+    "attempts": 12,
+    "tips": 25,
+    "p20_strokes_uL": [
+      18,
+      18,
+      18,
+      18,
+      18,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20,
+      20
+    ],
+    "retained_beads_uL": 10
+  },
+  "batch": {
+    "device_sessions": 1,
+    "tips": 31,
+    "remaining_tips": 65,
+    "attempts": 105,
+    "station_reconfiguration": false
+  },
+  "board_positions": "Two fixed module-mounted plates and one fixed tube rack; no gripper on OT-2. Separate resident Flex acceptance verifies continuous motion revisions.",
+  "limits": [
+    "Run-local independent simulated inputs; no cross-program physical reagent inventory or residue reconciliation",
+    "No PCR-to-cleanup material handoff",
+    "No measured amplification, thermal accuracy or bead recovery",
+    "All device actions are official SDK simulation"
+  ]
+}

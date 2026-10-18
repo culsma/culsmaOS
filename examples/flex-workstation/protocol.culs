@@ -1,0 +1,18 @@
+// Engineering acceptance: condition a bead suspension and collect its liquid phase.
+// Not a validated immunoprecipitation assay or a replacement for Module05.
+let prep_plate=plate(label="Preparation",format="96well",capacity=200uL);
+let prep=prep_plate[A1];
+let magnetic_plate=plate(label="Magnetic",format="96well",capacity=2000uL);
+let sample=magnetic_plate[A1];
+let stock=tube(label="Stock",capacity=2000uL,load=[content(kind=particulate,type=beads,code="BEADS",attrs={bead_property:magnetic}):10uL,content(kind=formulation,type=buffer,code="BUFFER"):80uL]);
+let collection=tube(label="Collection",capacity=2000uL);
+prep << [stock];
+agit(sample=prep[0],mode=shake,motion=orbital,rate=500rpm,duration=1s);
+with env(thermal=37C,duration=1s) { hold(sample=prep); }
+sample << [prep[0]];
+with env(field=magnetic_rack) {
+ hold(sample=sample);
+ sep(sample=sample[0],program=magnetic_program(duration=5s));
+ collection << [sample[0].contents[1]:40uL];
+}
+return collection;

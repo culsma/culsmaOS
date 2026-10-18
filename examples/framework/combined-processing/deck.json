@@ -1,0 +1,70 @@
+{
+  "robot_type": "OT-2",
+  "api_level": "2.20",
+  "pipette": "p300_single_gen2",
+  "mount": "right",
+  "tiprack": {
+    "load_name": "opentrons_96_tiprack_300ul",
+    "slot": "5"
+  },
+  "modules": {
+    "shaker": {
+      "model": "heaterShakerModuleV1",
+      "slot": "1"
+    },
+    "heater": {
+      "model": "temperature module gen2",
+      "slot": "3"
+    },
+    "magnet": {
+      "model": "magnetic module gen2",
+      "slot": "6",
+      "engage_height_mm": 6,
+      "aspirate_height_mm": 2
+    }
+  },
+  "labware": {
+    "shaking": {
+      "load_name": "nest_96_wellplate_200ul_flat",
+      "adapter": "opentrons_96_flat_bottom_adapter",
+      "module": "shaker"
+    },
+    "heated": {
+      "load_name": "opentrons_96_aluminumblock_nest_wellplate_100ul",
+      "module": "heater"
+    },
+    "captured": {
+      "load_name": "nest_96_wellplate_100ul_pcr_full_skirt",
+      "module": "magnet"
+    },
+    "tubes": {
+      "load_name": "opentrons_24_tuberack_eppendorf_2ml_safelock_snapcap",
+      "slot": "7"
+    }
+  },
+  "bindings": {
+    "entry.s1::well::A1::alloc": {
+      "labware": "shaking",
+      "well": "A1"
+    },
+    "entry.s4::well::A1::alloc": {
+      "labware": "heated",
+      "well": "A1"
+    },
+    "entry.s7::well::A1::alloc": {
+      "labware": "captured",
+      "well": "A1"
+    },
+    "entry.s9::alloc": {
+      "labware": "tubes",
+      "well": "A1"
+    },
+    "entry.s10::alloc": {
+      "labware": "tubes",
+      "well": "A2"
+    }
+  },
+  "transfer_policy": {
+    "stroke_mode": "single"
+  }
+}

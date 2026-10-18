@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "culsma-os"
+version = "0.1.0"
+description = "Evidence-aware laboratory execution host with a resident program queue"
+requires-python = ">=3.11,<3.13"
+dependencies = ["culsma>=1.0.8"]
+[project.optional-dependencies]
+simulator = ["culsma-opentrons-simulator==0.1.0"]
+dev = ["pytest>=8,<9"]
+[project.scripts]
+culsma-os = "culsma_os.cli:CulsmaOSCLI.main"
+[project.entry-points."culsma.program_executors"]
+opentrons-simulator = "culsma_os.bootstrap:LanguageProgramExecutorFactory"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]

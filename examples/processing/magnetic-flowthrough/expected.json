@@ -1,0 +1,17 @@
+{
+  "mode": "simulation",
+  "status": "completed",
+  "sample": {
+    "BEADS": 10,
+    "BUFFER": 40
+  },
+  "waste": {
+    "BUFFER": 40
+  },
+  "stock_volume_uL": 0,
+  "material_version": 3,
+  "language_effects": 3,
+  "system_release_effects": 1,
+  "field_measured": false,
+  "capture_yield_measured": false
+}

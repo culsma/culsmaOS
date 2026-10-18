@@ -1,0 +1,30 @@
+// Static magnetic-bead buffer exchange; derived from Module05 capture/wash ordering.
+// This does not implement the full immunoprecipitation assay or pipette resuspension.
+protocol MagneticBeadBufferExchange {
+  let carrier = plate(label="Exchange plate", format="96well", capacity=100uL);
+  let selected = carrier[A1];
+  let sample = selected[0];
+  let bead_stock = tube(label="Bead suspension", capacity=2000uL, load=[
+    content(kind=particulate, type=beads, code="BEADS", attrs={bead_property:magnetic}):10uL,
+    content(kind=formulation, type=buffer, code="STORAGE_BUFFER"):80uL]);
+  let wash_buffer = tube(label="Wash buffer", capacity=2000uL, load=[
+    content(kind=formulation, type=buffer, code="WASH_BUFFER"):400uL]);
+  let waste = tube(label="Collected storage and wash liquids", capacity=2000uL);
+  sample << [bead_stock];
+  with env(field=magnetic_rack) {
+    hold(sample=sample);
+    sep(sample=sample, program=magnetic_program(duration=2min));
+    waste << [sample.contents[1]] with constraint(low_carryover);
+  }
+  repeat wash in schedule(start=1,end=2,step=1) {
+    sample << [wash_buffer:80uL];
+    with env(field=magnetic_rack) {
+      hold(sample=sample);
+      sep(sample=sample, program=magnetic_program(duration=2min));
+      waste << [sample.contents[1]] with constraint(low_carryover);
+    }
+  }
+  return sample;
+}
+let washed_beads = MagneticBeadBufferExchange();
+return washed_beads;

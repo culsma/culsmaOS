@@ -1,0 +1,8 @@
+let p=plate(format="96well",capacity=100uL); let w=p[A1]; let sample=w[0];
+let stock=tube(capacity=2000uL,load=[content(kind=particulate,type=beads,code="BEADS",attrs={bead_property:magnetic}):10uL,content(kind=formulation,type=buffer,code="BUFFER"):80uL]);
+let waste=tube(capacity=2000uL);
+sample << [stock];with env(field=magnetic_rack) {
+ hold(sample=sample);
+ sep(sample=sample,program=magnetic_program(duration=5min));
+ waste << [sample.contents[1]:40uL];
+}

@@ -1,0 +1,94 @@
+{
+  "schema": "culsma_plr_star_v1",
+  "device_id": "pylabrobot-star",
+  "plates": [
+    "source",
+    "destination"
+  ],
+  "channels": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "bindings": {
+    "entry.s0::alloc": {
+      "labware": "source",
+      "well": "A1"
+    },
+    "entry.s8::alloc": {
+      "labware": "destination",
+      "well": "A1"
+    },
+    "entry.s1::alloc": {
+      "labware": "source",
+      "well": "B1"
+    },
+    "entry.s9::alloc": {
+      "labware": "destination",
+      "well": "B1"
+    },
+    "entry.s2::alloc": {
+      "labware": "source",
+      "well": "C1"
+    },
+    "entry.s10::alloc": {
+      "labware": "destination",
+      "well": "C1"
+    },
+    "entry.s3::alloc": {
+      "labware": "source",
+      "well": "D1"
+    },
+    "entry.s11::alloc": {
+      "labware": "destination",
+      "well": "D1"
+    },
+    "entry.s4::alloc": {
+      "labware": "source",
+      "well": "E1"
+    },
+    "entry.s12::alloc": {
+      "labware": "destination",
+      "well": "E1"
+    },
+    "entry.s5::alloc": {
+      "labware": "source",
+      "well": "F1"
+    },
+    "entry.s13::alloc": {
+      "labware": "destination",
+      "well": "F1"
+    },
+    "entry.s6::alloc": {
+      "labware": "source",
+      "well": "G1"
+    },
+    "entry.s14::alloc": {
+      "labware": "destination",
+      "well": "G1"
+    },
+    "entry.s7::alloc": {
+      "labware": "source",
+      "well": "H1"
+    },
+    "entry.s15::alloc": {
+      "labware": "destination",
+      "well": "H1"
+    }
+  },
+  "initial_volumes": {
+    "source:A1": 100,
+    "source:B1": 100,
+    "source:C1": 100,
+    "source:D1": 100,
+    "source:E1": 100,
+    "source:F1": 100,
+    "source:G1": 100,
+    "source:H1": 100
+  }
+}

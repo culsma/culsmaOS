@@ -1,0 +1,21 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "PingFang SC, Microsoft YaHei, sans-serif",
+    "fontSize": "18px",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#193047",
+    "primaryBorderColor": "#8799ab",
+    "lineColor": "#65798c",
+    "clusterBkg": "#f6f9fc",
+    "clusterBorder": "#cbd5e1"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "basis",
+    "nodeSpacing": 32,
+    "rankSpacing": 48,
+    "padding": 18,
+    "wrappingWidth": 250
+  }
+}

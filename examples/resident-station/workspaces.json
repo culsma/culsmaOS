@@ -1,0 +1,59 @@
+{
+  "schema": "culsma_program_workspaces_v1",
+  "profiles": [
+    {
+      "id": "pcr",
+      "program": "../pcr-benchmark/protocol.culs",
+      "bindings": {
+        "entry.s0::alloc": {
+          "labware": "tubes",
+          "well": "A1"
+        },
+        "entry.s1::alloc": {
+          "labware": "tubes",
+          "well": "A2"
+        },
+        "entry.s2::alloc": {
+          "labware": "tubes",
+          "well": "A3"
+        },
+        "entry.s3::alloc": {
+          "labware": "tubes",
+          "well": "A4"
+        },
+        "entry.s4::alloc": {
+          "labware": "tubes",
+          "well": "A5"
+        },
+        "entry.s5::alloc": {
+          "labware": "pcr",
+          "well": "A1"
+        }
+      },
+      "routes": {}
+    },
+    {
+      "id": "beads",
+      "program": "../magnetic-buffer-exchange/protocol.culs",
+      "bindings": {
+        "entry.s1::well::A1::alloc": {
+          "labware": "beads",
+          "well": "A1"
+        },
+        "entry.s4::alloc": {
+          "labware": "tubes",
+          "well": "B1"
+        },
+        "entry.s5::alloc": {
+          "labware": "tubes",
+          "well": "B2"
+        },
+        "entry.s6::alloc": {
+          "labware": "tubes",
+          "well": "B3"
+        }
+      },
+      "routes": {}
+    }
+  ]
+}

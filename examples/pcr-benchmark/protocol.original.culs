@@ -1,0 +1,26 @@
+protocol PCRWorkflow {
+  let template = tube(label = "Template", capacity = 200uL, load = [
+    content(kind = ContentKind.BIO_MOLECULE_OR_VIRUS, type = ContentType.DNA, code = "TEMPLATE"):1uL]);
+  let forward = tube(label = "Forward primer", capacity = 200uL, load = [
+    content(kind = ContentKind.BIO_MOLECULE_OR_VIRUS, type = ContentType.DNA, code = "FORWARD"):2.5uL]);
+  let reverse = tube(label = "Reverse primer", capacity = 200uL, load = [
+    content(kind = ContentKind.BIO_MOLECULE_OR_VIRUS, type = ContentType.DNA, code = "REVERSE"):2.5uL]);
+  let master_mix = tube(label = "Master mix", capacity = 200uL, load = [
+    content(kind = ContentKind.FORMULATION, type = ContentType.MASTER_MIX,
+      code = "MASTER_MIX"):25uL]);
+  let water = tube(label = "Water", capacity = 200uL, load = [
+    content(kind = ContentKind.FORMULATION, type = ContentType.BUFFER, code = "WATER"):19uL]);
+  let product = tube(label = "PCR reaction", capacity = 200uL);
+  product << [template, forward, reverse, master_mix, water]
+    with constraint(high_precision, low_carryover);
+  with env(thermal = 98C, duration = 30s) { hold(sample = product); }
+  repeat cycle in schedule(start = 1, end = 30, step = 1) {
+    with env(thermal = 98C, duration = 10s) { hold(sample = product); }
+    with env(thermal = 60C, duration = 20s) { hold(sample = product); }
+    with env(thermal = 72C, duration = 30s) { hold(sample = product); }
+  }
+  with env(thermal = 72C, duration = 5min) { hold(sample = product); }
+  return product;
+}
+let pcr_result = PCRWorkflow();
+return pcr_result;

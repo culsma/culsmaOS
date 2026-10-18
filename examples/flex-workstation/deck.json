@@ -1,0 +1,88 @@
+{
+  "robot_type": "Flex",
+  "api_level": "2.20",
+  "pipette": "flex_1channel_1000",
+  "mount": "left",
+  "tiprack": {
+    "load_name": "opentrons_flex_96_tiprack_1000ul",
+    "slot": "D3"
+  },
+  "labware": {
+    "assay": {
+      "load_name": "nest_96_wellplate_200ul_flat",
+      "slot": "D1"
+    },
+    "captured": {
+      "load_name": "nest_96_wellplate_2ml_deep",
+      "slot": "D2"
+    },
+    "tubes": {
+      "load_name": "opentrons_24_tuberack_eppendorf_2ml_safelock_snapcap",
+      "slot": "B2"
+    }
+  },
+  "bindings": {
+    "entry.s1::well::A1::alloc": {
+      "labware": "assay",
+      "well": "A1"
+    },
+    "entry.s4::well::A1::alloc": {
+      "labware": "captured",
+      "well": "A1"
+    },
+    "entry.s6::alloc": {
+      "labware": "tubes",
+      "well": "A1"
+    },
+    "entry.s7::alloc": {
+      "labware": "tubes",
+      "well": "A2"
+    }
+  },
+  "transfer_policy": {
+    "stroke_mode": "single"
+  },
+  "modules": {
+    "shaker": {
+      "model": "heaterShakerModuleV1",
+      "slot": "C1",
+      "adapter": "opentrons_96_flat_bottom_adapter"
+    },
+    "heater": {
+      "model": "temperature module gen2",
+      "slot": "B1"
+    },
+    "magnet": {
+      "model": "magneticBlockV1",
+      "slot": "C3",
+      "aspirate_height_mm": 2,
+      "release_destination": "D2"
+    }
+  },
+  "labware_moves": {
+    "entry.s9": [
+      {
+        "labware": "assay",
+        "destination": "module:shaker"
+      }
+    ],
+    "entry.s10": [
+      {
+        "labware": "assay",
+        "destination": "module:heater"
+      }
+    ],
+    "entry.s11": [
+      {
+        "labware": "assay",
+        "destination": "D1"
+      }
+    ],
+    "entry.s12.b.s0": [
+      {
+        "labware": "captured",
+        "destination": "module:magnet"
+      }
+    ]
+  }
+}

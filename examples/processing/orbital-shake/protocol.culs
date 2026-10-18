@@ -1,0 +1,1 @@
+let stock=tube(capacity=2000uL,load=[content(kind = formulation, type = buffer, code = "BUFFER"):200uL]); let p=plate(format="96well",capacity=200uL); let w=p[A1]; w << [stock:50uL]; agit(sample=w[0],mode=shake,motion=orbital,duration=30s,rate=500rpm); stock << [w[0]:20uL];

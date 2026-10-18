@@ -1,0 +1,92 @@
+{
+  "robot_type": "OT-2",
+  "api_level": "2.20",
+  "pipette": "p20_single_gen2",
+  "mount": "right",
+  "tiprack": {
+    "load_name": "opentrons_96_tiprack_20ul",
+    "slot": "2"
+  },
+  "labware": {
+    "tubes": {
+      "load_name": "opentrons_24_tuberack_eppendorf_2ml_safelock_snapcap",
+      "slot": "1"
+    },
+    "pcr": {
+      "load_name": "opentrons_96_wellplate_200ul_pcr_full_skirt",
+      "module": "cycler"
+    },
+    "beads": {
+      "load_name": "nest_96_wellplate_100ul_pcr_full_skirt",
+      "module": "magnet"
+    }
+  },
+  "bindings": {
+    "pcr:entry.s0::alloc": {
+      "labware": "tubes",
+      "well": "A1"
+    },
+    "pcr:entry.s1::alloc": {
+      "labware": "tubes",
+      "well": "A2"
+    },
+    "pcr:entry.s2::alloc": {
+      "labware": "tubes",
+      "well": "A3"
+    },
+    "pcr:entry.s3::alloc": {
+      "labware": "tubes",
+      "well": "A4"
+    },
+    "pcr:entry.s4::alloc": {
+      "labware": "tubes",
+      "well": "A5"
+    },
+    "pcr:entry.s5::alloc": {
+      "labware": "pcr",
+      "well": "A1"
+    },
+    "beads:entry.s1::well::A1::alloc": {
+      "labware": "beads",
+      "well": "A1"
+    },
+    "beads:entry.s4::alloc": {
+      "labware": "tubes",
+      "well": "B1"
+    },
+    "beads:entry.s5::alloc": {
+      "labware": "tubes",
+      "well": "B2"
+    },
+    "beads:entry.s6::alloc": {
+      "labware": "tubes",
+      "well": "B3"
+    }
+  },
+  "transfer_policy": {
+    "stroke_mode": "balanced_split",
+    "precision_method": {
+      "method_id": "pcr-p20-explicit-flow",
+      "revision": "1",
+      "pipette": "p20_single_gen2",
+      "minimum_volume_uL": 1,
+      "maximum_volume_uL": 20,
+      "aspirate_flow_rate_uL_s": 5,
+      "dispense_flow_rate_uL_s": 10
+    }
+  },
+  "modules": {
+    "cycler": {
+      "model": "thermocyclerModuleV2",
+      "slot": "7",
+      "lid_temperature_celsius": 105,
+      "keep_lid_closed": true
+    },
+    "magnet": {
+      "model": "magnetic module gen2",
+      "slot": "6",
+      "engage_height_mm": 6,
+      "aspirate_height_mm": 2
+    }
+  }
+}

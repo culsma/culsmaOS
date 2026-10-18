@@ -1,0 +1,12 @@
+flowchart TD
+    A[Original PCR source with both constraints] --> P[OS validates identities and declared device methods]
+    P -->|Unavailable method| R[Reject before device commands]
+    P --> T[Driver resolves high_precision and low_carryover]
+    T --> H[P20 explicit flow method / fresh tip per aspiration]
+    H --> V[Five inputs into 50 uL PCR reaction / six strokes]
+    V --> I[98 C / 30 s]
+    I --> L[30 cycles: 98 C / 10 s, 60 C / 20 s, 72 C / 30 s]
+    L --> F[72 C / 300 s]
+    F --> E[93 completed effects / language state matches reference]
+    E --> S[Heaters deactivated / resources released]
+    H -->|Missing or unknown evidence| U[Isolate / stop following holds / no replay]

@@ -1,0 +1,17 @@
+{
+  "mode": "simulation",
+  "operations": [
+    "Mutation",
+    "env_hold",
+    "Mutation"
+  ],
+  "stock_uL": 170,
+  "assay_A1_uL": 30,
+  "thermal_hold": {
+    "temperature_celsius": 37,
+    "duration_seconds": 60,
+    "evidence_scope": "virtual_module_command_observation",
+    "sample_temperature_measured": false
+  },
+  "tips_consumed": 2
+}

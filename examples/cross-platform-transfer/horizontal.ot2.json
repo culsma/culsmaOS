@@ -1,0 +1,86 @@
+{
+  "robot_type": "OT-2",
+  "api_level": "2.20",
+  "pipette": "p300_single_gen2",
+  "mount": "right",
+  "tiprack": {
+    "load_name": "opentrons_96_tiprack_300ul",
+    "slot": "1"
+  },
+  "labware": {
+    "source": {
+      "load_name": "corning_96_wellplate_360ul_flat",
+      "slot": "2"
+    },
+    "destination": {
+      "load_name": "corning_96_wellplate_360ul_flat",
+      "slot": "3"
+    }
+  },
+  "bindings": {
+    "entry.s0::alloc": {
+      "labware": "source",
+      "well": "A1"
+    },
+    "entry.s8::alloc": {
+      "labware": "destination",
+      "well": "A1"
+    },
+    "entry.s1::alloc": {
+      "labware": "source",
+      "well": "A2"
+    },
+    "entry.s9::alloc": {
+      "labware": "destination",
+      "well": "A2"
+    },
+    "entry.s2::alloc": {
+      "labware": "source",
+      "well": "A3"
+    },
+    "entry.s10::alloc": {
+      "labware": "destination",
+      "well": "A3"
+    },
+    "entry.s3::alloc": {
+      "labware": "source",
+      "well": "A4"
+    },
+    "entry.s11::alloc": {
+      "labware": "destination",
+      "well": "A4"
+    },
+    "entry.s4::alloc": {
+      "labware": "source",
+      "well": "A5"
+    },
+    "entry.s12::alloc": {
+      "labware": "destination",
+      "well": "A5"
+    },
+    "entry.s5::alloc": {
+      "labware": "source",
+      "well": "A6"
+    },
+    "entry.s13::alloc": {
+      "labware": "destination",
+      "well": "A6"
+    },
+    "entry.s6::alloc": {
+      "labware": "source",
+      "well": "A7"
+    },
+    "entry.s14::alloc": {
+      "labware": "destination",
+      "well": "A7"
+    },
+    "entry.s7::alloc": {
+      "labware": "source",
+      "well": "A8"
+    },
+    "entry.s15::alloc": {
+      "labware": "destination",
+      "well": "A8"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "mode": "simulation",
+  "material_origin": "language_model_after_completed_virtual_commands",
+  "sample_measured": false,
+  "volumes_uL": [
+    0,
+    0,
+    50,
+    0,
+    40
+  ],
+  "components": [
+    {},
+    {},
+    {
+      "BEADS": 10,
+      "BUFFER": 40
+    },
+    {},
+    {
+      "BUFFER": 40
+    }
+  ],
+  "material_version": 7,
+  "language_effects": 7,
+  "os_system_effects": 1,
+  "transfer_receipts": 4,
+  "thermal_receipts": 1,
+  "agitation_receipts": 1,
+  "magnetic_operations": [
+    "magnetic_separation",
+    "magnetic_release"
+  ],
+  "consumed_tips": 4,
+  "available_tips": 92,
+  "run_reservation": "released",
+  "active_child_resources": false,
+  "allocation_step_ids": [
+    "entry.s1::well::A1::alloc",
+    "entry.s4::well::A1::alloc",
+    "entry.s7::well::A1::alloc",
+    "entry.s9::alloc",
+    "entry.s10::alloc"
+  ]
+}

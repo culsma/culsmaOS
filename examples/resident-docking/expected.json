@@ -1,0 +1,30 @@
+{
+  "mode": "simulation",
+  "first_source": "examples/heater-shaker-docking/protocol.culs",
+  "second_source": "examples/resident-docking/second.culs",
+  "configuration": "examples/heater-shaker-docking/deck.json",
+  "runs": [
+    {
+      "status": "completed",
+      "material_version": 4,
+      "final_volumes_uL": {
+        "Assay_A1": 30,
+        "Stock": 70
+      }
+    },
+    {
+      "status": "completed",
+      "material_version": 4,
+      "final_volumes_uL": {
+        "Assay_A1": 25,
+        "Stock": 75
+      }
+    }
+  ],
+  "global_position_revision": 4,
+  "final_plate_position": "D1",
+  "attempts": 12,
+  "motion_registrations": 4,
+  "consumed_tips": 4,
+  "limits": "Independent modeled inputs per run; no physical replenishment or authoritative shared reagent inventory claimed"
+}

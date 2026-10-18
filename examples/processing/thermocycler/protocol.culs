@@ -1,0 +1,9 @@
+let stock = tube(capacity=2000uL, load=[content(kind=formulation, type=buffer, code="BUFFER"):200uL]);
+let p = plate(format="96well", capacity=100uL);
+let w = p[A1];
+
+w << [stock:50uL];
+with env(thermal=95C, duration=1s) { hold(w[0]); }
+with env(thermal=60C, duration=2s) { hold(w[0]); }
+with env(thermal=72C, duration=3s) { hold(w[0]); }
+stock << [w[0]:20uL];

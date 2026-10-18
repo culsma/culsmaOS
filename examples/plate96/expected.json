@@ -1,0 +1,11 @@
+{
+  "volumes_uL": {
+    "Stock": 150,
+    "Assay_A1": 30,
+    "Assay_A2": 0,
+    "Assay_B1": 0,
+    "Assay_B2": 20
+  },
+  "strokes": 4,
+  "mode": "simulation"
+}

@@ -1,0 +1,65 @@
+{
+  "benchmark": "Culsma/benchmarks/modules/example-01/protocol.culs",
+  "original_sha256": "2a706514b79b1aac94de98f3752fc2b6c1733fb4c1e73656864511f007795344",
+  "source_difference": null,
+  "recipe_uL": {
+    "TEMPLATE": 1,
+    "FORWARD": 2.5,
+    "REVERSE": 2.5,
+    "MASTER_MIX": 25,
+    "WATER": 19
+  },
+  "product_uL": 50,
+  "thermal_holds": 92,
+  "cycles": 30,
+  "schedule_celsius_seconds": {
+    "initial": [
+      98,
+      30
+    ],
+    "repeat": [
+      [
+        98,
+        10
+      ],
+      [
+        60,
+        20
+      ],
+      [
+        72,
+        30
+      ]
+    ],
+    "final": [
+      72,
+      300
+    ]
+  },
+  "total_programmed_hold_seconds": 2130,
+  "lid_celsius": 105,
+  "heater_end_state": "both deactivated after every scalar hold, lid stays closed",
+  "pipette": "p20_single_gen2",
+  "strokes_uL": [
+    1,
+    2.5,
+    2.5,
+    12.5,
+    12.5,
+    19
+  ],
+  "scope": "official command simulation and language-state equivalence; no measured thermal or biochemical result",
+  "physical_setup_assumption": "compatible reusable Thermocycler automation seal installed; virtual API does not measure seal presence",
+  "constraint_resolution": {
+    "high_precision": {
+      "method_id": "pcr-p20-explicit-flow",
+      "revision": "1",
+      "scope": "explicit method selection and command execution; no measured accuracy claim"
+    },
+    "low_carryover": {
+      "method_id": "fresh-tip-per-stroke",
+      "revision": "1",
+      "scope": "fresh tip per aspiration, including both25uL split strokes; no measured carryover claim"
+    }
+  }
+}

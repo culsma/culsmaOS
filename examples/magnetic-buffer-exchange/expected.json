@@ -1,0 +1,45 @@
+{
+  "purpose": "Static buffer exchange of a magnetic-bead suspension by two wash cycles",
+  "derivation": "Module05 capture/wash ordering; separate scoped protocol, not full immunoprecipitation or unchanged benchmark",
+  "initial_uL": {
+    "BEADS": 10,
+    "STORAGE_BUFFER": 80,
+    "WASH_BUFFER_STOCK": 400
+  },
+  "wash_cycles": 2,
+  "wash_addition_uL": 80,
+  "capture_events": 3,
+  "hold_seconds_per_capture": 120,
+  "flowthrough_transfers": 3,
+  "condition_releases": 3,
+  "language_effects": 9,
+  "tips": 6,
+  "expected_final_uL": {
+    "retained_beads": 10,
+    "bead_stock": 0,
+    "wash_stock": 240,
+    "collected_liquids": 240
+  },
+  "expected_waste_components_uL": {
+    "STORAGE_BUFFER": 80,
+    "WASH_BUFFER": 160,
+    "BEADS": 0
+  },
+  "scope": "Static add/settle/remove, no pipette resuspension, rotation or measured bead recovery. Exact language material state and protocol output match pure reference.",
+  "profiles": {
+    "deck.json": {
+      "robot": "OT-2",
+      "field_release": "disengage",
+      "total_attempts": 12,
+      "gripper_moves": 0
+    },
+    "deck-flex.json": {
+      "robot": "Flex",
+      "field_release": "journaled removal and verified release",
+      "total_attempts": 18,
+      "gripper_moves": 6,
+      "final_assay_position": "D1",
+      "final_position_revision": 6
+    }
+  }
+}

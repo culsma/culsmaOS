@@ -1,0 +1,13 @@
+flowchart TD
+    A[90 uL bead suspension] --> B[Initial capture: dock or engage, settle 120 s]
+    B --> C[Collect 80 uL storage liquid with low_carryover]
+    C --> D[Confirm release: disengage or undock]
+    D --> W1
+    subgraph W[Two static wash cycles]
+        W1[Add 80 uL wash buffer] --> W2[Dock or engage, settle 120 s]
+        W2 --> W3[Collect 80 uL flowthrough with low_carryover]
+        W3 --> W4[Confirm release: disengage or undock]
+    end
+    W4 --> E[Return bead fraction 10 uL / collected liquids 240 uL]
+    E --> F[Release parent run reservation]
+    W -.->|Any phase unknown| U[Stop later effects / retain isolation / no replay]

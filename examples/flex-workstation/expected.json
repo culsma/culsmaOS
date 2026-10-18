@@ -1,0 +1,40 @@
+{
+  "purpose": "Condition a bead suspension through mixing and scalar thermal hold, separate on Magnetic Block and collect its liquid phase",
+  "kind": "engineering_simulation_acceptance",
+  "benchmark_status": "Not a PCR or Module05 biological assay; benchmark-derived acceptance remains next",
+  "input_uL": 90,
+  "collection_uL": 40,
+  "remaining_magnetic_plate_uL": 50,
+  "material_version": 6,
+  "station_position_revision_delta": 5,
+  "final_positions": {
+    "assay": "D1",
+    "captured": "D2"
+  },
+  "operations": [
+    "transfer",
+    "labware_move",
+    "orbital_shake",
+    "labware_move",
+    "thermal_hold",
+    "labware_move",
+    "transfer",
+    "labware_move",
+    "magnetic_separation",
+    "transfer",
+    "labware_move",
+    "magnetic_release"
+  ],
+  "claims": [
+    "Completed virtual command observations",
+    "Material and output identity match pure language execution",
+    "Unknown effects retain isolation"
+  ],
+  "not_measured": [
+    "mixing quality",
+    "sample temperature",
+    "bead capture yield",
+    "pipetted volume",
+    "labware position"
+  ]
+}

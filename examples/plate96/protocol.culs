@@ -1,0 +1,8 @@
+
+let stock = tube(label="Stock",capacity=2000uL,load=[content(kind = formulation, type = buffer, code = "BUFFER"):200uL]);
+let assay = plate(label="Assay",format="96well",carrier_id="PlateA",capacity=200uL);
+let wells = assay[A1:B2];
+wells[0] << [stock:50uL];
+wells[3] << [stock:20uL];
+wells[1] << [wells[0]:20uL];
+stock << [wells[1]:20uL];

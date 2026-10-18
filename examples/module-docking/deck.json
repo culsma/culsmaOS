@@ -1,0 +1,50 @@
+{
+  "robot_type": "Flex",
+  "api_level": "2.20",
+  "pipette": "flex_1channel_1000",
+  "mount": "left",
+  "tiprack": {
+    "load_name": "opentrons_flex_96_tiprack_1000ul",
+    "slot": "D3"
+  },
+  "labware": {
+    "assay": {
+      "load_name": "nest_96_wellplate_200ul_flat",
+      "slot": "D1"
+    },
+    "stock": {
+      "load_name": "opentrons_24_tuberack_eppendorf_2ml_safelock_snapcap",
+      "slot": "B1"
+    }
+  },
+  "bindings": {
+    "entry.s1::well::A1::alloc": {
+      "labware": "assay",
+      "well": "A1"
+    },
+    "entry.s3::alloc": {
+      "labware": "stock",
+      "well": "A1"
+    }
+  },
+  "labware_moves": {
+    "entry.s5": [
+      {
+        "labware": "assay",
+        "destination": "module:heater"
+      }
+    ],
+    "entry.s6": [
+      {
+        "labware": "assay",
+        "destination": "D1"
+      }
+    ]
+  },
+  "modules": {
+    "heater": {
+      "model": "temperature module gen2",
+      "slot": "C1"
+    }
+  }
+}

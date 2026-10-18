@@ -1,0 +1,42 @@
+{
+  "robot_type": "OT-2",
+  "api_level": "2.20",
+  "pipette": "p300_single_gen2",
+  "mount": "right",
+  "tiprack": {
+    "load_name": "opentrons_96_tiprack_300ul",
+    "slot": "2"
+  },
+  "labware": {
+    "tubes": {
+      "load_name": "opentrons_24_tuberack_eppendorf_2ml_safelock_snapcap",
+      "slot": "1"
+    },
+    "plate": {
+      "load_name": "corning_96_wellplate_360ul_flat",
+      "slot": "3"
+    }
+  },
+  "bindings": {
+    "entry.s0::alloc": {
+      "labware": "tubes",
+      "well": "A1"
+    },
+    "entry.s2::well::A1::alloc": {
+      "labware": "plate",
+      "well": "A1"
+    },
+    "entry.s2::well::A2::alloc": {
+      "labware": "plate",
+      "well": "A2"
+    },
+    "entry.s2::well::B1::alloc": {
+      "labware": "plate",
+      "well": "B1"
+    },
+    "entry.s2::well::B2::alloc": {
+      "labware": "plate",
+      "well": "B2"
+    }
+  }
+}
