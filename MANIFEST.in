@@ -1,4 +1,4 @@
-include README.md index.html
+include README.md index.html LICENSE CHANGELOG.md
 recursive-include examples *.culs *.json *.svg *.mmd *.md
 recursive-include tests *.py *.culs *.json *.md
 recursive-include design *.json *.md

@@ -6,6 +6,8 @@ name = "culsma-os"
 version = "0.1.0"
 description = "Evidence-aware laboratory execution host with a resident program queue"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.13"
 dependencies = ["culsma==1.0.8+gca7a0984d0b5"]
 [project.optional-dependencies]

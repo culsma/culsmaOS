@@ -1,5 +1,7 @@
 # culsmaOS
 
+Version **0.1.0 — experimental source preview**. [Changes](CHANGELOG.md) · [Apache-2.0 license](LICENSE).
+
 **Scope: one station, one worker, fixed configuration, simulator validation. Runtime modules have minimal implementations; device and language coverage remains partial.**
 
 Private source preview: compatible core and simulator wheels are available in the [internal dependency prerelease](https://github.com/culsma/culsmaOS/releases/tag/internal-os-dependencies-20261018) to readers with repository access. Public Culsma `1.0.8` is incompatible. The [dependency contract](design/distribution-contract.json) pins exact commits and hashes; stable language/PyPI releases remain unchanged. [Preparation status](design/public-preview-contract.json).
