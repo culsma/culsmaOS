@@ -10,7 +10,7 @@
 | `fixtures/<module>/` | Static input data |
 
 Acceptance runners read their manifests from `tests/acceptance/manifests/`.
-`tests/architecture/module-map.json` owns the expected component and diagram mapping.
+`tests/architecture/module-map.json` owns expected source components and paths. Internal diagram checks are separate.
 
 Test cases do not import other test modules. Shared fixtures have explicit imports. `support/paths.py` owns the checkout root, so moving a test does not alter fixture discovery.
 
@@ -44,3 +44,7 @@ were not installed. The final simulator wheel adds license metadata with all
 33 runtime files unchanged. A separate fresh Python 3.11 installation passed
 `pip check`, one-shot Transfer and resident readiness/submission/completion/stop.
 [Evidence](../docs/evidence/public-preview-011-20261018.json).
+
+The internal-design split adds two packaging exclusion cases. The current
+architecture and acceptance-runner subset passes 98 cases both in the checkout
+and an extracted sdist. Runtime source remains identical to the full-suite baseline.

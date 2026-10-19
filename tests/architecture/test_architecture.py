@@ -2,7 +2,6 @@ from tests.support.paths import ROOT
 from pathlib import Path
 import ast
 import json
-import re
 from tests.support.architecture.architecture import ROOT, SRC
 
 
@@ -66,27 +65,17 @@ class TestArchitecture:
             not in (SRC / "event_journal/interactors/evidence.py").read_text()
         )
 
-    def test_module_diagram_participants_and_paths(self):
+    def test_component_paths_and_classes_match_source(self):
         index = json.loads((ROOT / "tests/architecture/module-map.json").read_text())
+        assert index["schema"] == "culsma_source_components_v1"
         for module in index["modules"]:
-            if module["phase_one"] != "minimal_implementation":
-                continue
-            package = module["directory"].split("/")[-2]
-            views = module.get("documentation", {}).get(
-                "class_views", [f"docs/module/{package}_class_diagram.mmd"]
-            )
-            classes = "\n".join((ROOT / view).read_text() for view in views)
-            sequences = (ROOT / f"docs/module/{package}_sequences.md").read_text()
-            defined = set(re.findall(r"class (\w+)", classes))
-            participants = set(re.findall(r"participant (\w+)", sequences))
-            assert participants <= defined, (package, participants - defined)
+            assert (ROOT / module["directory"]).is_dir(), module["module"]
             for component in module["components"]:
-                if (
-                    component["owner"] == "OS"
-                    and component["status"] == "implemented_minimal"
-                ):
-                    assert (ROOT / component["path"]).is_file(), component
-                    assert component["component"] in classes, component
+                path = ROOT / component["path"]
+                assert path.is_file(), component
+                classes = {node.name for node in ast.walk(ast.parse(path.read_text()))
+                           if isinstance(node, ast.ClassDef)}
+                assert component["component"] in classes, component
 
     def test_vendor_boundary_is_thin(self):
         plugin_source = (SRC / "bootstrap.py").read_text()

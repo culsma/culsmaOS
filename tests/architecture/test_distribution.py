@@ -60,6 +60,12 @@ class TestDistributionAudit:
                 entry=tarfile.TarInfo('culsma_os-0.1.0/'+name);entry.size=len(payload);archive.addfile(entry,io.BytesIO(payload))
             if problem=='state':
                 entry=tarfile.TarInfo('culsma_os-0.1.0/run-artifacts/private.json');entry.size=2;archive.addfile(entry,io.BytesIO(b'{}'))
+            if problem in {'design', 'rendered-design'}:
+                name = ('docs/module/internal_class_diagram.mmd' if problem == 'design'
+                        else 'diagrams/modules/internal-classes.svg')
+                entry=tarfile.TarInfo('culsma_os-0.1.0/'+name)
+                payload=b'internal review artifact';entry.size=len(payload)
+                archive.addfile(entry,io.BytesIO(payload))
         return module.DistributionAudit(),directory
 
     def test_valid_archives_do_not_import_runtime_dependencies(self,tmp_path):
@@ -78,7 +84,8 @@ class TestDistributionAudit:
     @pytest.mark.parametrize('problem,diagnostic', [
         ('console','CONSOLE_OWNERSHIP_INVALID'),('handoff','HANDOFF_MISSING'),
         ('input','SOURCE_INPUT_MISSING'),('state','LOCAL_STATE_INCLUDED'),
-        ('code','CODE_MISMATCH'),('dependency','DEPENDENCY_CONTRACT_INVALID')])
+        ('code','CODE_MISMATCH'),('dependency','DEPENDENCY_CONTRACT_INVALID'),
+        ('design','INTERNAL_DESIGN_INCLUDED'),('rendered-design','INTERNAL_DESIGN_INCLUDED')])
     def test_archive_contract_failures(self,tmp_path,problem,diagnostic):
         audit,directory=self.archives(tmp_path,problem)
         with pytest.raises(ValueError,match='DISTRIBUTION_'+diagnostic):

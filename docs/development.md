@@ -7,11 +7,14 @@ example are in the [README](../README.md#installation).
 
 | Location | Purpose |
 | --- | --- |
-| `diagrams/`, `docs/module/` | Architecture diagrams and module call chains |
+| `diagrams/` | Compact public architecture overview |
 | `docs/reference/`, `docs/contracts/` | Human-readable scope and behavioral agreements |
 | `docs/archive/`, `docs/release/` | Historical preparation records and current release readiness |
-| `tests/acceptance/manifests/`, `tests/architecture/module-map.json` | Executable acceptance and architecture-check inputs |
+| `tests/acceptance/manifests/`, `tests/architecture/module-map.json` | Executable acceptance and source-component checks |
 | `tools/distribution/manifest.json` | Exact dependency artifacts used by build and verification tools |
+
+Detailed design diagrams and diagram consistency checks are maintained in a separate
+internal workspace. Public acceptance is self-contained and checks source boundaries.
 
 ## Local development
 

@@ -43,6 +43,14 @@ class DistributionAudit:
             prefix = members[0].split('/')[0] + '/'
             if any(prefix + path not in members for path in self.required_inputs):
                 raise ValueError('DISTRIBUTION_SOURCE_INPUT_MISSING')
+            public_diagrams = {prefix + 'diagrams/readme-overview.puml',
+                               prefix + 'diagrams/readme-overview.svg'}
+            if any(n.startswith(prefix + 'docs/module/')
+                   or n.startswith(prefix + 'culsmaOS-design/')
+                   or (n.startswith(prefix + 'diagrams/')
+                       and n not in public_diagrams and not n.endswith('/'))
+                   for n in members):
+                raise ValueError('DISTRIBUTION_INTERNAL_DESIGN_INCLUDED')
             if any('/run-artifacts/' in n or '/.venv/' in n for n in members):
                 raise ValueError('DISTRIBUTION_LOCAL_STATE_INCLUDED')
             for path, payload in code.items():

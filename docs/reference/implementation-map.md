@@ -1,6 +1,6 @@
 # Framework implementation map
 
-[Architecture](../../diagrams/abstract-machine-os-functional-units-v1.svg) · [Modules](../module/README.md) · [Component-check catalog](../../tests/architecture/module-map.json) · [Current scope](../../README.md)
+[Architecture](../../diagrams/readme-overview.svg) · [Component-check catalog](../../tests/architecture/module-map.json) · [Current scope](../../README.md)
 
 | Boundary | Owner |
 | --- | --- |

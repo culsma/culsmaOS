@@ -54,7 +54,7 @@
       "selector": "tests/architecture/test_architecture.py::TestArchitecture",
       "expected_tests": [
         "test_architecture_boundaries",
-        "test_module_diagram_participants_and_paths",
+        "test_component_paths_and_classes_match_source",
         "test_vendor_boundary_is_thin",
         "test_external_cli_has_only_adapter_responsibilities",
         "test_semantic_adapter_uses_public_language_boundary",

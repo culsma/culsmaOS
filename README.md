@@ -13,12 +13,12 @@ outcomes remain explicit and block further execution of the affected run.
 
 ## Architecture
 
-[![culsmaOS architecture: independent Culsma language, six OS functional units, shared runtime management, capability interfaces and external instrument plugins. Measurement is reserved.](diagrams/readme-overview.svg)](diagrams/abstract-machine-os-functional-units-v1.svg)
+[![culsmaOS architecture: independent Culsma language, six OS functional units, shared runtime management, capability interfaces and external instrument plugins. Measurement is reserved.](diagrams/readme-overview.svg)](diagrams/readme-overview.svg)
 
 Green arrows highlight the Transfer path. Shared runtime management serves all
 functional units. Measurement remains reserved.
 
-[Full functional architecture](diagrams/abstract-machine-os-functional-units-v1.svg) · [Module diagrams](docs/module/README.md)
+[Architecture overview](diagrams/readme-overview.svg) · [Implementation map](docs/reference/implementation-map.md)
 
 ## Design principles
 
@@ -214,8 +214,7 @@ completion does not establish a measured biological result. Hamilton physical
 execution and general cross-device compatibility remain outside the accepted
 baseline.
 
-- [Architecture and module diagrams](docs/module/README.md)
-- [Functional review](docs/review/framework-functional-review.md)
+- [Architecture and implementation map](docs/reference/implementation-map.md)
 - [Development and acceptance](docs/development.md) · [Test organization](tests/README.md)
 - [Release notes](CHANGELOG.md) · [Compatible dependency versions](tools/distribution/manifest.json)
 
