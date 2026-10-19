@@ -172,3 +172,17 @@ pending, applied and rejected requests remain distinct. A lost response retains
 the request ID in browser session storage; retry uses that identity. No action is
 automatically retried, and unknown outcomes retain isolation. This development
 console supports one local operator; it is not a LAN service or user login system.
+
+### Shared human and browser-agent operation
+
+The same native buttons and labeled inputs support mouse, keyboard and DOM-based
+browser agents. Prefer accessible roles/names; stable `data-action`, `data-field`
+(JSON pointer), `data-collection` and `data-entity-id` markers disambiguate controls.
+The content region exposes the visible page, busy state, saved revision, dirty
+state and reviewed snapshot. **Last operation** distinguishes pending requests,
+acknowledgements, applied/rejected results and unavailable responses.
+
+These markers describe the page; they grant no authority and expose no credential
+or alternate command API. Configuration conflicts retain local edits. The page
+cannot identify a human versus an AI that uses the same browser session; separate
+client identity, attribution and MCP access are future work.

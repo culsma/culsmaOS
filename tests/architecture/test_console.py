@@ -29,3 +29,15 @@ class TestConsoleArchitecture:
         assert not any(f"'{method}'" in source for method in ['PUT','PATCH','DELETE'])
         assert "'/api/v1/configuration/drafts'" in source
         assert not any(f"'/api/v1/{action}'" in source for action in ['submit','pause','resume','cancel','host-stop'])
+
+
+def test_shared_dom_has_no_execution_bypass():
+    web = ROOT/'src/culsma_os/console/web'
+    presentation = (web/'interaction.js').read_text()
+    assert not any(value in presentation for value in ['fetch(', 'XMLHttpRequest', 'localStorage', 'sessionStorage',
+        'Authorization', 'access_token', 'CallerContext', 'culsma_opentrons', 'WebSocket'])
+    html = (web/'index.html').read_text()
+    assert 'data-ui-schema="culsma_console_ui_v1"' in html
+    assert 'aria-label="Last operation"' in html and 'aria-live="polite"' in html
+    source = '\n'.join(path.read_text() for path in web.glob('*.js'))
+    assert not any(value in source for value in ['dataset.token','dataset.credential','dataset.caller','window.execute','window.submit'])

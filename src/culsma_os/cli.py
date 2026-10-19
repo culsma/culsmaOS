@@ -87,7 +87,7 @@ class CulsmaOSCLI:
                 parser.exit(2, f"{error}\n")
             try:
                 print(f"Station console: {server.url}", flush=True)
-                print("Configuration drafts are separate; device execution remains CLI-controlled.", flush=True)
+                print("Drafts remain offline; program commands use the existing resident worker.", flush=True)
                 server.serve_forever(poll_interval=0.2)
             except KeyboardInterrupt:
                 pass

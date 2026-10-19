@@ -39,7 +39,7 @@ class DistributionAudit:
                     != 'culsma_os.bootstrap:LanguageProgramExecutorFactory'):
                 raise ValueError('DISTRIBUTION_HANDOFF_MISSING')
             code = {n: archive.read(n) for n in archive.namelist() if n.startswith('culsma_os/')}
-            console_assets = ('web/index.html', 'web/app.js', 'web/programs.js', 'web/style.css',
+            console_assets = ('web/index.html', 'web/app.js', 'web/programs.js', 'web/interaction.js', 'web/style.css',
                               'web/assets/culsma-logo.png', 'web/assets/culsma-os-wordmark.png')
             if ('culsma_os/console/__init__.py' in code
                     and any('culsma_os/console/' + asset not in code for asset in console_assets)):

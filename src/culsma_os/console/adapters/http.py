@@ -29,6 +29,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
     static_resources = {
         "/": ("index.html", "text/html; charset=utf-8"),
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+        "/interaction.js": ("interaction.js", "text/javascript; charset=utf-8"),
         "/programs.js": ("programs.js", "text/javascript; charset=utf-8"),
         "/style.css": ("style.css", "text/css; charset=utf-8"),
         "/assets/culsma-os-wordmark.png": ("assets/culsma-os-wordmark.png", "image/png"),
