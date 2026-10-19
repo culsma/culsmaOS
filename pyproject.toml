@@ -33,7 +33,9 @@ patch = ["subprocess"]
 show_missing = true
 
 [tool.coverage.json]
+output = "run-artifacts/coverage/coverage.json"
 show_contexts = false
 
 [tool.coverage.html]
+directory = "run-artifacts/coverage/html"
 show_contexts = true

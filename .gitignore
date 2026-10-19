@@ -10,3 +10,17 @@ run-artifacts/
 .coverage*
 htmlcov/
 .venv-*/
+
+# Generated validation output: source inputs and manifests remain versioned.
+/reports/
+/test-results/
+/coverage.json
+/coverage.xml
+/junit.xml
+/pytest.xml
+/pytest.log
+/regression.xml
+/regression.log
+/docs/evidence/
+/docs/archive/implementation-validation.json
+/docs/archive/test-validation-notes.md

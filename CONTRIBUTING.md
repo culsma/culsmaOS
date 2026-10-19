@@ -13,3 +13,7 @@ rules and update public contracts or the architecture overview when their bounda
 Run the relevant tests locally. Full release acceptance and builds also run locally;
 do not add GitHub Actions workflows. Use English documentation and Conventional
 Commits. Contributions are made under the repository's Apache-2.0 license.
+
+Keep test reports, logs, coverage results and validation snapshots under the
+ignored `run-artifacts/` directory. Commit test code, fixed input fixtures and
+acceptance manifests; do not commit generated run results.
