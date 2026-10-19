@@ -125,3 +125,11 @@ class StationConfigurationDraft:
         return {'draft_id':self.draft_id,'revision':self.revision,'title':self.title,
                 'driver':self.driver,'fingerprint':self.fingerprint,
                 'configuration':json.loads(self.configuration_json)}
+
+
+@dataclass(frozen=True)
+class ProgramBindingRequest:
+    draft_id: str
+    revision: int
+    program_id: str
+    snapshot_id: str

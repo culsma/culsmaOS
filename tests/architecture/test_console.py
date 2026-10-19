@@ -41,3 +41,20 @@ def test_shared_dom_has_no_execution_bypass():
     assert 'aria-label="Last operation"' in html and 'aria-live="polite"' in html
     source = '\n'.join(path.read_text() for path in web.glob('*.js'))
     assert not any(value in source for value in ['dataset.token','dataset.credential','dataset.caller','window.execute','window.submit'])
+
+
+def test_binding_page_has_shared_controls():
+    source = (ROOT/'src/culsma_os/console/web/programs.js').read_text()
+    assert "action:'program.check-bindings'" in source and "field:'/binding-draft'" in source
+    assert 'snapshot_id:this.inspection.snapshot_id' in source
+    assert 'this.bindingReview = null' in source
+
+
+def test_binding_owner_uses_fixed_auth_and_no_foreign_repository():
+    from culsma_os.auth.interactors import AuthorizedInteractor
+    from culsma_os.workspace_manager.interactors import ProgramBindingInteractor
+    assert ProgramBindingInteractor.execute is AuthorizedInteractor.execute
+    assert ProgramBindingInteractor.required_capability == 'configuration:drafts'
+    tree=ast.parse((ROOT/'src/culsma_os/workspace_manager/interactors.py').read_text())
+    imports=[node.module or '' for node in ast.walk(tree) if isinstance(node,ast.ImportFrom)]
+    assert not any('program_manager.repositories' in name or 'culsma_opentrons' in name for name in imports)

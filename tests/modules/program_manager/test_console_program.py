@@ -66,7 +66,7 @@ def test_library_bounds_and_opt_in(programs,tmp_path):
     assert not programs.sources.store.exists()
     disabled=FileProgramSourceRepository(None,tmp_path/'other-store')
     assert disabled.list()=={'enabled':False,'programs':[]}
-    programs.interactor.sources=disabled
+    programs.source_interactor.sources=disabled
     with pytest.raises(ConsoleProgramError,match='PROGRAM_LIBRARY_DISABLED'):
         programs.interactor.execute(programs.credential,ConsoleProgramRequest('submit','transfer.culs','a'*64,'r'))
 
@@ -76,16 +76,16 @@ def test_nested_imports_use_only_captured_library(programs):
     (programs.root/'library.culs').write_text('protocol helper() {}')
     snapshot=programs.sources.capture()
     # Import containment is independent of whether a library exports runnable semantics.
-    programs.interactor.validate_imports(snapshot,'transfer.culs')
+    programs.source_interactor.validate_imports(snapshot,'transfer.culs')
 
 
 @pytest.mark.parametrize('name',['../outside','/absolute','folder/../../outside'])
 def test_import_containment(programs,name,monkeypatch):
-    monkeypatch.setattr('culsma_os.program_manager.interactors.console_program.parse_file',
+    monkeypatch.setattr('culsma_os.program_manager.interactors.source.parse_file',
         lambda path:SimpleNamespace(library_imports=[SimpleNamespace(name=name)]))
     snapshot=programs.sources.capture()
     with pytest.raises(ConsoleProgramError,match='PROGRAM_IMPORT_OUTSIDE_LIBRARY'):
-        programs.interactor.validate_imports(snapshot,'transfer.culs')
+        programs.source_interactor.validate_imports(snapshot,'transfer.culs')
 
 
 def test_compile_errors_are_diagnostic_and_cannot_submit(programs):

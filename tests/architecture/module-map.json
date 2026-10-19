@@ -272,6 +272,10 @@
         {
           "component": "ResidentCommandPort",
           "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ProgramSourceInteractor",
+          "path": "src/culsma_os/program_manager/interactors/source.py"
         }
       ]
     },
@@ -462,6 +466,14 @@
         {
           "component": "SqliteStationConfigurationRepository",
           "path": "src/culsma_os/workspace_manager/repositories/configuration.py"
+        },
+        {
+          "component": "ProgramBindingInteractor",
+          "path": "src/culsma_os/workspace_manager/interactors.py"
+        },
+        {
+          "component": "ProgramBindingRequest",
+          "path": "src/culsma_os/workspace_manager/models.py"
         }
       ]
     },
@@ -839,6 +851,10 @@
         },
         {
           "component": "DeviceProfilePort",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "ProgramBindingProfilePort",
           "path": "src/culsma_os/driver_framework/models.py"
         }
       ]

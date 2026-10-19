@@ -129,3 +129,9 @@ class DeviceProfileInteractor:
                 'message':'Install a driver with the offline configuration profile capability'}],
                 'scope':'No device or program preflight performed'}
         return profiles[driver].validate(configuration)
+
+    def program_bindings(self, driver, configuration):
+        profiles, _ = self.discovery.discover()
+        profile = profiles.get(driver)
+        project = getattr(profile,'program_bindings',None)
+        return project(configuration) if callable(project) else None

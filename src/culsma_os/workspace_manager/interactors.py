@@ -553,3 +553,67 @@ class StationConfigurationInteractor(AuthorizedInteractor):
                 raise ConfigurationError('CONFIGURATION_EXPORT_INVALID')
             result['configuration'] = record['configuration']
         return result
+
+
+class ProgramBindingInteractor(AuthorizedInteractor):
+    """Read-only review of exact saved configuration and source identities."""
+    required_capability = 'configuration:drafts'
+    validation_scope = 'Allocation coverage and static address checks only. Capacity, geometry, routes, live resources and execution constraints remain resident worker preflight responsibilities.'
+
+    def __init__(self, tokens, repository: StationConfigurationRepository, profiles, programs):
+        super().__init__(tokens)
+        self.repository, self.profiles, self.programs = repository, profiles, programs
+
+    def perform(self, request):
+        import re
+        from .models import ProgramBindingRequest
+        if (not isinstance(request,ProgramBindingRequest)
+                or not isinstance(request.draft_id,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',request.draft_id) is None
+                or type(request.revision) is not int or request.revision < 1
+                or not isinstance(request.program_id,str) or not request.program_id
+                or not isinstance(request.snapshot_id,str) or re.fullmatch(r'[a-f0-9]{64}',request.snapshot_id) is None):
+            raise ConfigurationError('CONFIGURATION_BINDING_REQUEST_INVALID')
+        draft = self.repository.get(request.draft_id).as_dict()
+        if draft['revision'] != request.revision:
+            raise ConfigurationError('CONFIGURATION_REVISION_CONFLICT','conflict')
+        program = self.programs.review(request.program_id,request.snapshot_id)
+        validation = self.profiles.validate(draft['driver'],draft['configuration'])
+        diagnostics = [{**item,'owner':'program'} for item in program['diagnostics']]
+        diagnostics += [{**item,'owner':'configuration'} for item in validation['diagnostics']]
+        rows = []
+        if program['valid'] and validation['valid']:
+            bindings = self.profiles.program_bindings(draft['driver'],draft['configuration'])
+            rows, issues = self.compare(program['allocations'],bindings)
+            diagnostics.extend(issues)
+        # A concurrent save does not invalidate historical data, but must reject a current-review claim.
+        if self.repository.get(request.draft_id).revision != request.revision:
+            raise ConfigurationError('CONFIGURATION_REVISION_CONFLICT','conflict')
+        return {'schema':'culsma_program_bindings_v1','draft_id':draft['draft_id'],'revision':draft['revision'],
+                'fingerprint':draft['fingerprint'],'program_id':request.program_id,'snapshot_id':request.snapshot_id,
+                'valid':program['valid'] and validation['valid'] and not any(d.get('severity','error')=='error' for d in diagnostics),
+                'diagnostics':diagnostics,'bindings':rows,'scope':self.validation_scope,'activation':'not_applied'}
+
+    def compare(self, allocations, bindings):
+        if bindings is None:
+            return [],[{'owner':'workspace','code':'CONFIGURATION_BINDINGS_UNAVAILABLE',
+                        'message':'This driver does not expose offline program bindings'}]
+        if (not isinstance(bindings,dict) or any(not isinstance(key,str) or not isinstance(value,dict)
+                or set(value)!={'labware','well'} or any(not isinstance(v,str) or not v for v in value.values())
+                for key,value in bindings.items())):
+            raise ConfigurationError('CONFIGURATION_BINDINGS_RESPONSE_INVALID','bad_response')
+        expected = {item['allocation_id']:item for item in allocations}
+        used, rows, diagnostics = set(), [], []
+        for identity in sorted(expected.keys() | bindings.keys()):
+            allocation, address = expected.get(identity), bindings.get(identity)
+            status = 'missing' if address is None else 'extra' if allocation is None else 'matched'
+            if address is not None:
+                physical = (address['labware'],address['well'])
+                if physical in used:
+                    status = 'duplicate'
+                used.add(physical)
+            rows.append({'allocation_id':identity,'name':allocation.get('name') if allocation else None,
+                         'address':address,'status':status})
+            if status != 'matched':
+                diagnostics.append({'owner':'workspace','code':'CONFIGURATION_BINDING_'+status.upper(),
+                                    'allocation_id':identity,'message':status.capitalize()+' allocation binding'})
+        return rows,diagnostics

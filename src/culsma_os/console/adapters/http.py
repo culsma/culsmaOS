@@ -6,16 +6,16 @@ import logging
 from urllib.parse import unquote, urlsplit
 
 from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadRequest, ConsoleProgramRequest, ConsoleProgramError
-from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError
+from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError, ProgramBindingRequest
 from culsma_os.auth.models import ConsoleAccessError
 
 
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None):
         self.commands, self.configuration, self.sessions = commands, configuration, sessions
-        self.programs = programs
+        self.programs, self.bindings = programs, bindings
         super().__init__(("127.0.0.1", settings.port), ConsoleHTTPHandler)
 
     @property
@@ -117,11 +117,19 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             raise ConsoleReadError('PROGRAM_REQUEST_INVALID','invalid_request')
         return ConsoleProgramRequest(**payload)
 
+    def binding_request(self, payload):
+        if (not isinstance(payload,dict) or set(payload) != {'draft_id','revision','program_id','snapshot_id'}
+                or type(payload['revision']) is not int
+                or any(not isinstance(payload[key],str) for key in ['draft_id','program_id','snapshot_id'])):
+            raise ConsoleReadError('CONFIGURATION_BINDING_REQUEST_INVALID','invalid_request')
+        return ProgramBindingRequest(**payload)
+
     def do_POST(self):
         try:
             url = urlsplit(self.path)
             self.validate_context(True)
-            endpoints = {'/api/v1/configuration/drafts':(self.server.configuration,self.configuration_request,'culsma_configuration_v1'),
+            endpoints = {'/api/v1/configuration/program-bindings':(self.server.bindings,self.binding_request,'culsma_configuration_v1'),
+                         '/api/v1/configuration/drafts':(self.server.configuration,self.configuration_request,'culsma_configuration_v1'),
                          '/api/v1/programs':(self.server.programs,self.program_request,'culsma_program_console_v1')}
             if url.path not in endpoints or endpoints[url.path][0] is None:
                 self.reject_method()

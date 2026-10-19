@@ -1,6 +1,7 @@
 from culsma_os.auth.interactors import TokenInteractor
 from culsma_os.auth.repository import SessionCredentialRepository
 from culsma_os.program_manager.interactors.console_program import ConsoleProgramInteractor
+from culsma_os.program_manager.interactors.source import ProgramSourceInteractor
 from culsma_os.program_manager.interactors.compilation import CompilationInteractor
 from culsma_os.program_manager.interactors.semantics import HostedRuntimeInteractor
 from culsma_os.program_manager.repositories.sources import FileProgramSourceRepository
@@ -18,7 +19,8 @@ class ProgramCommandFixture:
         self.calls = []
         self.failure = None
         self.resident = resident or self
-        self.interactor = ConsoleProgramInteractor(self.tokens,self.sources,CompilationInteractor(),HostedRuntimeInteractor(),self.resident)
+        self.source_interactor = ProgramSourceInteractor(self.sources,CompilationInteractor(),HostedRuntimeInteractor())
+        self.interactor = ConsoleProgramInteractor(self.tokens,self.source_interactor,self.resident)
 
     def execute(self,payload):
         self.calls.append(payload)
