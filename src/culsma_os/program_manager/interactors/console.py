@@ -17,6 +17,12 @@ class ConsoleCommandInteractor:
         if request.resource == "run":
             self.validate_run_id(request.run_id)
             data = self.read({"action": "status", "run_id": request.run_id})
+            try:
+                data['execution_evidence'] = self.read({'action': 'run-evidence', 'run_id': request.run_id})
+            except ConsoleReadError as error:
+                if error.code != 'HOST_COMMAND_UNSUPPORTED':
+                    raise
+                data['execution_evidence'] = None
         else:
             if request.run_id is not None:
                 raise ConsoleReadError("CONSOLE_REQUEST_INVALID", "invalid_request")
@@ -35,9 +41,9 @@ class ConsoleCommandInteractor:
     def read(self, payload):
         if (not isinstance(payload, dict) or set(payload) - {"action", "run_id"}
                 or not isinstance(payload.get("action"), str)
-                or payload.get("action") not in {"host-status", "device-status", "runs", "status"}):
+                or payload.get("action") not in {"host-status", "device-status", "runs", "status", "run-evidence"}):
             raise ConsoleReadError("CONSOLE_READ_ONLY", "read_only")
-        if payload["action"] == "status":
+        if payload["action"] in {"status", "run-evidence"}:
             self.validate_run_id(payload.get("run_id"))
         elif "run_id" in payload:
             raise ConsoleReadError("CONSOLE_REQUEST_INVALID", "invalid_request")

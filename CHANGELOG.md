@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show run-scoped execution attempts, evidence, logical completions and matched material registrations in the read-only console. Existing CLI status responses are unchanged.
+
 - Add a loopback-only, read-only station console connected to an existing resident host. Station, queue and run-report views preserve recorded uncertainty and cannot issue device or run-control commands.
 
 ## 0.1.1 — Public experimental preview

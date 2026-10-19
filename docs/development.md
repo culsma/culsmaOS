@@ -125,3 +125,10 @@ culsma-os submit examples/transfer/transfer.culs --socket /tmp/culsma-console.so
 
 Stopping the console does not stop the resident service. An unavailable host is
 shown as disconnected; the console never starts or resumes execution implicitly.
+
+Run detail also reads a separate run-scoped evidence view. Expand intent, execution
+and registration records to inspect their identities and payloads. Device attempts
+and no-action logical completions are separate; derived collective evidence keeps
+its coverage label. Missing receipts and unmatched registrations stay explicit.
+Evidence and registration share one read snapshot; the run summary is independent.
+The view does not claim hardware timing or include every semantic declaration.

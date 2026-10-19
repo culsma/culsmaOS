@@ -212,7 +212,8 @@ def test_inspection_ownership_and_read_only_architecture():
         'device_manager/repository.py':{'os_devices'},
         'workspace_manager/repository.py':{'os_layouts','os_labware_positions','os_motion_registrations','os_station_motion_intents','os_workspace_imports'},
         'resource_manager/repository.py':{'os_resource_locks','os_permits','os_run_reservations','os_run_resources','os_station_usage','os_run_releases'},
-        'event_journal/repositories/inspection.py':{'os_attempts','os_evidence'},
+        'event_journal/repositories/inspection.py':{'os_attempts','os_evidence','os_logical_completions'},
+        'material_system/repositories/inspection.py':{'os_material_changes'},
     }
     import re
     for path,owned in files.items():

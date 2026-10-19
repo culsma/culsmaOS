@@ -7,6 +7,8 @@ class StationConsoleApp {
     this.pending = false;
     this.timer = null;
     this.lastObserved = null;
+    this.openRecords = new Set();
+    this.renderKey = null;
   }
 
   start() {
@@ -149,6 +151,65 @@ class StationConsoleApp {
     this.showAlert(null);
   }
 
+  recordDetails(label, value) {
+    const disclosure = this.element('details', '', 'record-details');
+    const key = [label, value?.run_id, value?.effect_id, value?.step_id].join(':');
+    disclosure.open = this.openRecords.has(key);
+    disclosure.addEventListener('toggle', () => {
+      if (disclosure.open) this.openRecords.add(key);
+      else this.openRecords.delete(key);
+    });
+    disclosure.append(this.element('summary', label));
+    disclosure.append(this.element('pre', JSON.stringify(value, null, 2), 'record-json'));
+    return disclosure;
+  }
+
+  renderEvidence(evidence) {
+    const card = this.card('Execution evidence');
+    if (!evidence) {
+      card.append(this.element('p', 'This service does not provide a run evidence view.', 'empty'));
+      return card;
+    }
+    card.append(this.element('p', 'OS journal records, not physical measurements. Device attempts and logical completions are listed separately in journal insertion order; no hardware timing is inferred. The run summary is read independently.', 'note'));
+    if (evidence.accounting !== 'recorded') {
+      card.append(this.element('p', 'Execution journal is unavailable. An empty view does not prove that no action occurred.', 'notice'));
+    }
+    card.append(this.element('h3', 'Device execution attempts'));
+    const attempts = evidence.attempts || [];
+    if (!attempts.length) card.append(this.element('p', 'No device attempts are recorded in this snapshot.', 'empty'));
+    for (const item of attempts) {
+      const row = this.element('article', '', 'evidence-attempt');
+      const identity = this.element('div');
+      identity.append(this.element('h4', this.display(item.step_id), 'mono'),
+        this.element('div', `${this.display(item.device_id)} · ${item.mode}`, 'label'));
+      const proof = item.evidence;
+      const status = proof ? proof.outcome : item.evidence_status;
+      const outcome = this.element('div', '', 'evidence-outcomes');
+      for (const [label, value] of [['Evidence', status], ['Material', item.registration?.status || 'not_recorded']]) {
+        const field = this.element('div');
+        field.append(this.element('div', label, 'label'), this.badge(value));
+        outcome.append(field);
+      }
+      const scope = proof?.payload?.evidence_scope || (proof?.payload?.aggregate ? 'aggregate coverage' : null);
+      if (scope) outcome.append(this.element('div', scope, 'label'));
+      const detail = this.element('div');
+      detail.append(this.recordDetails('Intent and references', {
+        attempt_id: item.attempt_id, effect_id: item.effect_id, context: item.context
+      }));
+      if (proof) detail.append(this.recordDetails('Execution receipt', proof));
+      if (item.registration?.receipt) detail.append(this.recordDetails('Registration receipt', item.registration.receipt));
+      row.append(identity, outcome, detail);
+      card.append(row);
+    }
+    card.append(this.element('p', 'Missing evidence means no matching receipt is recorded; it does not mean the action failed or never happened. A derived or aggregate receipt keeps its original coverage in the expanded record.', 'note'));
+    card.append(this.element('h3', 'Logical completions · no device action'));
+    card.append(this.table(['Effect', 'Mode', 'Material registration', 'Records'], (evidence.logical_completions || []).map(item => [
+      this.element('span', item.effect_id, 'mono'), item.mode, this.badge(item.registration?.status || 'not_recorded'),
+      this.recordDetails('Logical completion and registration', item)
+    ]), 'No logical completions are recorded in this snapshot.'));
+    return card;
+  }
+
   renderRun(data) {
     const back = this.element('a', '← All runs', 'back');
     back.href = '#runs';
@@ -180,7 +241,7 @@ class StationConsoleApp {
       material.append(this.element('p', 'No registered material snapshot is available for this run.', 'empty'));
     }
     const diagnostics = (result.alerts || []).map(item => typeof item === 'string' ? item : item.code || 'Diagnostic');
-    this.content.replaceChildren(back, state, semantic, material);
+    this.content.replaceChildren(back, state, semantic, this.renderEvidence(data.execution_evidence), material);
     this.showAlert(data.error || data.body_error || (diagnostics.length ? diagnostics.join(' · ') : null));
   }
 
@@ -211,10 +272,15 @@ class StationConsoleApp {
       document.querySelector('#connection').className = '';
       document.querySelector('#connection').replaceChildren(this.badge('Connected'));
       document.querySelector('#observed').textContent = `Read ${new Date(snapshot.observed_at).toLocaleTimeString()} · OS records · separate snapshots`;
-      if (isRun) this.renderRun(snapshot.data);
-      else if (route === '#runs') this.renderRuns(snapshot.data);
-      else this.renderStation(snapshot.data);
+      const key = route + JSON.stringify(snapshot.data);
+      if (key !== this.renderKey) {
+        if (isRun) this.renderRun(snapshot.data);
+        else if (route === '#runs') this.renderRuns(snapshot.data);
+        else this.renderStation(snapshot.data);
+        this.renderKey = key;
+      }
     } catch (error) {
+      this.renderKey = null;
       document.querySelector('#connection').className = '';
       const disconnected = error.httpStatus === 503 || error instanceof TypeError || error.name === 'AbortError';
       document.querySelector('#connection').replaceChildren(this.badge(disconnected ? 'Disconnected' : 'Read unavailable'));

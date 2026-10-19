@@ -40,10 +40,16 @@ class RunControlInteractor:
 
 
 class RunInspectionInteractor:
-    def __init__(self, tasks, report, connections):
+    def __init__(self, tasks, report, connections, evidence=None):
         self.tasks, self.report, self.connections = tasks, report, connections
+        self.evidence = evidence
 
     def execute(self, request):
+        if request.action == "evidence":
+            self.tasks.get(request.run_id)
+            if self.evidence is None:
+                raise ValueError('RUN_EVIDENCE_UNAVAILABLE')
+            return self.evidence.execute(request.run_id)
         if request.action == "pause":
             self.tasks.pause_dispatch(request.run_id)
         elif request.action == "cancel":

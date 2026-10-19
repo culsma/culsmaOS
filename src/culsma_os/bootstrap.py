@@ -264,7 +264,17 @@ class OSApplicationFactory:
         execution = ExecutionHostInteractor(tasks, host, state)
         material = MaterialInteractor(LocalMaterialRepository(connections[1]), RuntimeCheckpointCodecInteractor())
         report = RunReportInteractor(tasks, execution, material)
-        return RunInspectionInteractor(tasks, report, connections)
+        from .storage import ReadOnlyDatabaseSnapshot
+        from .program_manager.interactors.run_evidence import RunEvidenceInteractor
+        from .event_journal.interactors.inspection import EvidenceInspectionInteractor
+        from .event_journal.repositories.inspection import SqliteEvidenceInspectionRepository
+        from .material_system.interactors import MaterialInspectionInteractor
+        from .material_system.repositories.inspection import SqliteMaterialInspectionRepository
+        snapshot = ReadOnlyDatabaseSnapshot(context.database_path)
+        evidence = RunEvidenceInteractor(snapshot,
+            EvidenceInspectionInteractor(SqliteEvidenceInspectionRepository(snapshot)),
+            MaterialInspectionInteractor(SqliteMaterialInspectionRepository(snapshot)))
+        return RunInspectionInteractor(tasks, report, connections, evidence)
 
     def build_workspace_catalog(self, context):
         if context.workspace_config_path is None:

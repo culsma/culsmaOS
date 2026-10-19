@@ -1,4 +1,6 @@
 from culsma_os.program_manager.models import EffectResolution, GroupEffectResolution
+from dataclasses import asdict
+from .repositories.inspection import MaterialInspectionRepository
 from .models import ReconciliationResult
 from culsma_os.event_journal.models import LogicalCompletion
 from .repositories import MaterialRepository
@@ -163,3 +165,15 @@ class MaterialInteractor:
         return ReconciliationResult(True, EffectResolution(pending.effect_id, completion.completion_id,
             receipt.registration_id, completion.proposed_state_fingerprint, completion.mode,
             "OS_TRANSFER_NO_ACTION", completion.payload))
+
+
+class MaterialInspectionInteractor:
+    def __init__(self, repository: MaterialInspectionRepository):
+        self.repository = repository
+
+    def inspect_registration(self, effect_id, completion_id):
+        receipt = self.repository.receipt(effect_id)
+        if receipt is None:
+            return {'status': 'not_recorded', 'receipt': None}
+        matched = receipt.effect_id == effect_id and completion_id is not None and receipt.evidence_id == completion_id
+        return {'status': 'registered' if matched else 'unmatched', 'receipt': asdict(receipt)}

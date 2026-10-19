@@ -21,6 +21,9 @@ class ResidentCommandInteractor:
             return {'accepted': True, 'status': 'stopping'}
         if request.action == 'runs':
             return {'runs': [self.describe(entry.run_id) for entry in self.queue.entries()]}
+        if request.action == 'run-evidence':
+            self.require_run(request.run_id)
+            return self.inspector.execute(RunControlRequest('evidence', request.run_id, self.context))
         if request.action == 'status':
             self.require_run(request.run_id)
             result = self.inspector.execute(RunControlRequest('status', request.run_id, self.context))

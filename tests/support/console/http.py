@@ -12,6 +12,7 @@ class ResidentReadFixture:
             'device-status': {'source': 'os_records', 'hardware_observed': False,
                               'devices': [], 'resources': {}},
             'runs': {'runs': []},
+            'run-evidence': {'schema': 'culsma_run_evidence_v1', 'attempts': [], 'logical_completions': []},
             'status': {'run_id': 'run-1', 'status': 'completed', 'result': {}},
         }
         self.failure = None
@@ -49,3 +50,67 @@ class ConsoleHTTPHarness:
             return response.status, dict(response.getheaders()), payload
         finally:
             connection.close()
+
+
+class ConsoleProtocolHarness:
+    """Run the official SDK in its normal CLI process, with bounded cleanup."""
+    def __init__(self, directory, profile):
+        from pathlib import Path
+        from uuid import uuid4
+        from tests.support.paths import ROOT
+        from culsma_os.program_manager.adapters.resident import ResidentClientAdapter
+        self.directory, self.profile, self.root = directory, profile, ROOT
+        self.endpoint = Path('/private/tmp')/('culsma-console-test-'+uuid4().hex[:12]+'.sock')
+        self.database = directory/'os.sqlite3'
+        self.client = ResidentClientAdapter(self.endpoint, 5)
+        self.process, self.log = None, None
+
+    def __enter__(self):
+        import subprocess
+        import sys
+        self.log = (self.directory/'resident.log').open('w')
+        self.process = subprocess.Popen([sys.executable,'-m','culsma_os.cli','serve',
+            '--socket',str(self.endpoint),'--host-db',str(self.database),
+            '--driver-config',str(self.root/'examples'/self.profile/'deck.json'),
+            '--artifacts-dir',str(self.directory/'artifacts')], stdout=self.log,stderr=subprocess.STDOUT)
+        try:
+            self.wait(lambda: self.client.execute({'action':'host-status'})['status']=='ready', 30)
+            return self
+        except BaseException:
+            self.__exit__(None,None,None)
+            raise
+
+    def wait(self, predicate, timeout):
+        import time
+        deadline = time.monotonic()+timeout
+        while time.monotonic()<deadline:
+            if self.process.poll() is not None:
+                raise AssertionError('Resident process exited; inspect resident.log')
+            try:
+                if predicate():
+                    return
+                state = self.client.execute({'action':'host-status'})
+                if state['status']=='failed':
+                    raise AssertionError(str(state))
+            except OSError:
+                pass
+            time.sleep(.2)
+        raise AssertionError('Resident process timed out; inspect resident.log')
+
+    def __exit__(self, *args):
+        import subprocess
+        try:
+            if self.process and self.process.poll() is None:
+                try:
+                    self.client.execute({'action':'shutdown'})
+                except (OSError,ValueError):
+                    self.process.terminate()
+                try:
+                    self.process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait(timeout=5)
+        finally:
+            if self.log:
+                self.log.close()
+            self.endpoint.with_name(self.endpoint.name+'.host.lock').unlink(missing_ok=True)

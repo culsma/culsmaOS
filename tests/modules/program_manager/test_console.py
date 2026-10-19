@@ -41,7 +41,7 @@ class TestConsoleCommand:
         resident = ResidentReadFixture()
         resident.responses['status']['result'] = {'os': {'registered_material': {'version': 3}}}
         response = ConsoleCommandInteractor(resident).execute(ConsoleReadRequest('run', 'run-1'))
-        assert resident.calls == [{'action': 'status', 'run_id': 'run-1'}]
+        assert resident.calls == [{'action': 'status', 'run_id': 'run-1'}, {'action': 'run-evidence', 'run_id': 'run-1'}]
         assert response.data['result']['os']['registered_material']['version'] == 3
 
     @pytest.mark.parametrize('failure,code,kind', [
@@ -61,3 +61,13 @@ class TestConsoleCommand:
         resident = ResidentReadFixture(); resident.responses['runs'] = {'runs': None}
         with pytest.raises(ConsoleReadError, match='CONSOLE_BACKEND_RESPONSE_INVALID'):
             ConsoleCommandInteractor(resident).execute(ConsoleReadRequest('runs'))
+
+
+    def test_existing_service_without_evidence_query_keeps_its_run_report(self):
+        class ExistingResident(ResidentReadFixture):
+            def execute(self, payload):
+                if payload['action'] == 'run-evidence':
+                    raise ValueError('HOST_COMMAND_UNSUPPORTED')
+                return super().execute(payload)
+        result = ConsoleCommandInteractor(ExistingResident()).execute(ConsoleReadRequest('run','run-1'))
+        assert result.data['status'] == 'completed' and result.data['execution_evidence'] is None

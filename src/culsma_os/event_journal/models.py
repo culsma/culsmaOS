@@ -47,3 +47,11 @@ class DeviceEvidenceObservation:
     known_consumption: dict[str, int]
     evidence_ids: tuple[str, ...]
     accounting: str = 'recorded'
+
+
+@dataclass(frozen=True)
+class RunJournalObservation:
+    operations: tuple[AttemptObservation, ...]
+    logical_completions: tuple[LogicalCompletion, ...]
+    mismatched_effect_ids: tuple[str, ...]
+    accounting: str

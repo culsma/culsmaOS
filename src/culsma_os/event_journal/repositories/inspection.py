@@ -1,13 +1,15 @@
 """Read-only access to EventJournal-owned attempt and receipt tables."""
 import json
 from typing import Protocol
-from ..models import AttemptRecord, ExecutionEvidence
+from ..models import AttemptRecord, ExecutionEvidence, LogicalCompletion
 
 
 class EvidenceInspectionRepository(Protocol):
     def attempts(self, device_id) -> tuple[AttemptRecord, ...]: ...
     def evidence(self) -> tuple[ExecutionEvidence, ...]: ...
     def available(self) -> bool: ...
+    def attempts_for_run(self, run_id) -> tuple[AttemptRecord, ...]: ...
+    def logical_for_run(self, run_id) -> tuple[LogicalCompletion, ...]: ...
 
 
 class SqliteEvidenceInspectionRepository:
@@ -25,3 +27,14 @@ class SqliteEvidenceInspectionRepository:
     def evidence(self):
         return tuple(ExecutionEvidence(**json.loads(row[0])) for row in self.snapshot.rows(
             "os_evidence", "SELECT record FROM os_evidence ORDER BY evidence_id"))
+
+
+    def attempts_for_run(self, run_id):
+        records = (json.loads(row[0]) for row in self.snapshot.rows(
+            'os_attempts', 'SELECT record FROM os_attempts ORDER BY rowid'))
+        return tuple(AttemptRecord(**r) for r in records if r['run_id'] == run_id)
+
+    def logical_for_run(self, run_id):
+        records = (json.loads(row[0]) for row in self.snapshot.rows(
+            'os_logical_completions', 'SELECT record FROM os_logical_completions ORDER BY rowid'))
+        return tuple(LogicalCompletion(**r) for r in records if r['run_id'] == run_id)

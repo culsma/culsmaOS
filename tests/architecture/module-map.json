@@ -236,6 +236,10 @@
         {
           "component": "ResidentReadPort",
           "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "RunEvidenceInteractor",
+          "path": "src/culsma_os/program_manager/interactors/run_evidence.py"
         }
       ]
     },
@@ -304,6 +308,18 @@
         {
           "component": "ReconciliationResult",
           "path": "src/culsma_os/material_system/models.py"
+        },
+        {
+          "component": "MaterialInspectionInteractor",
+          "path": "src/culsma_os/material_system/interactors.py"
+        },
+        {
+          "component": "MaterialInspectionRepository",
+          "path": "src/culsma_os/material_system/repositories/inspection.py"
+        },
+        {
+          "component": "SqliteMaterialInspectionRepository",
+          "path": "src/culsma_os/material_system/repositories/inspection.py"
         }
       ]
     },
@@ -813,6 +829,10 @@
         },
         {
           "component": "DeviceEvidenceObservation",
+          "path": "src/culsma_os/event_journal/models.py"
+        },
+        {
+          "component": "RunJournalObservation",
           "path": "src/culsma_os/event_journal/models.py"
         }
       ]
