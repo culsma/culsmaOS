@@ -276,6 +276,10 @@
         {
           "component": "ProgramSourceInteractor",
           "path": "src/culsma_os/program_manager/interactors/source.py"
+        },
+        {
+          "component": "ResidentCommandFactory",
+          "path": "src/culsma_os/bootstrap.py"
         }
       ]
     },
@@ -474,6 +478,10 @@
         {
           "component": "ProgramBindingRequest",
           "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "ConfigurationDraftInteractor",
+          "path": "src/culsma_os/workspace_manager/interactors.py"
         }
       ]
     },
@@ -982,6 +990,14 @@
         {
           "component": "SqliteResidentConfigurationRepository",
           "path": "src/culsma_os/lifecycle_manager/repository.py"
+        },
+        {
+          "component": "ConsoleActivationInteractor",
+          "path": "src/culsma_os/lifecycle_manager/interactors.py"
+        },
+        {
+          "component": "ConsoleActivationRequest",
+          "path": "src/culsma_os/lifecycle_manager/models.py"
         }
       ]
     },

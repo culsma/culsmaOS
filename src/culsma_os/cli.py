@@ -87,7 +87,7 @@ class CulsmaOSCLI:
                 parser.exit(2, f"{error}\n")
             try:
                 print(f"Station console: {server.url}", flush=True)
-                print("Drafts remain offline; program commands use the existing resident worker.", flush=True)
+                print("Draft editing is offline; explicit application is handled by the resident service.", flush=True)
                 server.serve_forever(poll_interval=0.2)
             except KeyboardInterrupt:
                 pass

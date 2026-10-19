@@ -79,3 +79,24 @@ def test_invalid_requests_are_rejected_before_draft_write(tmp_path,draft_request
     path=tmp_path/'drafts.sqlite3';fixture=ConfigurationFixture(path)
     with pytest.raises(ConfigurationError): fixture.execute(draft_request)
     assert not path.exists()
+
+
+
+def test_independent_repositories_converge_on_revision_conflict(tmp_path):
+    from threading import Barrier
+    first=ConfigurationFixture(tmp_path/'drafts.sqlite3')
+    second=ConfigurationFixture(tmp_path/'drafts.sqlite3')
+    draft=create(first)
+    for expected in range(1,11):
+        barrier=Barrier(2)
+        def save(item):
+            fixture,title=item;barrier.wait(timeout=5)
+            try:
+                return fixture.execute(StationConfigurationRequest('save',draft['draft_id'],expected,title,'test-profile',{'valid':True}))
+            except ConfigurationError as error:return error.code
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results=list(executor.map(save,[(first,'First'),(second,'Second')]))
+        assert sum(isinstance(value,dict) for value in results)==1
+        assert results.count('CONFIGURATION_REVISION_CONFLICT')==1
+    assert first.repository.get(draft['draft_id']).revision==11
+    assert first.repository.get(draft['draft_id'],1).as_dict()==draft

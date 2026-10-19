@@ -35,6 +35,7 @@ export class ConsolePrograms {
     this.app.button.disabled = true;
     try {
       this.library = await this.request();
+      try { await this.app.activation.refresh(); } catch { this.app.activation.view = null; }
       const drafts = await this.app.configurationFetch('/api/v1/configuration/drafts');
       this.drafts = drafts.drafts || [];
       if (this.bindingReview && !this.drafts.some(draft => draft.draft_id === this.bindingReview.draft_id && draft.revision === this.bindingReview.revision)) this.bindingReview = null;
@@ -71,12 +72,12 @@ export class ConsolePrograms {
     },(this.library?.programs || []).map(item => item.program_id),{field:'/program-id'}));
     const check = a.configButton('Check program',() => this.inspect(selected),'',{action:'program.check',entity:selected});
     check.disabled = this.working || !selected;card.append(check);
-    const children = [card];
+    const children = [this.app.activation.render(),card];
     if (this.inspection) {
       const view = a.card('Reviewed source snapshot');
       view.append(a.badge(this.inspection.valid ? 'valid':'invalid'),a.details([
         ['Program',this.inspection.program_id],['Snapshot',a.element('span',this.inspection.snapshot_id,'mono')],
-        ['Configuration','Running service · worker preflight still required']
+        ['Configuration',this.reviewedConfiguration ? `${this.reviewedConfiguration.origin?.title || 'Service startup configuration'} · ${this.reviewedConfiguration.fingerprint.slice(0,12)}`:'Configuration status unavailable']
       ]),a.element('p',this.inspection.scope,'note'));
       view.append(a.table(['Diagnostic','Severity'],(this.inspection.diagnostics || []).map(item => [item.code,item.severity]),'No source diagnostics.'));
       view.append(a.table(['Allocation','Name'],(this.inspection.allocations || []).map(item => [item.allocation_id,item.name]),'No container allocations.'));
@@ -90,12 +91,19 @@ export class ConsolePrograms {
       const submit = a.card('Submit to the resident queue');
       if (pending) submit.append(a.element('p',`A submission receipt is still pending for ${pending.program_id}. Retry uses the same saved request ID; it does not create a new submission identity.`,'notice'));
       else submit.append(a.element('p','Submit the reviewed snapshot. The existing worker performs device preflight and records execution evidence. Admission is not completed execution.','note'));
+      if (!pending && this.reviewedConfiguration?.fingerprint !== this.app.activation.view?.active?.fingerprint) submit.append(a.element('p','The station configuration changed after review. Check the program again before submission.','notice'));
       const button = a.configButton(pending ? 'Retry same submission':'Submit reviewed snapshot',() => this.submit(),'',
         {action:'program.submit',entity:pending?.program_id || this.inspection.program_id});
-      button.disabled = this.working;submit.append(button);children.push(submit);
+      button.disabled = this.working || (!pending && (!this.reviewedConfiguration || this.app.activation.view?.host.status !== 'ready' || this.reviewedConfiguration.fingerprint !== this.app.activation.view?.active?.fingerprint));submit.append(button);children.push(submit);
     }
     a.content.replaceChildren(...children);
     for (const field of a.content.querySelectorAll('input,select')) field.disabled = this.working;
+  }
+
+  bindingIsActive(report) {
+    const origin = this.app.activation.view?.active?.origin;
+    return !!origin && origin.draft_id === report.draft_id && origin.revision === report.revision
+      && origin.configuration_fingerprint === report.fingerprint;
   }
 
   renderBindings() {
@@ -127,7 +135,7 @@ export class ConsolePrograms {
       card.dataset.snapshotId = report.snapshot_id;
       card.append(a.badge(report.valid ? 'valid':'invalid'),a.details([
         ['Configuration',`${report.draft_id} · r${report.revision}`],['Program snapshot',report.snapshot_id],
-        ['Activation','Not applied · submissions still use the running service']
+        ['Activation',this.bindingIsActive(report) ? 'This saved revision is active':'Review only · this is not the active saved revision']
       ]),a.element('p',report.scope,'note'));
       card.append(a.table(['Allocation','Name','Physical address','Status'],report.bindings.map(item => [
         item.allocation_id,item.name || '—',item.address ? `${item.address.labware} / ${item.address.well}`:'—',item.status
@@ -147,7 +155,7 @@ export class ConsolePrograms {
         draft_id:draft.draft_id,revision:draft.revision,program_id:this.inspection.program_id,snapshot_id:this.inspection.snapshot_id
       });
       this.app.interaction.result('program.check-bindings',this.bindingReview.valid ? 'succeeded':'invalid',
-        this.bindingReview.valid ? 'Bindings match the reviewed program. Configuration has not been applied.':'Binding checks found problems; inspect the report.',
+        this.bindingReview.valid ? 'Bindings match the reviewed program. This check did not change the active configuration.':'Binding checks found problems; inspect the report.',
         {entity:draft.draft_id,revision:draft.revision});
       this.app.showAlert(null);
     } catch (error) {
@@ -166,6 +174,9 @@ export class ConsolePrograms {
     this.working = true;this.app.syncBusy();this.render();
     this.app.interaction.result('program.check','pending','Checking program source.',{entity:programId});
     try {
+      await this.app.activation.refresh();
+      this.reviewedConfiguration = structuredClone(this.app.activation.view.active);
+      this.bindingDraft = this.reviewedConfiguration.origin?.draft_id || this.bindingDraft;
       this.inspection = await this.request({action:'inspect',program_id:programId});
       this.app.interaction.result('program.check',this.inspection.valid ? 'succeeded':'invalid',
         this.inspection.valid ? 'Source snapshot checked. Device and resource preflight still runs in the worker.':'Source checks rejected this program.',{entity:programId});
@@ -186,7 +197,7 @@ export class ConsolePrograms {
     let payload;
     try {
       payload = this.pending('submission') || {action:'submit',program_id:this.inspection.program_id,
-        snapshot_id:this.inspection.snapshot_id,request_id:crypto.randomUUID()};
+        snapshot_id:this.inspection.snapshot_id,request_id:crypto.randomUUID(),configuration_fingerprint:this.reviewedConfiguration.fingerprint};
       this.remember('submission',payload);
       this.app.interaction.result('program.submit','pending','Submission pending. Request identity retained.',{entity:payload.program_id,requestId:payload.request_id});
       const result = await this.request(payload);

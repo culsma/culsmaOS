@@ -22,7 +22,7 @@ def draft_console(tmp_path):
 def test_draft_http_flow_is_independent_of_resident(draft_console):
     console,headers,fixture,resident=draft_console
     status,_,body=console.request('GET','/api/v1/session',{'X-Culsma-Console':'1','Sec-Fetch-Site':'same-origin'})
-    assert status==200 and body['scope']=='configuration:drafts programs:execute'
+    assert status==200 and body['scope']=='configuration:drafts configuration:activate programs:execute'
     assert console.request('GET','/api/v1/configuration/profiles',headers)[2]['data']['profiles']
     assert console.request('GET','/api/v1/configuration/drafts',headers)[2]['data']['drafts']==[]
     code,_,body=console.request('POST','/api/v1/configuration/drafts',headers,

@@ -58,3 +58,17 @@ def test_binding_owner_uses_fixed_auth_and_no_foreign_repository():
     tree=ast.parse((ROOT/'src/culsma_os/workspace_manager/interactors.py').read_text())
     imports=[node.module or '' for node in ast.walk(tree) if isinstance(node,ast.ImportFrom)]
     assert not any('program_manager.repositories' in name or 'culsma_opentrons' in name for name in imports)
+
+
+
+def test_activation_owner_and_adapter_boundaries():
+    from culsma_os.auth.interactors import AuthorizedInteractor
+    from culsma_os.lifecycle_manager.interactors import ConsoleActivationInteractor
+    assert ConsoleActivationInteractor.execute is AuthorizedInteractor.execute
+    assert ConsoleActivationInteractor.required_capability=='configuration:activate'
+    tree=ast.parse((ROOT/'src/culsma_os/lifecycle_manager/interactors.py').read_text())
+    imports=[node.module or '' for node in ast.walk(tree) if isinstance(node,ast.ImportFrom)]
+    assert not any('workspace_manager.repositories' in name or 'culsma_opentrons' in name for name in imports)
+    source=(ROOT/'src/culsma_os/console/web/activation.js').read_text()
+    assert "action:'configuration.apply'" in source and "field:'/activation-confirmation'" in source
+    assert 'setInterval' not in source

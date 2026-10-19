@@ -8,14 +8,15 @@ from urllib.parse import unquote, urlsplit
 from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadRequest, ConsoleProgramRequest, ConsoleProgramError
 from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError, ProgramBindingRequest
 from culsma_os.auth.models import ConsoleAccessError
+from culsma_os.lifecycle_manager.models import ConsoleActivationRequest
 
 
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None):
         self.commands, self.configuration, self.sessions = commands, configuration, sessions
-        self.programs, self.bindings = programs, bindings
+        self.programs, self.bindings, self.activation = programs, bindings, activation
         super().__init__(("127.0.0.1", settings.port), ConsoleHTTPHandler)
 
     @property
@@ -31,6 +32,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
         "/interaction.js": ("interaction.js", "text/javascript; charset=utf-8"),
         "/programs.js": ("programs.js", "text/javascript; charset=utf-8"),
+        "/activation.js": ("activation.js", "text/javascript; charset=utf-8"),
         "/style.css": ("style.css", "text/css; charset=utf-8"),
         "/assets/culsma-os-wordmark.png": ("assets/culsma-os-wordmark.png", "image/png"),
         "/assets/culsma-logo.png": ("assets/culsma-logo.png", "image/png"),
@@ -83,6 +85,10 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                 result = self.server.configuration.execute(self.headers.get('Authorization'),StationConfigurationRequest(action))
                 self.respond(200,json.dumps({'schema':'culsma_configuration_v1','data':result}).encode())
                 return
+            if url.path == '/api/v1/configuration/active' and self.server.activation is not None:
+                result = self.server.activation.execute(self.headers.get('Authorization'),ConsoleActivationRequest('status'))
+                self.respond(200,json.dumps({'schema':'culsma_configuration_v1','data':result}).encode())
+                return
             if url.path == '/api/v1/programs' and self.server.programs is not None:
                 result = self.server.programs.execute(self.headers.get('Authorization'),ConsoleProgramRequest('list'))
                 self.respond(200,json.dumps({'schema':'culsma_program_console_v1','data':result}).encode())
@@ -111,11 +117,19 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         return StationConfigurationRequest(**payload)
 
     def program_request(self, payload):
-        allowed = {'action','program_id','snapshot_id','request_id','run_id'}
+        allowed = {'action','program_id','snapshot_id','request_id','run_id','configuration_fingerprint'}
         if (not isinstance(payload,dict) or set(payload)-allowed or not isinstance(payload.get('action'),str)
                 or any(value is not None and not isinstance(value,str) for value in payload.values())):
             raise ConsoleReadError('PROGRAM_REQUEST_INVALID','invalid_request')
         return ConsoleProgramRequest(**payload)
+
+    def activation_request(self, payload):
+        allowed = {'action','draft_id','revision','expected_fingerprint','request_id'}
+        if (not isinstance(payload,dict) or set(payload)-allowed or not isinstance(payload.get('action'),str)
+                or any(payload.get(key) is not None and not isinstance(payload[key],str) for key in allowed-{'revision'})
+                or (payload.get('revision') is not None and type(payload['revision']) is not int)):
+            raise ConsoleReadError('CONFIGURATION_ACTIVATION_REQUEST_INVALID','invalid_request')
+        return ConsoleActivationRequest(**payload)
 
     def binding_request(self, payload):
         if (not isinstance(payload,dict) or set(payload) != {'draft_id','revision','program_id','snapshot_id'}
@@ -128,7 +142,8 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         try:
             url = urlsplit(self.path)
             self.validate_context(True)
-            endpoints = {'/api/v1/configuration/program-bindings':(self.server.bindings,self.binding_request,'culsma_configuration_v1'),
+            endpoints = {'/api/v1/configuration/activation':(self.server.activation,self.activation_request,'culsma_configuration_v1'),
+                         '/api/v1/configuration/program-bindings':(self.server.bindings,self.binding_request,'culsma_configuration_v1'),
                          '/api/v1/configuration/drafts':(self.server.configuration,self.configuration_request,'culsma_configuration_v1'),
                          '/api/v1/programs':(self.server.programs,self.program_request,'culsma_program_console_v1')}
             if url.path not in endpoints or endpoints[url.path][0] is None:

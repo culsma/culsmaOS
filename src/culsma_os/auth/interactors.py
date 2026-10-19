@@ -26,7 +26,7 @@ class TokenInteractor:
         current = self.repository.current()
         if current is None or not hmac.compare_digest(current,digest):
             raise ConsoleAccessError('CONSOLE_SESSION_INVALID')
-        return CallerContext('local-console-process',frozenset({'configuration:drafts','programs:execute'}))
+        return CallerContext('local-console-process',frozenset({'configuration:drafts','configuration:activate','programs:execute'}))
 
 
 class AuthorizedInteractor:

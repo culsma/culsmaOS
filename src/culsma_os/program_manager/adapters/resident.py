@@ -36,19 +36,22 @@ class ResidentProtocolAdapter:
 
     @staticmethod
     def request(payload):
-        allowed = {'action','run_id','source','material_state','library_roots','request_id'}
+        allowed = {'action','run_id','source','material_state','library_roots','request_id','configuration','configuration_origin','configuration_fingerprint','driver'}
         if not isinstance(payload, dict) or set(payload) - allowed or not isinstance(payload.get('action'), str):
             raise ValueError('HOST_REQUEST_INVALID')
-        for key in ('run_id','source','material_state','request_id'):
+        for key in ('run_id','source','material_state','request_id','configuration_fingerprint','driver'):
             if payload.get(key) is not None and (not isinstance(payload[key], str) or not payload[key]):
                 raise ValueError('HOST_REQUEST_INVALID')
+        if any(payload.get(key) is not None and not isinstance(payload[key],dict) for key in ['configuration','configuration_origin']):
+            raise ValueError('HOST_REQUEST_INVALID')
         roots = payload.get('library_roots', [])
         if not isinstance(roots, list) or not all(isinstance(p, str) and p for p in roots):
             raise ValueError('HOST_REQUEST_INVALID')
         return ResidentCommand(payload['action'], payload.get('run_id'),
             Path(payload['source']) if payload.get('source') else None,
             Path(payload['material_state']) if payload.get('material_state') else None,
-            tuple(Path(p) for p in roots), payload.get('request_id'))
+            tuple(Path(p) for p in roots), payload.get('request_id'),payload.get('configuration'),
+            payload.get('configuration_origin'),payload.get('configuration_fingerprint'),payload.get('driver'))
 
 
 class ResidentSocketAdapter:

@@ -213,16 +213,15 @@ class OSApplicationFactory:
         from .program_manager.interactors.compilation import CompilationInteractor
         from .program_manager.interactors.resident import ResidentCommandInteractor
         from .program_manager.adapters.resident import ResidentSocketAdapter
-        status = ResidentStatusInteractor(settings.poll_interval)
-        inspector = self.build_run_inspector(settings.context)
-        queue = SqliteRunQueueRepository(inspector.tasks.repository.connection)
-        commands = ResidentCommandInteractor(CompilationInteractor(), inspector.tasks, queue, inspector,
-            HostedRuntimeInteractor(), RuntimeCheckpointCodecInteractor(), status, settings.context,
-            self.build_device_inspector(settings.context))
+        from dataclasses import replace
         connection = DatabaseConnection(settings.context.database_path).open()
-        configuration = ResidentConfigurationInteractor(SqliteResidentConfigurationRepository(connection), connection)
-        return ResidentHostInteractor(settings, status, HostLeaseFactory().build(settings.context, settings.socket_path),
-            commands, ResidentSocketAdapter(settings.socket_path, commands), ResidentWorkerFactory(self), configuration)
+        configuration = ResidentConfigurationInteractor(SqliteResidentConfigurationRepository(connection),connection)
+        settings = replace(settings,context=configuration.restore(settings.context))
+        status = ResidentStatusInteractor(settings.poll_interval)
+        command_factory = ResidentCommandFactory(self)
+        commands = command_factory.build(settings.context,status,configuration)
+        return ResidentHostInteractor(settings,status,HostLeaseFactory().build(settings.context,settings.socket_path),
+            commands,ResidentSocketAdapter(settings.socket_path,commands),ResidentWorkerFactory(self),configuration,command_factory)
 
     def build_hamilton_compiler(self):
         from culsma_driver_hamilton.assembly import build_transfer_compiler
@@ -324,3 +323,18 @@ class ResidentWorkerFactory:
         application = self.applications.build(context)
         connection = DatabaseConnection(context.database_path).open()
         return ResidentWorkerInteractor(application, SqliteRunQueueRepository(connection), connection, status)
+
+
+class ResidentCommandFactory:
+    def __init__(self, applications):
+        self.applications = applications
+
+    def build(self, context, status, configuration):
+        from .program_manager.repositories.queue import SqliteRunQueueRepository
+        from .program_manager.interactors.compilation import CompilationInteractor
+        from .program_manager.interactors.resident import ResidentCommandInteractor
+        inspector = self.applications.build_run_inspector(context)
+        queue = SqliteRunQueueRepository(inspector.tasks.repository.connection)
+        return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
+            HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
+            self.applications.build_device_inspector(context),configuration)

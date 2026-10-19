@@ -1,11 +1,11 @@
-"""Composition only; no device execution worker or live configuration changes."""
+"""Composition only; device workers and configuration application stay resident-owned."""
 from pathlib import Path
 from culsma_os.auth.interactors import TokenInteractor
 from culsma_os.auth.repository import SessionCredentialRepository
 from culsma_os.program_manager.adapters.resident import ResidentClientAdapter
 from culsma_os.program_manager.interactors.console import ConsoleCommandInteractor
 from culsma_os.program_manager.interactors.console_session import ConsoleSessionInteractor
-from culsma_os.workspace_manager.interactors import StationConfigurationInteractor, ProgramBindingInteractor
+from culsma_os.workspace_manager.interactors import StationConfigurationInteractor, ProgramBindingInteractor, ConfigurationDraftInteractor
 from culsma_os.workspace_manager.repositories.configuration import SqliteStationConfigurationRepository
 from culsma_os.device_manager.interactors import DeviceProfileInteractor
 from culsma_os.driver_framework.interactors import DriverProfileInteractor
@@ -14,6 +14,7 @@ from culsma_os.program_manager.interactors.source import ProgramSourceInteractor
 from culsma_os.program_manager.interactors.compilation import CompilationInteractor
 from culsma_os.program_manager.interactors.semantics import HostedRuntimeInteractor
 from culsma_os.program_manager.repositories.sources import FileProgramSourceRepository
+from culsma_os.lifecycle_manager.interactors import ConsoleActivationInteractor
 from .adapters.http import ConsoleHTTPServer
 
 
@@ -27,4 +28,5 @@ class ConsoleApplicationFactory:
         return ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
             StationConfigurationInteractor(tokens,repository,profiles),ConsoleSessionInteractor(tokens),
             ConsoleProgramInteractor(tokens,source,ResidentClientAdapter(settings.socket_path,timeout=10)),
-            ProgramBindingInteractor(tokens,repository,profiles,source))
+            ProgramBindingInteractor(tokens,repository,profiles,source),
+            ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),ResidentClientAdapter(settings.socket_path,timeout=10)))

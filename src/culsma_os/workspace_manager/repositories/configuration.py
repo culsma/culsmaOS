@@ -39,8 +39,9 @@ class SqliteStationConfigurationRepository:
     def save(self, draft_id, expected_revision, value):
         self.path.parent.mkdir(parents=True,exist_ok=True)
         with closing(sqlite3.connect(self.path,timeout=5)) as connection, connection:
-            connection.execute('CREATE TABLE IF NOT EXISTS configuration_drafts(draft_id TEXT,revision INTEGER,record TEXT,PRIMARY KEY(draft_id,revision))')
+            connection.execute('PRAGMA journal_mode=WAL')
             connection.execute('BEGIN IMMEDIATE')
+            connection.execute('CREATE TABLE IF NOT EXISTS configuration_drafts(draft_id TEXT,revision INTEGER,record TEXT,PRIMARY KEY(draft_id,revision))')
             current = connection.execute('SELECT max(revision) FROM configuration_drafts WHERE draft_id=?',(draft_id,)).fetchone()[0] or 0
             if current != expected_revision:
                 raise ConfigurationError('CONFIGURATION_REVISION_CONFLICT','conflict')

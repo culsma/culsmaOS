@@ -617,3 +617,20 @@ class ProgramBindingInteractor(AuthorizedInteractor):
                 diagnostics.append({'owner':'workspace','code':'CONFIGURATION_BINDING_'+status.upper(),
                                     'allocation_id':identity,'message':status.capitalize()+' allocation binding'})
         return rows,diagnostics
+
+
+class ConfigurationDraftInteractor:
+    def __init__(self, repository: StationConfigurationRepository, profiles):
+        self.repository, self.profiles = repository, profiles
+
+    def validated(self, draft_id, revision):
+        import re
+        if (not isinstance(draft_id,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',draft_id) is None
+                or type(revision) is not int or revision < 1):
+            raise ConfigurationError('CONFIGURATION_REQUEST_INVALID')
+        draft = self.repository.get(draft_id).as_dict()
+        if draft['revision'] != revision:
+            raise ConfigurationError('CONFIGURATION_REVISION_CONFLICT','conflict')
+        if not self.profiles.validate(draft['driver'],draft['configuration'])['valid']:
+            raise ConfigurationError('CONFIGURATION_ACTIVATION_INVALID')
+        return draft

@@ -212,6 +212,20 @@ class ResidentStatusInteractor:
         self.error = None
         self.blocked_run = None
         self.blocked_reason = None
+        self.rebuild_requested = Event()
+        self.rebuild_id = None
+
+    def request_rebuild(self, request_id):
+        with self.lock:
+            if self.rebuild_requested.is_set():
+                raise ValueError('HOST_RECONFIGURING')
+            self.ready = False
+            self.error = None
+            self.rebuild_id = request_id
+            self.rebuild_requested.set()
+
+    def worker_should_stop(self):
+        return self.stop_requested.is_set() or self.rebuild_requested.is_set()
 
     def mark_ready(self):
         with self.lock:
@@ -232,6 +246,8 @@ class ResidentStatusInteractor:
         with self.lock:
             if self.stop_requested.is_set():
                 raise ValueError('HOST_STOPPING')
+            if self.rebuild_requested.is_set():
+                raise ValueError('HOST_RECONFIGURING')
             if self.error:
                 raise ValueError('HOST_WORKER_FAILED')
             if not self.ready:
@@ -239,16 +255,16 @@ class ResidentStatusInteractor:
 
     def snapshot(self):
         with self.lock:
-            return {'status': 'failed' if self.error else 'stopping' if self.stop_requested.is_set() else 'ready' if self.ready else 'starting',
+            return {'status': 'failed' if self.error else 'stopping' if self.stop_requested.is_set() else 'reconfiguring' if self.rebuild_requested.is_set() else 'ready' if self.ready else 'starting',
                     'worker_error': self.error, 'blocked_run': self.blocked_run, 'blocked_reason': self.blocked_reason}
 
 
 class ResidentHostInteractor:
     """Own the resident lifetime; adapters never decide run admission or recovery."""
-    def __init__(self, settings, status, lease: HostLeaseRepository, commands, listener, worker_factory, configuration):
+    def __init__(self, settings, status, lease: HostLeaseRepository, commands, listener, worker_factory, configuration, command_factory=None):
         self.settings, self.status, self.lease = settings, status, lease
         self.commands, self.listener, self.worker_factory = commands, listener, worker_factory
-        self.configuration = configuration
+        self.configuration, self.command_factory = configuration, command_factory
 
     def request_stop(self, *args):
         self.status.request_stop()
@@ -263,6 +279,11 @@ class ResidentHostInteractor:
             worker = Thread(target=self.execute_worker, name='culsma-os-execution', daemon=False)
             worker.start()
             while not self.status.stop_requested.is_set() or worker.is_alive():
+                if self.status.rebuild_requested.is_set() and not worker.is_alive() and not self.status.stop_requested.is_set():
+                    if self.rebuild_worker():
+                        worker = Thread(target=self.execute_worker,name='culsma-os-execution',daemon=False)
+                        worker.start()
+                self.configuration.observe(self.status)
                 self.listener.handle_one()
         except KeyboardInterrupt:
             self.request_stop()
@@ -274,6 +295,27 @@ class ResidentHostInteractor:
             self.commands.close()
             self.configuration.close()
             self.lease.close()
+
+    def rebuild_worker(self):
+        from dataclasses import replace
+        request_id = self.status.rebuild_id
+        if self.status.snapshot()['worker_error']:
+            self.configuration.fail_rebuild(request_id)
+            self.status.rebuild_requested.clear()
+            return False
+        try:
+            context = self.configuration.apply(request_id,self.settings.context)
+            self.settings = replace(self.settings,context=context)
+            commands = self.command_factory.build(context,self.status,self.configuration)
+        except Exception as error:
+            self.configuration.fail_rebuild(request_id)
+            self.status.rebuild_requested.clear()
+            self.status.mark_failed(error)
+            return False
+        self.commands.close()
+        self.commands, self.listener.commands = commands, commands
+        self.status.rebuild_requested.clear()
+        return True
 
     def execute_worker(self):
         try:
@@ -287,6 +329,108 @@ class ResidentConfigurationInteractor:
     def __init__(self, repository: ResidentConfigurationRepository, connection):
         self.repository, self.connection = repository, connection
         self.fingerprint = None
+        self.base_fingerprint = None
+        self.in_flight = None
+        self.repository.initialize_activation()
+
+    def restore(self, context):
+        from dataclasses import replace
+        from pathlib import Path
+        active = self.repository.active()
+        self.base_fingerprint = self.calculate_fingerprint(context)
+        if active is None:
+            return context
+        if self.base_fingerprint not in {active['base_fingerprint'],active['fingerprint']}:
+            raise ValueError('HOST_CONFIGURATION_MISMATCH')
+        self.base_fingerprint = active['base_fingerprint']
+        restored = replace(context,config_path=Path(active['config_path']))
+        if self.calculate_fingerprint(restored) != active['fingerprint']:
+            raise ValueError('HOST_CONFIGURATION_SNAPSHOT_CHANGED')
+        return restored
+
+    def describe(self, status, request_id=None):
+        active = self.repository.active()
+        return {'host':status.snapshot(),'active':{
+            'fingerprint':self.fingerprint,
+            'origin':({key:active[key] for key in ['draft_id','revision','title','configuration_fingerprint']} if active else None)},
+            'receipt':self.public_receipt(self.repository.receipt(request_id))}
+
+    def public_receipt(self, receipt):
+        if receipt is None:
+            return None
+        return {key:receipt.get(key) for key in ['request_id','status','error','draft_id','revision','title','configuration_fingerprint']}
+
+    def previous_request(self, request, context):
+        import hashlib
+        import json
+        body = {'configuration':request.configuration,'origin':request.configuration_origin,
+                'expected':request.configuration_fingerprint,'driver':request.driver}
+        try:
+            fingerprint = hashlib.sha256(json.dumps(body,sort_keys=True,allow_nan=False).encode()).hexdigest()
+        except (ValueError,TypeError):
+            raise ValueError('HOST_CONFIGURATION_INVALID') from None
+        if not isinstance(request.request_id,str) or not request.request_id:
+            raise ValueError('HOST_CONFIGURATION_INVALID')
+        origin = request.configuration_origin
+        if (not isinstance(request.configuration,dict) or not isinstance(origin,dict)
+                or set(origin) != {'draft_id','revision','fingerprint','title'}
+                or type(origin['revision']) is not int or origin['revision'] < 1
+                or any(not isinstance(origin[key],str) or not origin[key] for key in ['draft_id','fingerprint','title'])):
+            raise ValueError('HOST_CONFIGURATION_INVALID')
+        encoded = json.dumps(request.configuration,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
+        if len(encoded)>200000 or hashlib.sha256(encoded).hexdigest()!=origin['fingerprint']:
+            raise ValueError('HOST_CONFIGURATION_INVALID')
+        previous = self.repository.receipt(request.request_id)
+        if previous is not None and previous['request_fingerprint'] != fingerprint:
+            raise ValueError('HOST_CONFIGURATION_REQUEST_CONFLICT')
+        return previous,fingerprint
+
+    def request(self, request, context, status):
+        import re
+        if (not isinstance(request.request_id,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',request.request_id) is None
+                or not isinstance(request.configuration,dict) or not isinstance(request.configuration_origin,dict)
+                or set(request.configuration_origin) != {'draft_id','revision','fingerprint','title'}):
+            raise ValueError('HOST_CONFIGURATION_INVALID')
+        previous,fingerprint = self.previous_request(request,context)
+        if previous is not None:
+            return self.public_receipt(previous)
+        if request.driver != context.driver_name:
+            raise ValueError('HOST_CONFIGURATION_DRIVER_CHANGE_UNSUPPORTED')
+        if request.configuration_fingerprint != self.fingerprint:
+            raise ValueError('HOST_CONFIGURATION_STALE')
+        path = self.repository.snapshot(context.database_path.parent/'configurations',request.configuration)
+        origin = request.configuration_origin
+        record = {'config_path':str(path.resolve()),'base_fingerprint':self.base_fingerprint or self.fingerprint,
+                  'expected_fingerprint':self.fingerprint,'driver':request.driver,'draft_id':origin['draft_id'],
+                  'revision':origin['revision'],'title':origin['title'],'configuration_fingerprint':origin['fingerprint']}
+        result = self.repository.prepare(request.request_id,fingerprint,record)
+        status.request_rebuild(request.request_id)
+        return self.public_receipt(result)
+
+    def apply(self, request_id, context):
+        from dataclasses import replace
+        from pathlib import Path
+        record = self.repository.receipt(request_id)
+        target = replace(context,config_path=Path(record['config_path']))
+        active = {key:record[key] for key in ['config_path','base_fingerprint','driver','draft_id','revision','title','configuration_fingerprint']}
+        active['fingerprint'] = self.calculate_fingerprint(target)
+        self.repository.activate(request_id,active,record['expected_fingerprint'])
+        self.fingerprint = active['fingerprint']
+        self.in_flight = request_id
+        return target
+
+    def fail_rebuild(self, request_id):
+        self.repository.settle(request_id,'failed','HOST_CONFIGURATION_START_FAILED')
+        self.in_flight = None
+
+    def observe(self, status):
+        if self.in_flight is None:
+            return
+        state = status.snapshot()
+        if state['status'] in {'ready','failed'}:
+            self.repository.settle(self.in_flight,'applied' if state['status']=='ready' else 'failed',
+                                   None if state['status']=='ready' else 'HOST_CONFIGURATION_START_FAILED')
+            self.in_flight = None
 
     def calculate_fingerprint(self, context):
         import hashlib
@@ -307,6 +451,7 @@ class ResidentConfigurationInteractor:
     def bind(self, context):
         self.fingerprint = self.calculate_fingerprint(context)
         self.repository.bind(self.fingerprint)
+        self.repository.interrupt_pending()
 
     def verify(self, context):
         if self.calculate_fingerprint(context) != self.fingerprint:
@@ -325,3 +470,52 @@ class HostLeasePathInteractor:
         if socket_path is not None:
             paths.append(Path(str(socket_path.resolve()) + '.host.lock'))
         return tuple(paths)
+
+
+from culsma_os.auth.interactors import AuthorizedInteractor
+
+
+class ConsoleActivationInteractor(AuthorizedInteractor):
+    required_capability = 'configuration:activate'
+
+    def __init__(self, tokens, drafts, resident):
+        super().__init__(tokens)
+        self.drafts, self.resident = drafts, resident
+
+    def perform(self, request):
+        import re
+        from .models import ConsoleActivationRequest
+        from culsma_os.workspace_manager.models import ConfigurationError
+        if not isinstance(request,ConsoleActivationRequest):
+            raise ConfigurationError('CONFIGURATION_ACTIVATION_REQUEST_INVALID')
+        if request.action == 'status':
+            if any(value is not None for value in [request.draft_id,request.revision,request.expected_fingerprint]):
+                raise ConfigurationError('CONFIGURATION_ACTIVATION_REQUEST_INVALID')
+            payload = {'action':'configuration-status'}
+            if request.request_id is not None:
+                if not isinstance(request.request_id,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',request.request_id) is None:
+                    raise ConfigurationError('CONFIGURATION_ACTIVATION_REQUEST_INVALID')
+                payload['request_id'] = request.request_id
+                payload['action'] = 'activation-status'
+        elif request.action == 'apply':
+            if (not isinstance(request.request_id,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',request.request_id) is None
+                    or not isinstance(request.expected_fingerprint,str) or re.fullmatch(r'[a-f0-9]{64}',request.expected_fingerprint) is None):
+                raise ConfigurationError('CONFIGURATION_ACTIVATION_REQUEST_INVALID')
+            draft = self.drafts.validated(request.draft_id,request.revision)
+            payload = {'action':'configure','request_id':request.request_id,'configuration_fingerprint':request.expected_fingerprint,
+                       'configuration':draft['configuration'],'driver':draft['driver'],
+                       'configuration_origin':{key:draft[key] for key in ['draft_id','revision','fingerprint','title']}}
+        else:
+            raise ConfigurationError('CONFIGURATION_ACTIVATION_REQUEST_INVALID')
+        try:
+            result = self.resident.execute(payload)
+        except OSError as error:
+            raise ConfigurationError('CONFIGURATION_HOST_RESPONSE_UNAVAILABLE','unavailable') from error
+        except ValueError as error:
+            code = str(error)
+            if re.fullmatch(r'[A-Z][A-Z0-9_]{0,79}',code) is None:
+                code = 'CONFIGURATION_HOST_REJECTED'
+            raise ConfigurationError(code,'conflict') from error
+        if not isinstance(result,dict):
+            raise ConfigurationError('CONFIGURATION_HOST_RESPONSE_INVALID','bad_response')
+        return result

@@ -6,12 +6,20 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
-        self.status, self.context, self.devices = status, context, devices
+        self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
 
     def execute(self, request):
+        if request.action in {'configuration-status','activation-status'}:
+            return self.configuration.describe(self.status,request.request_id if request.action=='activation-status' else None)
+        if request.action == 'configure':
+            previous,_ = self.configuration.previous_request(request,self.context)
+            if previous is not None:
+                return self.configuration.public_receipt(previous)
+            self.require_idle_configuration()
+            return self.configuration.request(request,self.context,self.status)
         if request.action == 'host-status':
             return self.status.snapshot()
         if request.action == 'device-status':
@@ -46,6 +54,19 @@ class ResidentCommandInteractor:
             return self.queue.add_control(request.request_id or str(uuid4()), request.run_id, request.action)
         raise ValueError('HOST_COMMAND_UNSUPPORTED')
 
+    def require_idle_configuration(self):
+        state = self.status.snapshot()
+        if state['status'] not in {'ready','failed'}:
+            raise ValueError('HOST_RECONFIGURING' if state['status']=='reconfiguring' else 'HOST_NOT_READY')
+        if self.queue.head() is not None or self.queue.pending_controls():
+            raise ValueError('HOST_CONFIGURATION_BUSY')
+        report = self.devices.execute()
+        resources = report['resources']
+        if (resources.get('local_accounting') != 'recorded' or resources.get('station_accounting') != 'recorded'
+                or any(resources.get(key) for key in ['locks','permits','station_reservations','station_locks'])
+                or any(device['unresolved_operations'] or device['positions']['status']=='unknown' for device in report['devices'])):
+            raise ValueError('HOST_CONFIGURATION_RESOURCES_UNRESOLVED')
+
     def require_run(self, run_id):
         if not run_id or not self.queue.contains(run_id):
             raise ValueError('HOST_RUN_NOT_FOUND')
@@ -65,13 +86,17 @@ class ResidentCommandInteractor:
         errors = [d for d in self.semantics.validate_plan(compiled.plan) if d.severity == 'error']
         if errors:
             raise ResidentAdmissionError('HOST_PLAN_UNSUPPORTED', (d.to_dict() for d in errors))
+        identity = ((compiled.plan,compiled.state,request.configuration_fingerprint) if request.configuration_fingerprint is not None
+                    else (compiled.plan,compiled.state))
         submission = QueueSubmission(request.request_id or str(uuid4()),
-            self.codec.fingerprint((compiled.plan, compiled.state)), str(request.source.resolve()))
+            self.codec.fingerprint(identity), str(request.source.resolve()))
         previous = self.queue.submission(submission.request_id)
         if previous is not None:
             if previous.fingerprint != submission.fingerprint or previous.source != submission.source:
                 raise ValueError('HOST_SUBMISSION_ID_CONFLICT')
             return {**self.describe(previous.run_id), 'request_id': previous.request_id, 'accepted': True}
+        if request.configuration_fingerprint is not None and request.configuration_fingerprint != self.configuration.fingerprint:
+            raise ValueError('HOST_CONFIGURATION_STALE')
         run_id = self.tasks.submit(RunRequest(compiled.plan, compiled.state), submission)
         return {**self.describe(run_id), 'request_id': submission.request_id, 'accepted': True}
 
@@ -88,7 +113,7 @@ class ResidentWorkerInteractor:
         try:
             self.application.client.start()
             self.status.mark_ready()
-            while not self.status.stop_requested.is_set():
+            while not self.status.worker_should_stop():
                 self.tick()
                 self.status.stop_requested.wait(self.status.poll_interval)
             head = self.queue.head()
@@ -127,7 +152,7 @@ class ResidentWorkerInteractor:
 
     def tick(self):
         self.process_controls()
-        if self.status.stop_requested.is_set():
+        if self.status.worker_should_stop():
             return
         head = self.queue.head()
         if head is None:

@@ -263,6 +263,10 @@ class ResidentCommand:
     library_roots: tuple[Path, ...] = ()
     request_id: str | None = None
 
+    configuration: dict | None = None
+    configuration_origin: dict | None = None
+    configuration_fingerprint: str | None = None
+    driver: str | None = None
 
 class ResidentAdmissionError(ValueError):
     def __init__(self, code, diagnostics=()):
@@ -306,6 +310,7 @@ class ConsoleProgramRequest:
     request_id: str | None = None
     run_id: str | None = None
 
+    configuration_fingerprint: str | None = None
 
 class ConsoleProgramError(ValueError):
     def __init__(self, code, kind='invalid_request', diagnostics=()):

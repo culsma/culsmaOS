@@ -1,5 +1,6 @@
 import {ConsolePrograms} from './programs.js';
 import {ConsoleInteraction} from './interaction.js';
+import {ConsoleActivation} from './activation.js';
 
 class StationConsoleApp {
   constructor() {
@@ -20,6 +21,7 @@ class StationConsoleApp {
     this.configDrafts = [];
     this.configValidation = null;
     this.programs = new ConsolePrograms(this);
+    this.activation = new ConsoleActivation(this);
   }
 
   start() {
@@ -295,13 +297,14 @@ class StationConsoleApp {
       const [profiles,drafts] = await Promise.all([
         this.configurationFetch('/api/v1/configuration/profiles'),
         this.configurationFetch('/api/v1/configuration/drafts')]);
+      try { await this.activation.refresh(); } catch { this.activation.view = null; }
       this.configProfiles = profiles.profiles || [];
       this.configDrafts = drafts.drafts || [];
       if (location.hash !== '#configuration') { this.pending = true; return; }
       document.querySelector('#title').textContent = 'Configuration drafts';
       for (const name of ['station','runs','configuration','programs']) document.querySelector(`#${name}-tab`).setAttribute('aria-current',name === 'configuration' ? 'page':'false');
       document.querySelector('#connection').replaceChildren(this.badge('Connected'));
-      document.querySelector('#observed').textContent = 'Local draft store · running station unchanged';
+      document.querySelector('#observed').textContent = 'Saved drafts and explicit station configuration application';
       this.showAlert(profiles.unavailable?.length ? `Profiles unavailable: ${profiles.unavailable.join(', ')}` : null);
       this.renderConfiguration();
     } catch (error) {
@@ -362,10 +365,12 @@ class StationConsoleApp {
     this.interaction.view('configuration',{loadState:'ready',draftId:this.configDraft?.draft_id,revision:this.configDraft?.revision,dirty,
       validationState:dirty ? 'not_checked' : this.configValidation ? (this.configValidation.valid ? 'valid':'invalid'):'not_checked'});
     this.interaction.diagnostics(!dirty && this.configValidation ? this.configValidation.diagnostics || []:[]);
+    this.activation.updateActions();
     if (state) state.textContent = dirty ? `Unsaved changes · based on ${this.configDraft ? `revision ${this.configDraft.revision}`:'a new draft'} · save before validation` : `Saved revision ${this.configDraft.revision} · ${this.configDraft.fingerprint.slice(0,12)}`;
   }
 
   startConfigDraft(driver, configuration, title = 'New station configuration', record = null) {
+    this.activation.confirmed = false;
     this.configDraft = record;
     this.configDriver = driver;
     this.configTitle = title;
@@ -384,6 +389,7 @@ class StationConsoleApp {
 
   async configAction(action, extra = {}) {
     if (this.configSaving) return;
+    this.activation.confirmed = false;
     this.configSaving = true; this.syncBusy();this.updateConfigActions();
     const operation = `configuration.${action === 'create' ? 'save':action}`;
     this.interaction.result(operation,'pending','Configuration request pending.');
@@ -429,7 +435,7 @@ class StationConsoleApp {
     if (location.hash !== '#configuration') return;
     this.interaction.view('configuration',{loadState:'ready'});
     const setup = this.card('Prepare a configuration');
-    setup.append(this.element('p','Save and validate a draft, then export it for an explicit station-service restart. Draft editing does not move equipment or reset station records.','note'));
+    setup.append(this.element('p','Save and validate a draft, review its program bindings, then explicitly apply it to an idle simulated station. Editing alone does not change the active configuration.','note'));
     const profile = this.configProfiles.find(item => item.driver === this.configDriver) || this.configProfiles[0];
     let selected = profile?.driver;
     setup.append(this.configField('Installed profile',selected,value => {selected = value;},this.configProfiles.map(item => item.driver),{field:'/profile'}));
@@ -455,7 +461,7 @@ class StationConsoleApp {
     const saved = this.card('Saved drafts');
     for (const draft of this.configDrafts) saved.append(this.configButton(`Load ${draft.title} · r${draft.revision}`,() => this.configAction('get',{draft_id:draft.draft_id}),'',{action:'configuration.get',entity:draft.draft_id,revision:draft.revision}));
     if (!this.configDrafts.length) saved.append(this.element('p','No saved drafts yet.','empty'));
-    const children = [setup,saved];
+    const children = [this.activation.render(),setup,saved];
     if (this.configWorking) {
       const editor = this.card('Edit draft');
       const fields = this.element('div','','config-grid');
@@ -499,6 +505,7 @@ class StationConsoleApp {
         this.configButton('Validate saved draft',() => this.configAction('validate'),'validate-draft',{action:'configuration.validate'}),
         this.configButton('Export validated configuration',() => this.configAction('export'),'export-draft',{action:'configuration.export'}));
       editor.append(controls);
+      if (this.configDraft) editor.append(this.activation.controls());
       const state = this.element('p','','label');state.id = 'draft-state';editor.append(state);
       if (this.configValidation) {
         const validation = this.element('div'); validation.id = 'draft-validation';

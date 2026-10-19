@@ -8,4 +8,4 @@ class ConsoleSessionInteractor:
     def execute(self):
         return {'schema':'culsma_console_session_v1',
                 'access_token':self.tokens.issue_console_session(),
-                'scope':'configuration:drafts programs:execute','lifetime':'console_process'}
+                'scope':'configuration:drafts configuration:activate programs:execute','lifetime':'console_process'}

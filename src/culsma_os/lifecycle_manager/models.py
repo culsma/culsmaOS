@@ -15,3 +15,12 @@ class ResidentHostSettings:
     context: HostBuildContext
     socket_path: Path
     poll_interval: float = 0.05
+
+
+@dataclass(frozen=True)
+class ConsoleActivationRequest:
+    action: str
+    draft_id: str | None = None
+    revision: int | None = None
+    expected_fingerprint: str | None = None
+    request_id: str | None = None

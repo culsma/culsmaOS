@@ -16,6 +16,9 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
             raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
         values = {'program_id':request.program_id,'snapshot_id':request.snapshot_id,
                   'request_id':request.request_id,'run_id':request.run_id}
+        if request.configuration_fingerprint is not None:
+            if not isinstance(request.configuration_fingerprint,str) or request.action != 'submit' or re.fullmatch(r'[a-f0-9]{64}',request.configuration_fingerprint) is None:
+                raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
         required = {'list':set(),'inspect':{'program_id'},'submit':{'program_id','snapshot_id','request_id'},
                     'control-status':{'run_id','request_id'},'pause':{'run_id','request_id'},'resume':{'run_id','request_id'},'cancel':{'run_id','request_id'}}
         if (request.action not in required or {key for key,value in values.items() if value is not None} != required[request.action]
@@ -35,8 +38,11 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
             return inspection
         if not inspection['valid']:
             raise ConsoleProgramError('PROGRAM_DIAGNOSTICS_REJECTED',diagnostics=inspection['diagnostics'])
-        result = self.command({'action':'submit','source':str(snapshot.directory/request.program_id),
-            'library_roots':[str(snapshot.directory)],'request_id':request.request_id})
+        payload = {'action':'submit','source':str(snapshot.directory/request.program_id),
+            'library_roots':[str(snapshot.directory)],'request_id':request.request_id}
+        if request.configuration_fingerprint is not None:
+            payload['configuration_fingerprint'] = request.configuration_fingerprint
+        result = self.command(payload)
         return {'run':result,'snapshot_id':snapshot.snapshot_id,'program_id':request.program_id,
                 'configuration':'running_service','effect':'admitted_to_resident_queue'}
 
