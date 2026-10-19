@@ -8,6 +8,9 @@ import subprocess
 
 
 class PublicTreeCheck:
+    internal_docs = ('docs/module/', 'docs/evidence/', 'docs/archive/',
+                     'docs/release/', 'docs/contracts/', 'design/')
+
     cjk = re.compile(r'[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]')
 
     def inspect_text(self, content, suffix):
@@ -24,6 +27,9 @@ class PublicTreeCheck:
         problems, scanned, images = [], 0, 0
         for name in self.files(root):
             path = root / name
+            if (name.startswith(self.internal_docs)
+                    or (name.startswith('docs/') and re.search(r'20\d{6}', name))):
+                problems.append({'path': name, 'error': 'INTERNAL_RECORD_IN_PUBLIC_TREE'})
             if path.suffix == '.png':
                 images += 1
                 if not path.with_suffix('.svg').is_file():

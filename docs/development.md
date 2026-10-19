@@ -8,8 +8,7 @@ example are in the [README](../README.md#installation).
 | Location | Purpose |
 | --- | --- |
 | `diagrams/` | Compact public architecture overview |
-| `docs/reference/`, `docs/contracts/` | Human-readable scope and behavioral agreements |
-| `docs/archive/`, `docs/release/` | Historical preparation records and current release readiness |
+| `docs/reference/` | Current architecture ownership and supported capability scope |
 | `tests/acceptance/manifests/`, `tests/architecture/module-map.json` | Executable acceptance and source-component checks |
 | `tools/distribution/manifest.json` | Exact dependency artifacts used by build and verification tools |
 
@@ -42,8 +41,7 @@ python -m tests.acceptance.protocols \
   --output-dir run-artifacts/protocol-acceptance/first-run
 ```
 
-Use a new output directory. [Manifest](../tests/acceptance/manifests/protocols.json)
-· [Recorded evidence](evidence/protocol-acceptance-20261018.json).
+Use a new output directory. [Manifest](../tests/acceptance/manifests/protocols.json).
 
 ## Resident acceptance
 
@@ -55,8 +53,7 @@ python -m tests.acceptance.resident \
   --output-dir run-artifacts/resident-acceptance/first-run
 ```
 
-Use a new output directory. [Manifest](../tests/acceptance/manifests/resident.json)
-· [Recorded evidence](evidence/mixed-resident-protocols-20261018.json).
+Use a new output directory. [Manifest](../tests/acceptance/manifests/resident.json).
 
 Different complete programs share the [fixed station](../examples/resident-station/deck.json)
 through [program bindings and routes](../examples/resident-station/workspaces.json):
@@ -99,12 +96,3 @@ python tools/check_distribution.py --directory dist
 ```
 
 Build and verify artifacts locally before uploading a release.
-
-## Design contracts
-
-- [Runtime baseline](reference/framework-baseline.json)
-- [Station state ownership](evidence/station-workspace-20261017.json)
-- [Program workspace bindings](contracts/program-workspace-contract.json)
-- [Resident acceptance contract](contracts/resident-protocol-acceptance.json)
-- [Distribution and exact dependency snapshots](../tools/distribution/manifest.json)
-- [Public preview preparation](release/preview-readiness.json)

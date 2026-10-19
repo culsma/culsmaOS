@@ -22,3 +22,27 @@ class TestPublicText:
 
     def test_scientific_unicode_is_allowed(self):
         assert module.PublicTreeCheck().inspect_text('20 \u00b5L, \u03b1 = 0.5'.encode(), '.md') == []
+
+
+    @pytest.mark.parametrize('relative', [
+        'docs/evidence/check.json', 'docs/contracts/check.json',
+        'docs/archive/check.json', 'docs/release/check.json',
+        'docs/check-20261018.json',
+    ])
+    def test_internal_records_are_rejected(self, tmp_path, monkeypatch, relative):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True)
+        path.write_text('{}')
+        checker = module.PublicTreeCheck()
+        monkeypatch.setattr(checker, 'files', lambda root: [relative])
+        result = checker.inspect(tmp_path)
+        assert result['checks'] == 'failed'
+        assert result['errors'] == [{'path': relative, 'error': 'INTERNAL_RECORD_IN_PUBLIC_TREE'}]
+
+    def test_current_documentation_is_allowed(self, tmp_path, monkeypatch):
+        path = tmp_path / 'docs/development.md'
+        path.parent.mkdir()
+        path.write_text('# Development\n')
+        checker = module.PublicTreeCheck()
+        monkeypatch.setattr(checker, 'files', lambda root: ['docs/development.md'])
+        assert checker.inspect(tmp_path)['checks'] == 'passed'

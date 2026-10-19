@@ -4,6 +4,7 @@ import configparser
 from email.parser import BytesParser
 from hashlib import sha256
 import json
+import re
 from pathlib import Path
 import tarfile
 import zipfile
@@ -45,7 +46,11 @@ class DistributionAudit:
                 raise ValueError('DISTRIBUTION_SOURCE_INPUT_MISSING')
             public_diagrams = {prefix + 'diagrams/readme-overview.puml',
                                prefix + 'diagrams/readme-overview.svg'}
-            if any(n.startswith(prefix + 'docs/module/')
+            internal_paths = tuple(prefix + path for path in (
+                'docs/module/', 'docs/evidence/', 'docs/archive/', 'docs/release/',
+                'docs/contracts/', 'design/'))
+            if any(n.startswith(internal_paths)
+                   or (n.startswith(prefix + 'docs/') and re.search(r'20\d{6}', n[len(prefix):]))
                    or n.startswith(prefix + 'culsmaOS-design/')
                    or (n.startswith(prefix + 'diagrams/')
                        and n not in public_diagrams and not n.endswith('/'))

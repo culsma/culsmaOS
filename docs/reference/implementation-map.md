@@ -19,6 +19,4 @@ Module packages use Interactor / Repository / Model. Visual functional units do 
 
 Scalar, well-group and restricted multichannel execution retain ordered typed references. Public language group envelopes reach the OS without compiler-level scalar submission. Actual device geometry and capability determine execution waves. Material registration remains per member; shared evidence does not imply per-channel observation.
 
-[Group contracts](../contracts/transfer-group-contracts.json) · [Transfer design](../contracts/transfer-batch-execution.md) · [Capability matrix](instrument-capability-map.json) · [Acceptance](../../tests/acceptance/manifests/resident.json)
-
-Remaining preparation is tracked in the serial [public preview plan](../release/preview-readiness.json). Historical drafts are outside the public source tree.
+[Capability matrix](instrument-capability-map.json) · [Acceptance](../../tests/acceptance/manifests/resident.json)

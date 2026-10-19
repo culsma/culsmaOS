@@ -88,8 +88,5 @@
     "Run-local independent simulated inputs, no PCR-to-bead sample handoff",
     "No physical reagent inventory or real-device result",
     "Public dependency/version release is a separate readiness gate"
-  ],
-  "references": [
-    "docs/contracts/program-workspace-contract.json"
   ]
 }

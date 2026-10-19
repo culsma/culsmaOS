@@ -44,7 +44,6 @@
     "language_handoff": "tests/integration/test_language_cli.py",
     "checkpoint_and_resource_safety": "tests/integration/test_main_chain.py"
   },
-  "evidence": "docs/evidence/public-preview-011-20261018.json",
   "release": {
     "repository": "culsma/culsmaOS",
     "tag": "0.1.1",
