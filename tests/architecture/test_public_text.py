@@ -46,3 +46,30 @@ class TestPublicText:
         checker = module.PublicTreeCheck()
         monkeypatch.setattr(checker, 'files', lambda root: ['docs/development.md'])
         assert checker.inspect(tmp_path)['checks'] == 'passed'
+
+
+    def test_local_html_links_detect_missing_targets(self, tmp_path):
+        (tmp_path / 'assets').mkdir()
+        (tmp_path / 'assets/logo.png').write_bytes(b'image')
+        content = b'<img src="assets/logo.png"><a href="docs/removed.json">Old</a><a href="#top">Top</a><a href="https://example.com">External</a>'
+        assert module.PublicTreeCheck().inspect_html_links(content, tmp_path / 'index.html', tmp_path) == ['docs/removed.json']
+
+    def test_missing_html_link_fails_public_tree_check(self, tmp_path, monkeypatch):
+        (tmp_path / 'index.html').write_text('<a href="removed.json">Old</a>')
+        checker = module.PublicTreeCheck()
+        monkeypatch.setattr(checker, 'files', lambda root: ['index.html'])
+        assert checker.inspect(tmp_path)['errors'] == [
+            {'path': 'index.html', 'error': 'LOCAL_LINK_MISSING', 'target': 'removed.json'}]
+
+    @pytest.mark.parametrize('changed', [False, True])
+    def test_only_reviewed_shared_logo_bytes_are_accepted(self, tmp_path, monkeypatch, changed):
+        relative = 'assets/culsma-logo.png'
+        original = Path(__file__).resolve().parents[2] / relative
+        target = tmp_path / relative
+        target.parent.mkdir()
+        target.write_bytes(b'changed image' if changed else original.read_bytes())
+        checker = module.PublicTreeCheck()
+        monkeypatch.setattr(checker, 'files', lambda root: [relative])
+        result = checker.inspect(tmp_path)
+        assert result['checks'] == ('failed' if changed else 'passed')
+        assert result['errors'] == ([{'path': relative, 'error': 'BRAND_IMAGE_HASH_MISMATCH'}] if changed else [])

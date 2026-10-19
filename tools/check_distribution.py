@@ -11,7 +11,7 @@ import zipfile
 
 
 class DistributionAudit:
-    required_inputs = ('pyproject.toml', 'requirements/preview-constraints.txt',
+    required_inputs = ('assets/culsma-logo.png', 'pyproject.toml', 'requirements/preview-constraints.txt',
                        'tools/distribution/manifest.json',
                        'tests/acceptance/manifests/protocols.json',
                        'tests/acceptance/manifests/resident.json',

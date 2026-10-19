@@ -1,3 +1,5 @@
+<img src="assets/culsma-logo.png" alt="Culsma logo" width="100">
+
 # culsmaOS
 
 **An operating-system framework for executing laboratory protocols.**
