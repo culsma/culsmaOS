@@ -11,7 +11,7 @@ outcomes remain explicit and block further execution of the affected run.
 
 [Install](#installation) · [Run an example](#quick-start) · [Example protocols](#example-protocols) · [Architecture](#architecture)
 
-**0.1.1 experimental preview** · Python 3.11–3.12 · [Apache-2.0](LICENSE)
+**0.1.1 experimental preview** · Python 3.11–3.12 · [Apache-2.0](LICENSE) · [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23467661.svg)](https://doi.org/10.5281/zenodo.23467661)
 
 ## Architecture
 
@@ -222,9 +222,9 @@ baseline.
 
 ## How to cite
 
-Cite the software version used for your work. Author and version metadata are
-provided in [CITATION.cff](CITATION.cff); the archived release DOI will be added
-when the record is available.
+Cite the software version used for your work. Version **0.1.1** is archived at
+[10.5281/zenodo.23467661](https://doi.org/10.5281/zenodo.23467661).
+Author and version metadata are provided in [CITATION.cff](CITATION.cff).
 
 ## License
 
