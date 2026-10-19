@@ -39,10 +39,10 @@ class ConsoleHTTPHarness:
         self.server.server_close()
         assert not self.thread.is_alive()
 
-    def request(self, method, path, headers=None):
+    def request(self, method, path, headers=None, body=None):
         connection = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=10)
         try:
-            connection.request(method, path, headers=headers or {})
+            connection.request(method, path, headers=headers or {},body=json.dumps(body) if isinstance(body,dict) else body)
             response = connection.getresponse()
             payload = response.read()
             if payload and response.getheader('Content-Type', '').startswith('application/json'):

@@ -7,6 +7,7 @@ from pathlib import Path
 class ConsoleSettings:
     socket_path: Path
     port: int = 8765
+    drafts_path: Path | None = None
 
     def __post_init__(self):
         if type(self.port) is not int or not 0 <= self.port <= 65535:

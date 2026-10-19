@@ -87,3 +87,41 @@ class WorkspaceAddress:
 
 class ProgramWorkspacePort(Protocol):
     def workspace_for_run(self, run_id: str) -> dict | None: ...
+
+
+@dataclass(frozen=True)
+class StationConfigurationRequest:
+    action: str
+    draft_id: str | None = None
+    revision: int | None = None
+    title: str | None = None
+    driver: str | None = None
+    configuration: dict | None = None
+
+
+class ConfigurationError(ValueError):
+    def __init__(self, code, kind='invalid_request'):
+        super().__init__(code)
+        self.code, self.kind = code, kind
+
+
+@dataclass(frozen=True)
+class StationConfigurationDraft:
+    draft_id: str
+    revision: int
+    title: str
+    driver: str
+    fingerprint: str
+    configuration_json: str
+
+    @classmethod
+    def from_record(cls, record):
+        import json
+        return cls(record['draft_id'],record['revision'],record['title'],record['driver'],
+                   record['fingerprint'],json.dumps(record['configuration'],allow_nan=False))
+
+    def as_dict(self):
+        import json
+        return {'draft_id':self.draft_id,'revision':self.revision,'title':self.title,
+                'driver':self.driver,'fingerprint':self.fingerprint,
+                'configuration':json.loads(self.configuration_json)}

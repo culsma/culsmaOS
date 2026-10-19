@@ -22,8 +22,10 @@ class TestConsoleArchitecture:
         imports = [node.module or '' for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
         assert not any('adapters' in name or 'console' in name for name in imports)
 
-    def test_browser_source_is_read_only_and_renders_text_safely(self):
+    def test_browser_changes_only_drafts_and_renders_text_safely(self):
         source = (ROOT/'src/culsma_os/console/web/app.js').read_text()
         assert 'innerHTML' not in source and 'eval(' not in source
         assert "textContent" in source
-        assert not any(f"method: '{method}'" in source for method in ['POST', 'PUT', 'PATCH', 'DELETE'])
+        assert not any(f"'{method}'" in source for method in ['PUT','PATCH','DELETE'])
+        assert "'/api/v1/configuration/drafts'" in source
+        assert not any(f"'/api/v1/{action}'" in source for action in ['submit','pause','resume','cancel','host-stop'])

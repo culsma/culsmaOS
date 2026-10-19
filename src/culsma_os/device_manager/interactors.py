@@ -111,3 +111,21 @@ class DeviceInspectionInteractor:
                 'step_id': attempt.context.get('step_id'),
                 'operation_kind': attempt.context.get('description', {}).get('operation_kind', 'transfer'),
                 'status': receipt.outcome if receipt else 'awaiting_evidence'}
+
+
+class DeviceProfileInteractor:
+    def __init__(self, discovery):
+        self.discovery = discovery
+
+    def describe(self):
+        profiles, unavailable = self.discovery.discover()
+        return {'profiles':[{'driver':name,**profile.describe()} for name,profile in profiles.items()],
+                'unavailable':list(unavailable)}
+
+    def validate(self, driver, configuration):
+        profiles, unavailable = self.discovery.discover()
+        if driver not in profiles:
+            return {'valid':False,'diagnostics':[{'code':'PROFILE_UNAVAILABLE','path':'/driver',
+                'message':'Install a driver with the offline configuration profile capability'}],
+                'scope':'No device or program preflight performed'}
+        return profiles[driver].validate(configuration)

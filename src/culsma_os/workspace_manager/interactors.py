@@ -490,3 +490,66 @@ class WorkspaceProfileInteractor:
                     raise ValueError('WORKSPACE_ROUTE_INVALID')
         return {'schema': 'culsma_run_workspace_v1', 'id': identity,
                 'bindings': deepcopy(bindings), 'routes': deepcopy(routes)}
+
+
+from culsma_os.auth.interactors import AuthorizedInteractor
+from .repositories.configuration import StationConfigurationRepository
+from .models import ConfigurationError, StationConfigurationRequest
+
+
+class StationConfigurationInteractor(AuthorizedInteractor):
+    required_capability = 'configuration:drafts'
+
+    def __init__(self, tokens, repository: StationConfigurationRepository, profiles):
+        super().__init__(tokens)
+        self.repository, self.profiles = repository, profiles
+
+    def perform(self, request):
+        import hashlib
+        import json
+        import re
+        from uuid import uuid4
+        if not isinstance(request,StationConfigurationRequest):
+            raise ConfigurationError('CONFIGURATION_REQUEST_INVALID')
+        if request.action == 'profiles':
+            return self.profiles.describe()
+        if request.action == 'list':
+            return {'drafts':[draft.as_dict() for draft in self.repository.list()]}
+        if request.action not in {'create','get','save','validate','export'}:
+            raise ConfigurationError('CONFIGURATION_ACTION_UNSUPPORTED')
+        if request.action != 'create' and (not isinstance(request.draft_id,str)
+                or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',request.draft_id) is None):
+            raise ConfigurationError('CONFIGURATION_ID_INVALID')
+        if (request.action in {'save','validate','export'} or (request.action == 'get' and request.revision is not None)) and (type(request.revision) is not int or request.revision < 1):
+            raise ConfigurationError('CONFIGURATION_REVISION_REQUIRED')
+        if request.action in {'create','save'}:
+            if (not isinstance(request.title,str) or not 1 <= len(request.title.strip()) <= 120
+                    or not isinstance(request.driver,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,100}',request.driver) is None
+                    or not isinstance(request.configuration,dict)):
+                raise ConfigurationError('CONFIGURATION_DRAFT_INVALID')
+            try:
+                encoded = json.dumps(request.configuration,sort_keys=True,separators=(',',':'),allow_nan=False)
+            except (ValueError,TypeError,RecursionError):
+                raise ConfigurationError('CONFIGURATION_JSON_INVALID') from None
+            if len(encoded.encode()) > 200000:
+                raise ConfigurationError('CONFIGURATION_TOO_LARGE')
+            value = {'title':request.title.strip(),'driver':request.driver,
+                     'configuration':json.loads(encoded),'fingerprint':hashlib.sha256(encoded.encode()).hexdigest()}
+            if request.action == 'create':
+                return {'draft':self.repository.save(str(uuid4()),0,value).as_dict()}
+            self.repository.get(request.draft_id)
+            return {'draft':self.repository.save(request.draft_id,request.revision,value).as_dict()}
+        record = self.repository.get(request.draft_id,request.revision).as_dict()
+        if request.action == 'get':
+            return {'draft':record}
+        current = self.repository.get(request.draft_id)
+        if current.revision != request.revision:
+            raise ConfigurationError('CONFIGURATION_REVISION_CONFLICT','conflict')
+        validation = self.profiles.validate(record['driver'],record['configuration'])
+        result = {'draft_id':record['draft_id'],'revision':record['revision'],
+                  'fingerprint':record['fingerprint'],'validation':validation,'activation':'not_applied'}
+        if request.action == 'export':
+            if not validation['valid']:
+                raise ConfigurationError('CONFIGURATION_EXPORT_INVALID')
+            result['configuration'] = record['configuration']
+        return result

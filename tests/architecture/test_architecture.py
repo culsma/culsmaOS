@@ -20,6 +20,7 @@ class TestArchitecture:
             "event_journal",
             "recovery_manager",
             "lifecycle_manager",
+            "auth",  # Process-local credential owner for writable console use cases.
             "console",  # Transport/composition package, not a second execution subsystem.
         }
         assert {

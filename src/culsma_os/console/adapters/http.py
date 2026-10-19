@@ -1,4 +1,4 @@
-"""Fixed-resource, loopback-only HTTP adapter for the read-only OS console."""
+"""Fixed-resource, loopback-only HTTP adapter for the local OS console."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
 import json
@@ -6,13 +6,15 @@ import logging
 from urllib.parse import unquote, urlsplit
 
 from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadRequest
+from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError
+from culsma_os.auth.models import ConsoleAccessError
 
 
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands):
-        self.commands = commands
+    def __init__(self, settings, commands, configuration=None, sessions=None):
+        self.commands, self.configuration, self.sessions = commands, configuration, sessions
         super().__init__(("127.0.0.1", settings.port), ConsoleHTTPHandler)
 
     @property
@@ -67,21 +69,76 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                 payload = files("culsma_os.console").joinpath("web", name).read_bytes()
                 self.respond(200, payload, content_type)
                 return
+            if url.path == '/api/v1/session' and self.server.sessions is not None:
+                if self.headers.get('X-Culsma-Console') != '1' or self.headers.get('Sec-Fetch-Site') != 'same-origin':
+                    raise ConsoleReadError('CONSOLE_BOOTSTRAP_CONTEXT_REJECTED','forbidden')
+                result = self.server.sessions.execute()
+                self.respond(200,json.dumps(result).encode())
+                return
+            if url.path in {'/api/v1/configuration/profiles','/api/v1/configuration/drafts'} and self.server.configuration is not None:
+                action = 'profiles' if url.path.endswith('/profiles') else 'list'
+                result = self.server.configuration.execute(self.headers.get('Authorization'),StationConfigurationRequest(action))
+                self.respond(200,json.dumps({'schema':'culsma_configuration_v1','data':result}).encode())
+                return
             result = self.server.commands.execute(self.route(url.path))
             self.respond(200, json.dumps(result.as_dict()).encode())
-        except ConsoleReadError as error:
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError) as error:
             status = {"forbidden": 403, "not_found": 404, "invalid_request": 400,
-                      "read_only": 405, "unavailable": 503, "bad_response": 502}[error.kind]
+                      "read_only": 405, "unavailable": 503, "bad_response": 502, "unauthenticated":401, "conflict":409}[error.kind]
             self.respond(status, json.dumps({"schema": "culsma_console_v1", "ok": False,
                 "error": {"code": error.code}}).encode())
         except Exception:
             logging.getLogger(__name__).exception("Console read failed")
             self.respond(500, b'{"ok":false,"error":{"code":"CONSOLE_INTERNAL_ERROR"}}')
 
+    def configuration_request(self, payload):
+        allowed = {'action','draft_id','revision','title','driver','configuration'}
+        if not isinstance(payload,dict) or set(payload)-allowed or not isinstance(payload.get('action'),str):
+            raise ConsoleReadError('CONSOLE_CONFIGURATION_REQUEST_INVALID','invalid_request')
+        if any(payload.get(key) is not None and not isinstance(payload[key],str) for key in ['draft_id','title','driver']):
+            raise ConsoleReadError('CONSOLE_CONFIGURATION_REQUEST_INVALID','invalid_request')
+        if payload.get('revision') is not None and type(payload['revision']) is not int:
+            raise ConsoleReadError('CONSOLE_CONFIGURATION_REQUEST_INVALID','invalid_request')
+        if payload.get('configuration') is not None and not isinstance(payload['configuration'],dict):
+            raise ConsoleReadError('CONSOLE_CONFIGURATION_REQUEST_INVALID','invalid_request')
+        return StationConfigurationRequest(**payload)
+
+    def do_POST(self):
+        try:
+            url = urlsplit(self.path)
+            self.validate_context(True)
+            if url.path != '/api/v1/configuration/drafts' or self.server.configuration is None:
+                self.reject_method()
+                return
+            if url.query or url.fragment or url.scheme or url.netloc:
+                raise ConsoleReadError('CONSOLE_REQUEST_INVALID','invalid_request')
+            if self.headers.get('Origin') != 'http://'+self.headers.get('Host',''):
+                raise ConsoleReadError('CONSOLE_ORIGIN_REJECTED','forbidden')
+            lengths = self.headers.get_all('Content-Length',[])
+            if len(lengths) != 1 or not lengths[0].isdigit() or self.headers.get('Transfer-Encoding') is not None:
+                raise ConsoleReadError('CONSOLE_BODY_INVALID','invalid_request')
+            length = int(lengths[0])
+            if not 1 <= length <= 250000 or self.headers.get('Content-Type','').split(';')[0] != 'application/json':
+                raise ConsoleReadError('CONSOLE_BODY_INVALID','invalid_request')
+            try:
+                body = self.rfile.read(length)
+                if len(body) != length:
+                    raise ValueError('Incomplete body')
+                payload = json.loads(body)
+            except (ValueError,UnicodeError,RecursionError):
+                raise ConsoleReadError('CONSOLE_JSON_INVALID','invalid_request') from None
+            result = self.server.configuration.execute(self.headers.get('Authorization'),self.configuration_request(payload))
+            self.respond(200,json.dumps({'schema':'culsma_configuration_v1','data':result}).encode())
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError) as error:
+            status = {'forbidden':403,'unauthenticated':401,'conflict':409,'not_found':404,'invalid_request':400}[error.kind]
+            self.respond(status,json.dumps({'ok':False,'error':{'code':error.code}}).encode())
+        except Exception:
+            logging.getLogger(__name__).exception('Console configuration failed')
+            self.respond(500,b'{"ok":false,"error":{"code":"CONSOLE_INTERNAL_ERROR"}}')
+
     def reject_method(self):
         self.respond(405, b'{"ok":false,"error":{"code":"CONSOLE_READ_ONLY"}}')
 
-    do_POST = reject_method
     do_PUT = reject_method
     do_PATCH = reject_method
     do_DELETE = reject_method

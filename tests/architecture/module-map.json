@@ -240,6 +240,10 @@
         {
           "component": "RunEvidenceInteractor",
           "path": "src/culsma_os/program_manager/interactors/run_evidence.py"
+        },
+        {
+          "component": "ConsoleSessionInteractor",
+          "path": "src/culsma_os/program_manager/interactors/console_session.py"
         }
       ]
     },
@@ -406,6 +410,30 @@
         {
           "component": "ProgramWorkspacePort",
           "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "StationConfigurationInteractor",
+          "path": "src/culsma_os/workspace_manager/interactors.py"
+        },
+        {
+          "component": "StationConfigurationRequest",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "StationConfigurationDraft",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "ConfigurationError",
+          "path": "src/culsma_os/workspace_manager/models.py"
+        },
+        {
+          "component": "StationConfigurationRepository",
+          "path": "src/culsma_os/workspace_manager/repositories/configuration.py"
+        },
+        {
+          "component": "SqliteStationConfigurationRepository",
+          "path": "src/culsma_os/workspace_manager/repositories/configuration.py"
         }
       ]
     },
@@ -678,6 +706,10 @@
         {
           "component": "SqliteDeviceInspectionRepository",
           "path": "src/culsma_os/device_manager/repository.py"
+        },
+        {
+          "component": "DeviceProfileInteractor",
+          "path": "src/culsma_os/device_manager/interactors.py"
         }
       ]
     },
@@ -772,6 +804,14 @@
         {
           "component": "FeedbackContractInteractor",
           "path": "src/culsma_os/driver_framework/interactors.py"
+        },
+        {
+          "component": "DriverProfileInteractor",
+          "path": "src/culsma_os/driver_framework/interactors.py"
+        },
+        {
+          "component": "DeviceProfilePort",
+          "path": "src/culsma_os/driver_framework/models.py"
         }
       ]
     },
@@ -920,6 +960,32 @@
         {
           "component": "ConsoleHTTPHandler",
           "path": "src/culsma_os/console/adapters/http.py"
+        }
+      ]
+    },
+    {
+      "module": "Auth",
+      "directory": "src/culsma_os/auth/",
+      "components": [
+        {
+          "component": "TokenInteractor",
+          "path": "src/culsma_os/auth/interactors.py"
+        },
+        {
+          "component": "AuthorizedInteractor",
+          "path": "src/culsma_os/auth/interactors.py"
+        },
+        {
+          "component": "SessionCredentialRepository",
+          "path": "src/culsma_os/auth/repository.py"
+        },
+        {
+          "component": "CallerContext",
+          "path": "src/culsma_os/auth/models.py"
+        },
+        {
+          "component": "ConsoleAccessError",
+          "path": "src/culsma_os/auth/models.py"
         }
       ]
     }

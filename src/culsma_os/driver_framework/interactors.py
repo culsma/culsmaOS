@@ -364,3 +364,27 @@ class FeedbackContractInteractor:
             "diagnostic": reason,
         }
         return replace(receipt, outcome="unknown" if reason else receipt.outcome, payload=payload)
+
+
+class DriverProfileInteractor:
+    """Optional configuration capability on installed driver factories."""
+    def __init__(self, candidates=None):
+        self.candidates = candidates
+
+    def discover(self):
+        candidates = self.candidates if self.candidates is not None else entry_points(group='culsma.drivers')
+        profiles, unavailable = {}, []
+        for candidate in candidates:
+            try:
+                factory = candidate.load()()
+                capability = getattr(factory,'configuration_profile',None)
+                if not callable(capability):
+                    continue
+                if candidate.name in profiles:
+                    raise ValueError('PROFILE_NAME_CONFLICT')
+                profiles[candidate.name] = capability()
+            except Exception:
+                unavailable.append(candidate.name)
+        for name in unavailable:
+            profiles.pop(name,None)
+        return profiles, tuple(unavailable)

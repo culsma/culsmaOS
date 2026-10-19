@@ -97,7 +97,7 @@ python tools/check_distribution.py --directory dist
 
 Build and verify artifacts locally before uploading a release.
 
-## Read-only station console (development checkout)
+## Station console (development checkout)
 
 This console is under development and is not part of the published 0.1.1 wheel.
 Install this checkout using the local development command above. Start an existing
@@ -114,7 +114,7 @@ culsma-os console --socket /tmp/culsma-console.sock --port 8765
 ```
 
 Open the printed loopback URL. Station, run list and run detail display OS records;
-the interface cannot submit work or change resources. A fresh service can have no
+the execution views cannot submit work or change resources. A fresh service can have no
 device records until its first accepted run. Submit through the existing CLI:
 
 ```sh
@@ -132,3 +132,23 @@ and no-action logical completions are separate; derived collective evidence keep
 its coverage label. Missing receipts and unmatched registrations stay explicit.
 Evidence and registration share one read snapshot; the run summary is independent.
 The view does not claim hardware timing or include every semantic declaration.
+
+### Configuration drafts
+
+Open **Configuration**, choose an installed profile and use **New from profile**
+or import a device configuration JSON file. Edit fields, save a draft, validate
+its saved revision and export the validated JSON. Labware and binding forms are
+structured; modules, routes and policy remain available through Advanced JSON.
+Validation uses the external driver's optional offline profile capability and
+installed labware definitions. It is not program preflight or a hardware check.
+
+Drafts default to `run-artifacts/console/drafts.sqlite3`; select a different local
+store with `--drafts-db PATH`. Saving/exporting never activates configuration or
+changes recorded tips, positions or reservations. Use an exported file explicitly
+when starting `serve`; existing configuration and ownership guards still apply.
+
+Writable draft requests use an ephemeral same-origin, console-process credential.
+It expires when the console restarts and grants no execution-control capability.
+This is a single-user loopback console, not a multi-user login system. The external
+driver must provide `configuration_profile()`; older plugins remain usable for
+execution inspection but cannot validate/export configuration drafts.
