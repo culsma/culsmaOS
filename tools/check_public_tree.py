@@ -22,8 +22,12 @@ class LocalHTMLLinks(HTMLParser):
 
 
 class PublicTreeCheck:
-    brand_images = {'assets/culsma-logo.png':
-                    'cb3c56f139b7473c84be44adcbe1c58f035ec8428b36393bb64914692a8f9d95'}
+    brand_images = {
+        'assets/culsma-logo.png':
+            'cb3c56f139b7473c84be44adcbe1c58f035ec8428b36393bb64914692a8f9d95',
+        'assets/culsma-os-wordmark.png':
+            '67f67511aa2104511f99b210612bf750f8a195879e8f5050a9b655c12b2c01c4',
+    }
 
     internal_docs = ('docs/module/', 'docs/evidence/', 'docs/archive/',
                      'docs/release/', 'docs/contracts/', 'design/')

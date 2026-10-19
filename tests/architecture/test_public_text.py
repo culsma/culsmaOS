@@ -61,9 +61,9 @@ class TestPublicText:
         assert checker.inspect(tmp_path)['errors'] == [
             {'path': 'index.html', 'error': 'LOCAL_LINK_MISSING', 'target': 'removed.json'}]
 
+    @pytest.mark.parametrize('relative', ['assets/culsma-logo.png', 'assets/culsma-os-wordmark.png'])
     @pytest.mark.parametrize('changed', [False, True])
-    def test_only_reviewed_shared_logo_bytes_are_accepted(self, tmp_path, monkeypatch, changed):
-        relative = 'assets/culsma-logo.png'
+    def test_only_reviewed_shared_logo_bytes_are_accepted(self, tmp_path, monkeypatch, changed, relative):
         original = Path(__file__).resolve().parents[2] / relative
         target = tmp_path / relative
         target.parent.mkdir()

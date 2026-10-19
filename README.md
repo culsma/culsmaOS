@@ -1,7 +1,6 @@
-<h1 align="center">
-  <img src="assets/culsma-logo.png" alt="" width="64" height="64" align="absmiddle">
-  culsmaOS
-</h1>
+<p align="center">
+  <img src="assets/culsma-os-wordmark.png" alt="CulsmaOS" width="720">
+</p>
 
 **An operating-system framework for executing laboratory protocols.**
 
