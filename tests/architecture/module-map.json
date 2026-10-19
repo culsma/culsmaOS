@@ -216,6 +216,26 @@
         {
           "component": "FileWorkspaceCatalogRepository",
           "path": "src/culsma_os/program_manager/repositories/workspace.py"
+        },
+        {
+          "component": "ConsoleCommandInteractor",
+          "path": "src/culsma_os/program_manager/interactors/console.py"
+        },
+        {
+          "component": "ConsoleReadRequest",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ConsoleReadResponse",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ConsoleReadError",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ResidentReadPort",
+          "path": "src/culsma_os/program_manager/models.py"
         }
       ]
     },
@@ -858,6 +878,28 @@
         {
           "component": "SqliteResidentConfigurationRepository",
           "path": "src/culsma_os/lifecycle_manager/repository.py"
+        }
+      ]
+    },
+    {
+      "module": "ConsoleTransport",
+      "directory": "src/culsma_os/console/",
+      "components": [
+        {
+          "component": "ConsoleSettings",
+          "path": "src/culsma_os/console/models.py"
+        },
+        {
+          "component": "ConsoleApplicationFactory",
+          "path": "src/culsma_os/console/providers.py"
+        },
+        {
+          "component": "ConsoleHTTPServer",
+          "path": "src/culsma_os/console/adapters/http.py"
+        },
+        {
+          "component": "ConsoleHTTPHandler",
+          "path": "src/culsma_os/console/adapters/http.py"
         }
       ]
     }

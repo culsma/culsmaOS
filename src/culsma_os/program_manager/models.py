@@ -268,3 +268,31 @@ class ResidentAdmissionError(ValueError):
     def __init__(self, code, diagnostics=()):
         super().__init__(code)
         self.diagnostics = tuple(diagnostics)
+
+
+@dataclass(frozen=True)
+class ConsoleReadRequest:
+    resource: str
+    run_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ConsoleReadResponse:
+    resource: str
+    observed_at: str
+    data: dict[str, Any]
+
+    def as_dict(self):
+        return {"schema": "culsma_console_v1", "ok": True, "resource": self.resource,
+                "observed_at": self.observed_at, "source": "resident_service",
+                "consistency": "independent_resident_reads", "data": self.data}
+
+
+class ConsoleReadError(ValueError):
+    def __init__(self, code: str, kind: str):
+        super().__init__(code)
+        self.code, self.kind = code, kind
+
+
+class ResidentReadPort(Protocol):
+    def execute(self, payload: dict[str, Any]) -> dict[str, Any]: ...

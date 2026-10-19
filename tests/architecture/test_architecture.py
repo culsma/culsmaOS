@@ -20,6 +20,7 @@ class TestArchitecture:
             "event_journal",
             "recovery_manager",
             "lifecycle_manager",
+            "console",  # Transport/composition package, not a second execution subsystem.
         }
         assert {
             p.name for p in SRC.iterdir() if p.is_dir() and p.name != "__pycache__"
@@ -40,6 +41,7 @@ class TestArchitecture:
                     "repository.py",
                     "repositories",
                     "adapters",
+                    "providers.py",
                 }, path
             for node in ast.walk(tree):
                 if not isinstance(node, ast.ImportFrom):

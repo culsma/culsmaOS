@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add a loopback-only, read-only station console connected to an existing resident host. Station, queue and run-report views preserve recorded uncertainty and cannot issue device or run-control commands.
+
 ## 0.1.1 — Public experimental preview
 
 - Redact local filesystem paths from published evidence and repository history.

@@ -48,6 +48,8 @@ class TestDistributionAudit:
             archive.writestr('culsma_os-0.1.0.dist-info/METADATA',metadata)
             archive.writestr('culsma_os-0.1.0.dist-info/entry_points.txt',entries)
             archive.writestr('culsma_os/__init__.py','"""Runtime."""\n')
+            if problem == 'console-assets':
+                archive.writestr('culsma_os/console/__init__.py', '')
         import importlib.util
         spec=importlib.util.spec_from_file_location('distribution_audit',ROOT/'tools/check_distribution.py')
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -96,7 +98,7 @@ class TestDistributionAudit:
         ('design','INTERNAL_DESIGN_INCLUDED'),('rendered-design','INTERNAL_DESIGN_INCLUDED'),
         ('evidence','INTERNAL_DESIGN_INCLUDED'),('contract','INTERNAL_DESIGN_INCLUDED'),
         ('archive','INTERNAL_DESIGN_INCLUDED'),('release-plan','INTERNAL_DESIGN_INCLUDED'),
-        ('dated-doc','INTERNAL_DESIGN_INCLUDED')])
+        ('dated-doc','INTERNAL_DESIGN_INCLUDED'),('console-assets','CONSOLE_ASSET_MISSING')])
     def test_archive_contract_failures(self,tmp_path,problem,diagnostic):
         audit,directory=self.archives(tmp_path,problem)
         with pytest.raises(ValueError,match='DISTRIBUTION_'+diagnostic):

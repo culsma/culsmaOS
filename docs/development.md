@@ -96,3 +96,32 @@ python tools/check_distribution.py --directory dist
 ```
 
 Build and verify artifacts locally before uploading a release.
+
+## Read-only station console (development checkout)
+
+This console is under development and is not part of the published 0.1.1 wheel.
+Install this checkout using the local development command above. Start an existing
+resident service, then attach the console from another terminal:
+
+```sh
+# Terminal 1
+culsma-os serve --socket /tmp/culsma-console.sock \
+  --host-db run-artifacts/console/os.sqlite3 \
+  --driver-config examples/transfer/deck.json \
+  --artifacts-dir run-artifacts/console
+# Terminal 2
+culsma-os console --socket /tmp/culsma-console.sock --port 8765
+```
+
+Open the printed loopback URL. Station, run list and run detail display OS records;
+the interface cannot submit work or change resources. A fresh service can have no
+device records until its first accepted run. Submit through the existing CLI:
+
+```sh
+culsma-os host-status --socket /tmp/culsma-console.sock
+# Wait for ready, then:
+culsma-os submit examples/transfer/transfer.culs --socket /tmp/culsma-console.sock
+```
+
+Stopping the console does not stop the resident service. An unavailable host is
+shown as disconnected; the console never starts or resumes execution implicitly.

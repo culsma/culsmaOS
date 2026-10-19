@@ -29,6 +29,11 @@ class PublicTreeCheck:
             '67f67511aa2104511f99b210612bf750f8a195879e8f5050a9b655c12b2c01c4',
     }
 
+    brand_images.update({
+        "src/culsma_os/console/web/assets/culsma-logo.png": brand_images["assets/culsma-logo.png"],
+        "src/culsma_os/console/web/assets/culsma-os-wordmark.png": brand_images["assets/culsma-os-wordmark.png"],
+    })
+
     internal_docs = ('docs/module/', 'docs/evidence/', 'docs/archive/',
                      'docs/release/', 'docs/contracts/', 'design/')
 

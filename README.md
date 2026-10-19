@@ -210,7 +210,7 @@ are integrated for restricted device profiles. Plate centrifugation is validated
 through third-party protocol simulation. See the [capability map](docs/reference/instrument-capability-map.json)
 for exact coverage.
 
-The preview has no GUI, parallel execution, general manual reconciliation or
+The published 0.1.1 preview has no GUI, parallel execution, general manual reconciliation or
 measurement/readout integration. Material quantities are modeled; device action
 completion does not establish a measured biological result. Hamilton physical
 execution and general cross-device compatibility remain outside the accepted
@@ -218,6 +218,7 @@ baseline.
 
 - [Architecture and implementation map](docs/reference/implementation-map.md)
 - [Development and acceptance](docs/development.md) · [Test organization](tests/README.md)
+- [Read-only console (development checkout)](docs/development.md#read-only-station-console-development-checkout)
 - [Release notes](CHANGELOG.md) · [Compatible dependency versions](tools/distribution/manifest.json)
 
 ## How to cite

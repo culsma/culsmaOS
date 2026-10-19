@@ -39,3 +39,6 @@ show_contexts = false
 [tool.coverage.html]
 directory = "run-artifacts/coverage/html"
 show_contexts = true
+
+[tool.setuptools.package-data]
+"culsma_os.console" = ["web/*.html", "web/*.js", "web/*.css", "web/assets/*.png"]

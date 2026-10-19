@@ -71,7 +71,26 @@ class CulsmaOSCLI:
         for action in ("runs", "host-status", "host-stop", "device-status"):
             remote = commands.add_parser(action)
             remote.add_argument("--socket", type=Path, required=True)
+        console = commands.add_parser("console", help="Inspect an existing resident host in a read-only local browser console")
+        console.add_argument("--socket", type=Path, required=True)
+        console.add_argument("--port", type=int, default=8765)
         args = parser.parse_args(argv)
+        if args.command == "console":
+            from culsma_os.console.models import ConsoleSettings
+            from culsma_os.console.providers import ConsoleApplicationFactory
+            try:
+                server = ConsoleApplicationFactory().build(ConsoleSettings(args.socket.resolve(), args.port))
+            except (ValueError, OSError) as error:
+                parser.exit(2, f"{error}\n")
+            try:
+                print(f"Read-only station console: {server.url}", flush=True)
+                print("Connects to the selected resident service; no execution worker is started.", flush=True)
+                server.serve_forever(poll_interval=0.2)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                server.server_close()
+            raise SystemExit(0)
         if args.command == "serve":
             from culsma_os.lifecycle_manager.models import ResidentHostSettings
             import signal
