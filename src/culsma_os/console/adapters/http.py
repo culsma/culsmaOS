@@ -5,7 +5,7 @@ import json
 import logging
 from urllib.parse import unquote, urlsplit
 
-from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadRequest
+from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadRequest, ConsoleProgramRequest, ConsoleProgramError
 from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError
 from culsma_os.auth.models import ConsoleAccessError
 
@@ -13,8 +13,9 @@ from culsma_os.auth.models import ConsoleAccessError
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None):
         self.commands, self.configuration, self.sessions = commands, configuration, sessions
+        self.programs = programs
         super().__init__(("127.0.0.1", settings.port), ConsoleHTTPHandler)
 
     @property
@@ -28,6 +29,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
     static_resources = {
         "/": ("index.html", "text/html; charset=utf-8"),
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+        "/programs.js": ("programs.js", "text/javascript; charset=utf-8"),
         "/style.css": ("style.css", "text/css; charset=utf-8"),
         "/assets/culsma-os-wordmark.png": ("assets/culsma-os-wordmark.png", "image/png"),
         "/assets/culsma-logo.png": ("assets/culsma-logo.png", "image/png"),
@@ -80,9 +82,13 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                 result = self.server.configuration.execute(self.headers.get('Authorization'),StationConfigurationRequest(action))
                 self.respond(200,json.dumps({'schema':'culsma_configuration_v1','data':result}).encode())
                 return
+            if url.path == '/api/v1/programs' and self.server.programs is not None:
+                result = self.server.programs.execute(self.headers.get('Authorization'),ConsoleProgramRequest('list'))
+                self.respond(200,json.dumps({'schema':'culsma_program_console_v1','data':result}).encode())
+                return
             result = self.server.commands.execute(self.route(url.path))
             self.respond(200, json.dumps(result.as_dict()).encode())
-        except (ConsoleReadError,ConfigurationError,ConsoleAccessError) as error:
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError) as error:
             status = {"forbidden": 403, "not_found": 404, "invalid_request": 400,
                       "read_only": 405, "unavailable": 503, "bad_response": 502, "unauthenticated":401, "conflict":409}[error.kind]
             self.respond(status, json.dumps({"schema": "culsma_console_v1", "ok": False,
@@ -103,11 +109,20 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             raise ConsoleReadError('CONSOLE_CONFIGURATION_REQUEST_INVALID','invalid_request')
         return StationConfigurationRequest(**payload)
 
+    def program_request(self, payload):
+        allowed = {'action','program_id','snapshot_id','request_id','run_id'}
+        if (not isinstance(payload,dict) or set(payload)-allowed or not isinstance(payload.get('action'),str)
+                or any(value is not None and not isinstance(value,str) for value in payload.values())):
+            raise ConsoleReadError('PROGRAM_REQUEST_INVALID','invalid_request')
+        return ConsoleProgramRequest(**payload)
+
     def do_POST(self):
         try:
             url = urlsplit(self.path)
             self.validate_context(True)
-            if url.path != '/api/v1/configuration/drafts' or self.server.configuration is None:
+            endpoints = {'/api/v1/configuration/drafts':(self.server.configuration,self.configuration_request,'culsma_configuration_v1'),
+                         '/api/v1/programs':(self.server.programs,self.program_request,'culsma_program_console_v1')}
+            if url.path not in endpoints or endpoints[url.path][0] is None:
                 self.reject_method()
                 return
             if url.query or url.fragment or url.scheme or url.netloc:
@@ -127,13 +142,15 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                 payload = json.loads(body)
             except (ValueError,UnicodeError,RecursionError):
                 raise ConsoleReadError('CONSOLE_JSON_INVALID','invalid_request') from None
-            result = self.server.configuration.execute(self.headers.get('Authorization'),self.configuration_request(payload))
-            self.respond(200,json.dumps({'schema':'culsma_configuration_v1','data':result}).encode())
-        except (ConsoleReadError,ConfigurationError,ConsoleAccessError) as error:
-            status = {'forbidden':403,'unauthenticated':401,'conflict':409,'not_found':404,'invalid_request':400}[error.kind]
-            self.respond(status,json.dumps({'ok':False,'error':{'code':error.code}}).encode())
+            interactor, parse_request, schema = endpoints[url.path]
+            result = interactor.execute(self.headers.get('Authorization'),parse_request(payload))
+            self.respond(200,json.dumps({'schema':schema,'data':result}).encode())
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError) as error:
+            status = {'forbidden':403,'unauthenticated':401,'conflict':409,'not_found':404,'invalid_request':400,'unavailable':503,'bad_response':502}[error.kind]
+            self.respond(status,json.dumps({'ok':False,'error':{'code':error.code,
+                'diagnostics':getattr(error,'diagnostics',())}}).encode())
         except Exception:
-            logging.getLogger(__name__).exception('Console configuration failed')
+            logging.getLogger(__name__).exception('Console command failed')
             self.respond(500,b'{"ok":false,"error":{"code":"CONSOLE_INTERNAL_ERROR"}}')
 
     def reject_method(self):

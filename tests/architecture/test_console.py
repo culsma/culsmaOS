@@ -22,8 +22,8 @@ class TestConsoleArchitecture:
         imports = [node.module or '' for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
         assert not any('adapters' in name or 'console' in name for name in imports)
 
-    def test_browser_changes_only_drafts_and_renders_text_safely(self):
-        source = (ROOT/'src/culsma_os/console/web/app.js').read_text()
+    def test_browser_uses_bounded_commands_and_renders_text_safely(self):
+        source = '\n'.join(path.read_text() for path in (ROOT/'src/culsma_os/console/web').glob('*.js'))
         assert 'innerHTML' not in source and 'eval(' not in source
         assert "textContent" in source
         assert not any(f"'{method}'" in source for method in ['PUT','PATCH','DELETE'])

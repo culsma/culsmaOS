@@ -296,3 +296,37 @@ class ConsoleReadError(ValueError):
 
 class ResidentReadPort(Protocol):
     def execute(self, payload: dict[str, Any]) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class ConsoleProgramRequest:
+    action: str
+    program_id: str | None = None
+    snapshot_id: str | None = None
+    request_id: str | None = None
+    run_id: str | None = None
+
+
+class ConsoleProgramError(ValueError):
+    def __init__(self, code, kind='invalid_request', diagnostics=()):
+        super().__init__(code)
+        self.code, self.kind, self.diagnostics = code, kind, tuple(diagnostics)
+
+
+@dataclass(frozen=True)
+class ProgramSourceSnapshot:
+    snapshot_id: str
+    directory: Path
+    files: tuple[str, ...]
+
+
+class ProgramSourceRepository(Protocol):
+    def enabled(self) -> bool: ...
+    def list(self) -> dict: ...
+    def capture(self) -> ProgramSourceSnapshot: ...
+    def load(self, snapshot_id: str) -> ProgramSourceSnapshot: ...
+    def read_source(self, snapshot: ProgramSourceSnapshot, program_id: str) -> str: ...
+
+
+class ResidentCommandPort(Protocol):
+    def execute(self, payload: dict[str, Any]) -> dict[str, Any]: ...

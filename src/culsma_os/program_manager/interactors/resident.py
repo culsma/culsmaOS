@@ -29,6 +29,15 @@ class ResidentCommandInteractor:
             result = self.inspector.execute(RunControlRequest('status', request.run_id, self.context))
             result['pending_controls'] = list(self.queue.pending_controls(request.run_id))
             return result
+        if request.action == 'control-status':
+            self.require_run(request.run_id)
+            try:
+                command = self.queue.control(request.request_id)
+            except KeyError as error:
+                raise ValueError('HOST_CONTROL_NOT_FOUND') from error
+            if command['run_id'] != request.run_id:
+                raise ValueError('HOST_CONTROL_NOT_FOUND')
+            return command
         self.status.require_admission()
         if request.action == 'submit':
             return self.submit(request)

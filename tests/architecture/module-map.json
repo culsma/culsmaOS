@@ -244,6 +244,34 @@
         {
           "component": "ConsoleSessionInteractor",
           "path": "src/culsma_os/program_manager/interactors/console_session.py"
+        },
+        {
+          "component": "ConsoleProgramInteractor",
+          "path": "src/culsma_os/program_manager/interactors/console_program.py"
+        },
+        {
+          "component": "FileProgramSourceRepository",
+          "path": "src/culsma_os/program_manager/repositories/sources.py"
+        },
+        {
+          "component": "ConsoleProgramRequest",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ConsoleProgramError",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ProgramSourceSnapshot",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ProgramSourceRepository",
+          "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "ResidentCommandPort",
+          "path": "src/culsma_os/program_manager/models.py"
         }
       ]
     },

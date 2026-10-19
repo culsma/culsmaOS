@@ -9,6 +9,10 @@ from culsma_os.workspace_manager.interactors import StationConfigurationInteract
 from culsma_os.workspace_manager.repositories.configuration import SqliteStationConfigurationRepository
 from culsma_os.device_manager.interactors import DeviceProfileInteractor
 from culsma_os.driver_framework.interactors import DriverProfileInteractor
+from culsma_os.program_manager.interactors.console_program import ConsoleProgramInteractor
+from culsma_os.program_manager.interactors.compilation import CompilationInteractor
+from culsma_os.program_manager.interactors.semantics import HostedRuntimeInteractor
+from culsma_os.program_manager.repositories.sources import FileProgramSourceRepository
 from .adapters.http import ConsoleHTTPServer
 
 
@@ -19,4 +23,7 @@ class ConsoleApplicationFactory:
             ResidentClientAdapter(settings.socket_path, timeout=3)),
             StationConfigurationInteractor(tokens,SqliteStationConfigurationRepository(
                 settings.drafts_path or Path('run-artifacts/console/drafts.sqlite3')),DeviceProfileInteractor(DriverProfileInteractor())),
-            ConsoleSessionInteractor(tokens))
+            ConsoleSessionInteractor(tokens),
+            ConsoleProgramInteractor(tokens,FileProgramSourceRepository(settings.program_root,
+                settings.program_store or Path('run-artifacts/console/programs')),
+                CompilationInteractor(),HostedRuntimeInteractor(),ResidentClientAdapter(settings.socket_path,timeout=10)))

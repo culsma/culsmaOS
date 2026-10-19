@@ -218,7 +218,7 @@ baseline.
 
 - [Architecture and implementation map](docs/reference/implementation-map.md)
 - [Development and acceptance](docs/development.md) · [Test organization](tests/README.md)
-- [Read-only console (development checkout)](docs/development.md#read-only-station-console-development-checkout)
+- [Station console (development checkout)](docs/development.md#station-console-development-checkout)
 - [Release notes](CHANGELOG.md) · [Compatible dependency versions](tools/distribution/manifest.json)
 
 ## How to cite

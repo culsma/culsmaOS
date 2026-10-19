@@ -1,3 +1,5 @@
+import {ConsolePrograms} from './programs.js';
+
 class StationConsoleApp {
   constructor() {
     this.content = document.querySelector('#content');
@@ -15,6 +17,7 @@ class StationConsoleApp {
     this.configProfiles = [];
     this.configDrafts = [];
     this.configValidation = null;
+    this.programs = new ConsolePrograms(this);
   }
 
   start() {
@@ -247,7 +250,7 @@ class StationConsoleApp {
       material.append(this.element('p', 'No registered material snapshot is available for this run.', 'empty'));
     }
     const diagnostics = (result.alerts || []).map(item => typeof item === 'string' ? item : item.code || 'Diagnostic');
-    this.content.replaceChildren(back, state, semantic, this.renderEvidence(data.execution_evidence), material);
+    this.content.replaceChildren(back, state, this.programs.renderControls(data), semantic, this.renderEvidence(data.execution_evidence), material);
     this.showAlert(data.error || data.body_error || (diagnostics.length ? diagnostics.join(' · ') : null));
   }
 
@@ -263,7 +266,7 @@ class StationConsoleApp {
       const result = await response.json();
       if (!response.ok) {
         if (response.status === 401) this.configToken = null;
-        throw new Error(result.error?.code || 'CONFIGURATION_REQUEST_FAILED');
+        throw new Error([result.error?.code || 'CONSOLE_REQUEST_FAILED',...(result.error?.diagnostics || []).map(item => item.code)].join(' · '));
       }
       return result.data || result;
     } finally { clearTimeout(timeout); }
@@ -284,7 +287,7 @@ class StationConsoleApp {
       this.configDrafts = drafts.drafts || [];
       if (location.hash !== '#configuration') { this.pending = true; return; }
       document.querySelector('#title').textContent = 'Configuration drafts';
-      for (const name of ['station','runs','configuration']) document.querySelector(`#${name}-tab`).setAttribute('aria-current',name === 'configuration' ? 'page':'false');
+      for (const name of ['station','runs','configuration','programs']) document.querySelector(`#${name}-tab`).setAttribute('aria-current',name === 'configuration' ? 'page':'false');
       document.querySelector('#connection').replaceChildren(this.badge('Connected'));
       document.querySelector('#observed').textContent = 'Local draft store · running station unchanged';
       this.showAlert(profiles.unavailable?.length ? `Profiles unavailable: ${profiles.unavailable.join(', ')}` : null);
@@ -471,9 +474,11 @@ class StationConsoleApp {
     if (document.hidden) return;
     if (this.busy) { this.pending = true; return; }
     if (location.hash === '#configuration') { await this.refreshConfiguration(); return; }
+    if (location.hash === '#programs') { await this.programs.refresh(); return; }
     this.busy = true;
     this.button.disabled = true;
     document.querySelector('#configuration-tab').setAttribute('aria-current','false');
+    document.querySelector('#programs-tab').setAttribute('aria-current','false');
     const route = location.hash || '#station';
     const isRun = route.startsWith('#run/');
     const controller = new AbortController();
@@ -495,7 +500,9 @@ class StationConsoleApp {
       document.querySelector('#connection').className = '';
       document.querySelector('#connection').replaceChildren(this.badge('Connected'));
       document.querySelector('#observed').textContent = `Read ${new Date(snapshot.observed_at).toLocaleTimeString()} · OS records · separate snapshots`;
-      const key = route + JSON.stringify(snapshot.data);
+      if (isRun) await this.programs.observeControl(snapshot.data.run_id);
+      if (route !== (location.hash || '#station')) { this.pending = true; return; }
+      const key = route + JSON.stringify(snapshot.data) + (this.programs.controlMessages.get(snapshot.data.run_id) || '');
       if (key !== this.renderKey) {
         if (isRun) this.renderRun(snapshot.data);
         else if (route === '#runs') this.renderRuns(snapshot.data);
@@ -515,7 +522,7 @@ class StationConsoleApp {
       this.busy = false;
       this.button.disabled = false;
       if (this.pending) { this.pending = false; this.refresh(); }
-      else if (!document.hidden && location.hash !== '#configuration') this.timer = setTimeout(() => this.refresh(), 2500);
+      else if (!document.hidden && !['#configuration','#programs'].includes(location.hash)) this.timer = setTimeout(() => this.refresh(), 2500);
     }
   }
 }

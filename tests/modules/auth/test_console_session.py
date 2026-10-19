@@ -9,7 +9,7 @@ def test_process_session_is_stable_but_not_valid_in_another_process_owner():
     token=first.issue_console_session()
     assert token==first.issue_console_session()
     caller=first.execute('Bearer '+token)
-    assert caller.capabilities==frozenset({'configuration:drafts'})
+    assert caller.capabilities==frozenset({'configuration:drafts','programs:execute'})
     with pytest.raises(ConsoleAccessError): second.execute('Bearer '+token)
     with pytest.raises((AttributeError,TypeError)): caller.subject='forged'
 

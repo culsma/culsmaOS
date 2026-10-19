@@ -5,7 +5,7 @@ from pathlib import Path
 import socket
 import stat
 from uuid import uuid4
-from ..models import ResidentCommand
+from ..models import ResidentCommand, ResidentAdmissionError
 
 
 class ResidentProtocolAdapter:
@@ -110,5 +110,5 @@ class ResidentClientAdapter:
             ResidentProtocolAdapter.send(connection, request)
             response = ResidentProtocolAdapter.receive(connection)
         if not response['ok']:
-            raise ValueError(response['error'])
+            raise ResidentAdmissionError(response['error'], response.get('diagnostics', ()))
         return response['result']
