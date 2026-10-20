@@ -56,7 +56,7 @@ export class ConsolePrograms {
     if (location.hash !== '#programs') return;
     const a = this.app;
     document.querySelector('#title').textContent = 'Submit a program';
-    for (const id of ['station','runs','configuration','programs']) document.querySelector(`#${id}-tab`).setAttribute('aria-current',id === 'programs' ? 'page':'false');
+    a.selectPage('programs');
     document.querySelector('#connection').replaceChildren(a.element('span','Local library','badge neutral'));
     document.querySelector('#observed').textContent = 'Program library · explicit submission to the selected resident service';
     const card = a.card('Choose and check');

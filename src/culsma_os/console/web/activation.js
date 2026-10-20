@@ -32,7 +32,10 @@ export class ConsoleActivation {
     this.timer = setTimeout(async () => {
       try {
         await this.refresh();
-        if (location.hash === '#configuration') this.app.renderConfiguration();
+        if (['#configuration','#system'].includes(location.hash)) {
+          try { await this.app.configuration.readCurrent(location.hash === '#configuration'); } catch (error) { this.app.showAlert(error.message); }
+          if (location.hash === '#system') this.app.renderSystemInformation();else this.app.renderConfiguration();
+        }
       } catch (error) {
         this.app.interaction.result('configuration.apply','unavailable','Configuration status unavailable. The request ID is retained; no automatic apply retry.');
       }
@@ -41,20 +44,21 @@ export class ConsoleActivation {
 
   render() {
     const a = this.app;const card = a.card('Active station configuration');
-    card.dataset.region = 'active-configuration';
+    card.dataset.region = 'active-configuration';card.classList.add('configuration-current');
     if (!this.view) { card.append(a.element('p','Station configuration status is unavailable.','notice'));return card; }
     const active = this.view.active;
     card.dataset.configurationFingerprint = active.fingerprint;
     card.dataset.hostState = this.view.host.status;
-    card.append(a.badge(this.view.host.status),a.details([
-      ['Selected configuration',active.origin ? `${active.origin.title} · r${active.origin.revision}`:'Service startup configuration'],
-      ['Configuration identity',a.element('span',active.fingerprint,'mono')]
-    ]));
+    const heading = card.querySelector('h2');const header = a.element('div','','content-heading');
+    heading.replaceWith(header);header.append(heading,a.badge(this.view.host.status));
+    card.append(a.element('p',active.origin ? `${active.origin.title} · r${active.origin.revision}`:'Service startup configuration','configuration-summary'));
+    const details = a.element('details','','config-advanced');details.append(a.element('summary','Configuration identity and apply receipt'));
+    details.append(a.details([['Configuration identity',a.element('span',active.fingerprint,'mono')]]));
     if (this.view.receipt) {
       const receipt = this.view.receipt;
-      card.append(a.details([['Last apply request',receipt.request_id],['Application state',receipt.status],['Problem',receipt.error || 'None']]));
+      details.append(a.details([['Last apply request',receipt.request_id],['Application state',receipt.status],['Problem',receipt.error || 'None']]));
     }
-    card.append(a.element('p','Application rebuilds the simulated execution session when the station is idle. Run history, tip accounting and unresolved resources are retained. It does not rearrange a physical deck or replenish supplies.','note'));
+    card.append(details);
     return card;
   }
 

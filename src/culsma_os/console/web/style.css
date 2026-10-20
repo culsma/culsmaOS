@@ -15,3 +15,21 @@
 .operation-status small{display:block;font:11px ui-monospace,monospace;margin-top:5px;overflow-wrap:anywhere}
 
 .operation-status{position:sticky;top:12px;z-index:2;box-shadow:0 3px 10px #1930470c}
+
+/* Concrete configuration sections, shared by keyboard and browser-agent use. */
+.configuration-summary{font-size:13px;line-height:1.7;margin:10px 0;color:#344f68}
+[data-region=configuration-changes] td{max-width:360px}
+.config-actions input[type=checkbox]{width:auto;align-self:flex-start}
+.config-map-row{grid-template-columns:minmax(100px,1fr) repeat(3,minmax(100px,1fr)) minmax(110px,1fr)}
+@media(max-width:900px){.config-map-row{grid-template-columns:1fr 1fr}}
+
+.configuration-current{padding:16px 22px}.configuration-current h2{margin:0;font-size:15px}
+.configuration-current .configuration-summary{margin:5px 0}.configuration-current .config-advanced{margin-top:8px}
+
+.configuration-context{display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:12px;color:#61768a;margin:0 0 16px}
+[data-region=station-settings]>.label{margin:0 0 18px}
+[data-region=configuration-changes] .config-advanced{margin:0 0 16px}
+nav{flex-wrap:wrap;gap:12px 24px}
+@media(max-width:600px){.configuration-context{align-items:flex-start;flex-direction:column}}
+
+@media(max-width:600px){.config-map-row{grid-template-columns:1fr}}

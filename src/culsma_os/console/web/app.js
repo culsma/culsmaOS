@@ -1,6 +1,7 @@
 import {ConsolePrograms} from './programs.js';
 import {ConsoleInteraction} from './interaction.js';
 import {ConsoleActivation} from './activation.js';
+import {ConsoleConfiguration,ConsoleSystemInformation} from './configuration.js';
 
 class StationConsoleApp {
   constructor() {
@@ -22,6 +23,8 @@ class StationConsoleApp {
     this.configValidation = null;
     this.programs = new ConsolePrograms(this);
     this.activation = new ConsoleActivation(this);
+    this.configuration = new ConsoleConfiguration(this);
+    this.systemInformation = new ConsoleSystemInformation(this);
   }
 
   start() {
@@ -285,8 +288,15 @@ class StationConsoleApp {
     } finally { clearTimeout(timeout); }
   }
 
+  selectPage(page) {
+    for (const id of ['station','runs','configuration','programs','system']) {
+      document.querySelector(`#${id}-tab`).setAttribute('aria-current',id === page ? 'page':'false');
+    }
+  }
+
   async refreshConfiguration() {
-    this.interaction.view('configuration',{loadState:'loading'});
+    const route = location.hash;const page = route === '#system' ? 'system':'configuration';
+    this.interaction.view(page,{loadState:'loading'});
     this.busy = true;this.syncBusy();
     this.button.disabled = true;
     try {
@@ -300,15 +310,17 @@ class StationConsoleApp {
       try { await this.activation.refresh(); } catch { this.activation.view = null; }
       this.configProfiles = profiles.profiles || [];
       this.configDrafts = drafts.drafts || [];
-      if (location.hash !== '#configuration') { this.pending = true; return; }
-      document.querySelector('#title').textContent = 'Configuration drafts';
-      for (const name of ['station','runs','configuration','programs']) document.querySelector(`#${name}-tab`).setAttribute('aria-current',name === 'configuration' ? 'page':'false');
+      let configurationError = null;
+      try { await this.configuration.readCurrent(page === 'configuration'); } catch (error) { configurationError = error.message; }
+      if (location.hash !== route) { this.pending = true; return; }
+      document.querySelector('#title').textContent = page === 'system' ? 'System Information':'Configuration';
+      this.selectPage(page);
       document.querySelector('#connection').replaceChildren(this.badge('Connected'));
-      document.querySelector('#observed').textContent = 'Saved drafts and explicit station configuration application';
-      this.showAlert(profiles.unavailable?.length ? `Profiles unavailable: ${profiles.unavailable.join(', ')}` : null);
-      this.renderConfiguration();
+      document.querySelector('#observed').textContent = page === 'system' ? 'Saved configuration and installed plugin definitions · no hardware discovery':'Layout settings · explicit changes to the current configuration';
+      this.showAlert(configurationError || (profiles.unavailable?.length ? `Profiles unavailable: ${profiles.unavailable.join(', ')}` : null));
+      if (page === 'system') this.renderSystemInformation();else this.renderConfiguration();
     } catch (error) {
-      if (location.hash === '#configuration') this.interaction.view('configuration',{loadState:'unavailable'});
+      if (location.hash === route) this.interaction.view(page,{loadState:'unavailable'});
       this.showAlert(error.message);
     }
     finally {
@@ -330,7 +342,7 @@ class StationConsoleApp {
       }
     } else input.type = 'text';
     input.value = value || '';
-    input.addEventListener(options ? 'change' : 'input',() => {changed(input.value); if (location.hash === '#configuration') { this.configValidation = null; this.updateConfigActions(); }});
+    input.addEventListener(options ? 'change' : 'input',() => {changed(input.value,input); if (location.hash === '#configuration') { this.configValidation = null; this.updateConfigActions(); }});
     wrapper.append(input);
     return wrapper;
   }
@@ -347,7 +359,7 @@ class StationConsoleApp {
   }
 
   configDirty() {
-    return !this.configDraft || JSON.stringify(this.configWorking) !== JSON.stringify(this.configDraft.configuration)
+    return this.configuration.jsonEdited || this.configuration.invalidFields.size > 0 || !this.configDraft || JSON.stringify(this.configWorking) !== JSON.stringify(this.configDraft.configuration)
       || this.configTitle !== this.configDraft.title || this.configDriver !== this.configDraft.driver;
   }
 
@@ -357,6 +369,10 @@ class StationConsoleApp {
     for (const input of this.content.querySelectorAll('input,select,textarea,button')) input.disabled = !!this.configSaving;
     const validation = document.querySelector('#draft-validation');
     if (validation) validation.hidden = dirty || !this.configValidation;
+    const discard = document.querySelector('#discard-configuration');
+    if (discard) discard.disabled = !!this.configSaving || !dirty;
+    const save = document.querySelector('#save-configuration');
+    if (save) save.disabled = !!this.configSaving || !dirty || this.configuration.jsonEdited || this.configuration.invalidFields.size > 0;
     const validate = document.querySelector('#validate-draft');
     const exportButton = document.querySelector('#export-draft');
     if (validate) validate.disabled = dirty || this.configSaving;
@@ -365,12 +381,20 @@ class StationConsoleApp {
     this.interaction.view('configuration',{loadState:'ready',draftId:this.configDraft?.draft_id,revision:this.configDraft?.revision,dirty,
       validationState:dirty ? 'not_checked' : this.configValidation ? (this.configValidation.valid ? 'valid':'invalid'):'not_checked'});
     this.interaction.diagnostics(!dirty && this.configValidation ? this.configValidation.diagnostics || []:[]);
+    for (const input of this.content.querySelectorAll('[data-field]')) {
+      if (this.configuration.invalidFields.has(input.dataset.field)) input.setAttribute('aria-invalid','true');
+    }
+    this.configuration.updateChangeSummary();
     this.activation.updateActions();
-    if (state) state.textContent = dirty ? `Unsaved changes · based on ${this.configDraft ? `revision ${this.configDraft.revision}`:'a new draft'} · save before validation` : `Saved revision ${this.configDraft.revision} · ${this.configDraft.fingerprint.slice(0,12)}`;
+    if (state) state.textContent = this.configuration.jsonEdited ? 'Unapplied JSON edits · update the proposal in Advanced, or discard edits'
+      : this.configuration.invalidFields.size ? 'Correct invalid numeric fields before saving' : dirty ? `Unsaved changes · based on ${this.configDraft ? `revision ${this.configDraft.revision}`:'a new draft'} · save before validation` : `Saved revision ${this.configDraft.revision} · ${this.configDraft.fingerprint.slice(0,12)}`;
   }
 
   startConfigDraft(driver, configuration, title = 'New station configuration', record = null) {
     this.activation.confirmed = false;
+    this.configuration.invalidFields.clear();
+    this.configuration.invalidValues.clear();
+    this.configuration.jsonEdited = false;this.configuration.jsonText = null;
     this.configDraft = record;
     this.configDriver = driver;
     this.configTitle = title;
@@ -389,6 +413,8 @@ class StationConsoleApp {
 
   async configAction(action, extra = {}) {
     if (this.configSaving) return;
+    if (this.configuration.jsonEdited && action !== 'get') {this.showAlert('Update proposed settings from JSON before saving.');return;}
+    if (this.configuration.invalidFields.size && action !== 'get') {this.showAlert('Correct the highlighted numeric fields before saving.');return;}
     this.activation.confirmed = false;
     this.configSaving = true; this.syncBusy();this.updateConfigActions();
     const operation = `configuration.${action === 'create' ? 'save':action}`;
@@ -410,8 +436,8 @@ class StationConsoleApp {
         link.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
       }
       const revision = data.draft?.revision || data.revision;
-      const message = ['create','save'].includes(action) ? `Draft saved · revision ${revision}. Running station unchanged.`
-        : action === 'get' ? `Draft loaded · revision ${revision}.`
+      const message = ['create','save'].includes(action) ? `Changes saved · revision ${revision}. Apply them explicitly to change the station.`
+        : action === 'get' ? `Configuration loaded for review · revision ${revision}.`
         : action === 'validate' ? `Saved revision ${revision}: ${data.validation.valid ? 'valid':'invalid'}. Static checks only.`
         : `Validated revision ${revision} exported. Running station unchanged.`;
       this.interaction.result(operation,action === 'validate' && !data.validation.valid ? 'invalid':'succeeded',message,
@@ -431,105 +457,25 @@ class StationConsoleApp {
     }
   }
 
+  renderSystemInformation() {
+    if (location.hash !== '#system') return;
+    this.systemInformation.render();
+  }
+
   renderConfiguration() {
     if (location.hash !== '#configuration') return;
-    this.interaction.view('configuration',{loadState:'ready'});
-    const setup = this.card('Prepare a configuration');
-    setup.append(this.element('p','Save and validate a draft, review its program bindings, then explicitly apply it to an idle simulated station. Editing alone does not change the active configuration.','note'));
-    const profile = this.configProfiles.find(item => item.driver === this.configDriver) || this.configProfiles[0];
-    let selected = profile?.driver;
-    setup.append(this.configField('Installed profile',selected,value => {selected = value;},this.configProfiles.map(item => item.driver),{field:'/profile'}));
-    const actions = this.element('div','','config-actions');
-    actions.append(this.configButton('New from profile',() => {
-      const item = this.configProfiles.find(value => value.driver === selected);
-      if (item) {this.startConfigDraft(item.driver,item.template || {});this.interaction.result('configuration.new','succeeded','New local draft. Save it before validation.');}
-    },'',{action:'configuration.new'}));
-    const upload = this.element('input'); upload.type = 'file'; upload.accept = '.json,application/json';
-    upload.setAttribute('aria-label','Import configuration JSON');
-    this.interaction.identify(upload,{action:'configuration.import',field:'/import'});
-    upload.addEventListener('change',async () => {
-      try {
-        const file = upload.files[0]; if (!file) return;
-        if (file.size > 200000) throw new Error('CONFIGURATION_TOO_LARGE');
-        const value = JSON.parse(await file.text());
-        if (!value || Array.isArray(value) || typeof value !== 'object') throw new Error('CONFIGURATION_JSON_INVALID');
-        this.startConfigDraft(selected || '',value,file.name);
-      } catch (error) { this.showAlert(error.message); }
-    });
-    actions.append(upload); setup.append(actions);
-    if (!this.configProfiles.length) setup.append(this.element('p','No offline configuration profile is installed. Install a compatible external driver profile to validate and export drafts.','notice'));
-    const saved = this.card('Saved drafts');
-    for (const draft of this.configDrafts) saved.append(this.configButton(`Load ${draft.title} · r${draft.revision}`,() => this.configAction('get',{draft_id:draft.draft_id}),'',{action:'configuration.get',entity:draft.draft_id,revision:draft.revision}));
-    if (!this.configDrafts.length) saved.append(this.element('p','No saved drafts yet.','empty'));
-    const children = [this.activation.render(),setup,saved];
-    if (this.configWorking) {
-      const editor = this.card('Edit draft');
-      const fields = this.element('div','','config-grid');
-      fields.append(this.configField('Draft title',this.configTitle,value => {this.configTitle = value;},null,{field:'/title'}));
-      fields.append(this.configField('Driver',this.configDriver,value => {this.configDriver = value; this.renderConfiguration();},this.configProfiles.map(item => item.driver),{field:'/driver'}));
-      const definition = this.configProfiles.find(item => item.driver === this.configDriver);
-      for (const field of definition?.fields || []) fields.append(this.configField(field.label,this.configPath(this.configWorking,field.path),value => this.setConfigPath(field.path,value),field.options,{field:this.interaction.pointer(['configuration',...field.path])}));
-      editor.append(fields);
-      for (const map of definition?.maps || []) {
-        editor.append(this.element('h3',map.label));
-        const rawValues = this.configPath(this.configWorking,map.path);
-        const values = rawValues && typeof rawValues === 'object' && !Array.isArray(rawValues) ? rawValues : {};
-        for (const [name,value] of Object.entries(values)) {
-          const row = this.element('div','','config-map-row');
-          this.interaction.identify(row,{collection:this.interaction.pointer(map.path),entity:name});
-          row.append(this.element('strong',name));
-          for (const column of map.columns) row.append(this.configField(`${map.label} ${name} ${column}`,value?.[column],text => {
-            if (!values[name] || typeof values[name] !== 'object' || Array.isArray(values[name])) values[name] = {};
-            if (text === '') delete values[name][column]; else values[name][column] = text;
-          },null,{field:this.interaction.pointer(['configuration',...map.path,name,column]),entity:name,collection:this.interaction.pointer(map.path)}));
-          row.append(this.configButton(`Remove ${map.label} ${name}`,() => {delete values[name];this.configValidation = null;this.renderConfiguration();},'',{action:'configuration.remove-entry',collection:this.interaction.pointer(map.path),entity:name}));
-          editor.append(row);
-        }
-        let key = '';
-        const add = this.element('div','','config-actions');
-        add.append(this.configField(`New ${map.label} identifier`,'',value => {key = value;},null,{field:this.interaction.pointer(['new-entry',...map.path]),collection:this.interaction.pointer(map.path)}),this.configButton(`Add ${map.label}`,() => {
-          if (!key || Object.hasOwn(values,key) || ['__proto__','constructor','prototype'].includes(key)) {this.showAlert('CONFIGURATION_IDENTIFIER_INVALID');return;}
-          values[key] = {};this.setConfigPath(map.path,values);this.configValidation = null;this.renderConfiguration();
-        },'',{action:'configuration.add-entry',collection:this.interaction.pointer(map.path)})); editor.append(add);
-      }
-      const advanced = this.element('details','','config-advanced');
-      advanced.append(this.element('summary','Advanced configuration JSON · modules, routes and policy'));
-      const json = this.element('textarea');json.value = JSON.stringify(this.configWorking,null,2);json.setAttribute('aria-label','Advanced configuration JSON');
-      this.interaction.identify(json,{field:'/advanced-configuration'});
-      advanced.append(json,this.configButton('Apply JSON to editor',() => {
-        try {const value = JSON.parse(json.value);if (!value || Array.isArray(value) || typeof value !== 'object') throw new Error('CONFIGURATION_JSON_INVALID');this.configWorking = value;this.configValidation = null;this.renderConfiguration();}
-        catch (error) {this.showAlert(error.message);}
-      },'',{action:'configuration.apply-json'})); editor.append(advanced);
-      const controls = this.element('div','','config-actions');
-      controls.append(this.configButton('Save draft',() => this.configAction(this.configDraft ? 'save':'create'),'',{action:'configuration.save'}),
-        this.configButton('Validate saved draft',() => this.configAction('validate'),'validate-draft',{action:'configuration.validate'}),
-        this.configButton('Export validated configuration',() => this.configAction('export'),'export-draft',{action:'configuration.export'}));
-      editor.append(controls);
-      if (this.configDraft) editor.append(this.activation.controls());
-      const state = this.element('p','','label');state.id = 'draft-state';editor.append(state);
-      if (this.configValidation) {
-        const validation = this.element('div'); validation.id = 'draft-validation';
-        validation.append(this.badge(this.configValidation.valid ? 'valid':'invalid'));
-        validation.append(this.element('p',this.configValidation.scope,'note'));
-        validation.append(this.table(['Field','Code','Message'],(this.configValidation.diagnostics || []).map(item => [item.path,item.code,item.message]),'Static configuration checks passed. Program preflight still happens before execution.'));
-        editor.append(validation);
-      }
-      children.push(editor);
-    }
-    this.content.replaceChildren(...children);
-    this.updateConfigActions();
+    this.configuration.render();
   }
 
   async refresh() {
     clearTimeout(this.timer);
     if (document.hidden) return;
     if (this.busy) { this.pending = true; return; }
-    if (location.hash === '#configuration') { await this.refreshConfiguration(); return; }
+    if (['#configuration','#system'].includes(location.hash)) { await this.refreshConfiguration(); return; }
     if (location.hash === '#programs') { await this.programs.refresh(); return; }
     this.busy = true;this.syncBusy();
     this.button.disabled = true;
-    document.querySelector('#configuration-tab').setAttribute('aria-current','false');
-    document.querySelector('#programs-tab').setAttribute('aria-current','false');
+    this.selectPage(location.hash === '#runs' ? 'runs':'station');
     const route = location.hash || '#station';
     this.interaction.view(route.startsWith('#run/') ? 'run':route === '#runs' ? 'runs':'station',{loadState:'loading'});
     const isRun = route.startsWith('#run/');
@@ -575,7 +521,7 @@ class StationConsoleApp {
       this.busy = false;this.syncBusy();
       this.button.disabled = false;
       if (this.pending) { this.pending = false; this.refresh(); }
-      else if (!document.hidden && !['#configuration','#programs'].includes(location.hash)) this.timer = setTimeout(() => this.refresh(), 2500);
+      else if (!document.hidden && !['#configuration','#programs','#system'].includes(location.hash)) this.timer = setTimeout(() => this.refresh(), 2500);
     }
   }
 }

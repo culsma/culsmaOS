@@ -32,6 +32,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
         "/interaction.js": ("interaction.js", "text/javascript; charset=utf-8"),
         "/programs.js": ("programs.js", "text/javascript; charset=utf-8"),
+        "/configuration.js": ("configuration.js", "text/javascript; charset=utf-8"),
         "/activation.js": ("activation.js", "text/javascript; charset=utf-8"),
         "/style.css": ("style.css", "text/css; charset=utf-8"),
         "/assets/culsma-os-wordmark.png": ("assets/culsma-os-wordmark.png", "image/png"),
