@@ -24,3 +24,6 @@ htmlcov/
 /docs/evidence/
 /docs/archive/implementation-validation.json
 /docs/archive/test-validation-notes.md
+
+# Locally staged native application; distributed only in a platform product bundle.
+/src/culsma_os/console/native/

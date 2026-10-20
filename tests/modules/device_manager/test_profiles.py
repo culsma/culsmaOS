@@ -32,3 +32,20 @@ def test_offline_bindings_are_optional_for_existing_plugins():
     interactor=DeviceProfileInteractor(DriverProfileInteractor([Entry()]))
     assert interactor.program_bindings('external',{}) is None
     assert interactor.program_bindings('missing',{}) is None
+
+
+class OfflineEntry:
+    name = 'offline-layout'
+    def load(self): return Profile
+
+
+def test_configuration_only_plugins_do_not_require_a_fake_execution_factory():
+    profiles, unavailable = DriverProfileInteractor([], [OfflineEntry()]).discover()
+    assert list(profiles) == ['offline-layout'] and not unavailable
+    assert profiles['offline-layout'].validate({})['valid']
+
+
+def test_profile_identity_collision_across_groups_is_not_arbitrarily_selected():
+    entry = OfflineEntry(); entry.name = Entry.name
+    profiles, unavailable = DriverProfileInteractor([Entry()], [entry]).discover()
+    assert not profiles and unavailable == ('external',)

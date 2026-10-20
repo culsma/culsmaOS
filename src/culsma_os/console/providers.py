@@ -19,6 +19,13 @@ from .adapters.http import ConsoleHTTPServer
 
 
 class ConsoleApplicationFactory:
+    def build_desktop(self, settings, executable, resident_command=None, log_path=None):
+        from .interactors import DesktopConsoleInteractor
+        from .adapters.desktop import NativeConsoleProcessAdapter, ResidentProcessAdapter
+        server = self.build(settings)
+        return DesktopConsoleInteractor(server, server.sessions, NativeConsoleProcessAdapter(executable),
+            ResidentProcessAdapter(resident_command, log_path, Path(log_path).parent/'stations') if resident_command else None)
+
     def build(self, settings):
         tokens = TokenInteractor(SessionCredentialRepository())
         repository = SqliteStationConfigurationRepository(settings.drafts_path or Path('run-artifacts/console/drafts.sqlite3'))

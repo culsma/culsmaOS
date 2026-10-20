@@ -1,6 +1,15 @@
 """Immutable local HTTP transport settings."""
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
+
+
+class NativeApplicationPort(Protocol):
+    def run(self, connection: dict) -> int: ...
+
+
+class LocalResidentStartupPort(Protocol):
+    def start(self) -> None: ...
 
 
 @dataclass(frozen=True)

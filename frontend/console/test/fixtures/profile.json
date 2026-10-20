@@ -1,0 +1,683 @@
+{
+  "label": "Opentrons official simulator",
+  "layout": {
+    "schema": "culsma_layout_v1",
+    "revision": 1,
+    "schematic": true,
+    "selector_path": [
+      "robot_type"
+    ],
+    "variants": {
+      "OT-2": {
+        "id": "opentrons-ot-2-schematic-v1",
+        "label": "OT-2 deck",
+        "width": 3,
+        "height": 4,
+        "positions": [
+          {
+            "id": "10",
+            "label": "10",
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "11",
+            "label": "11",
+            "x": 1,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "12",
+            "label": "12",
+            "x": 2,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "accepts": [],
+            "fixed_label": "Waste"
+          },
+          {
+            "id": "7",
+            "label": "7",
+            "x": 0,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "8",
+            "label": "8",
+            "x": 1,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "9",
+            "label": "9",
+            "x": 2,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "4",
+            "label": "4",
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "5",
+            "label": "5",
+            "x": 1,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "6",
+            "label": "6",
+            "x": 2,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "1",
+            "label": "1",
+            "x": 0,
+            "y": 3,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "2",
+            "label": "2",
+            "x": 1,
+            "y": 3,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "3",
+            "label": "3",
+            "x": 2,
+            "y": 3,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          }
+        ]
+      },
+      "Flex": {
+        "id": "opentrons-flex-schematic-v1",
+        "label": "Flex deck",
+        "width": 3,
+        "height": 4,
+        "positions": [
+          {
+            "id": "A1",
+            "label": "A1",
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "A2",
+            "label": "A2",
+            "x": 1,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "A3",
+            "label": "A3",
+            "x": 2,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "accepts": [],
+            "fixed_label": "Waste"
+          },
+          {
+            "id": "B1",
+            "label": "B1",
+            "x": 0,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "B2",
+            "label": "B2",
+            "x": 1,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "B3",
+            "label": "B3",
+            "x": 2,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "C1",
+            "label": "C1",
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "C2",
+            "label": "C2",
+            "x": 1,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "C3",
+            "label": "C3",
+            "x": 2,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "D1",
+            "label": "D1",
+            "x": 0,
+            "y": 3,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "D2",
+            "label": "D2",
+            "x": 1,
+            "y": 3,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          },
+          {
+            "id": "D3",
+            "label": "D3",
+            "x": 2,
+            "y": 3,
+            "width": 1,
+            "height": 1,
+            "accepts": [
+              "labware",
+              "tiprack",
+              "module"
+            ],
+            "fixed_label": null
+          }
+        ]
+      }
+    },
+    "collections": [
+      {
+        "id": "labware",
+        "path": [
+          "labware"
+        ],
+        "keyed": true,
+        "editable": true,
+        "category": "labware",
+        "model_field": "load_name",
+        "position_field": "slot",
+        "parent_field": "module"
+      },
+      {
+        "id": "tiprack",
+        "path": [
+          "tiprack"
+        ],
+        "keyed": false,
+        "editable": true,
+        "category": "tiprack",
+        "model_field": "load_name",
+        "position_field": "slot"
+      },
+      {
+        "id": "modules",
+        "path": [
+          "modules"
+        ],
+        "keyed": true,
+        "editable": false,
+        "category": "module",
+        "model_field": "model",
+        "position_field": "slot"
+      }
+    ],
+    "catalogue": [
+      {
+        "id": "opentrons_24_tuberack_eppendorf_2ml_safelock_snapcap",
+        "label": "24-position tube rack \u00b7 Eppendorf 2 mL",
+        "category": "labware"
+      },
+      {
+        "id": "corning_96_wellplate_360ul_flat",
+        "label": "96-well plate \u00b7 Corning 360 uL",
+        "category": "labware"
+      },
+      {
+        "id": "nest_96_wellplate_200ul_flat",
+        "label": "96-well plate \u00b7 NEST 200 uL",
+        "category": "labware"
+      },
+      {
+        "id": "nest_96_wellplate_2ml_deep",
+        "label": "96-well deep plate \u00b7 NEST 2 mL",
+        "category": "labware"
+      },
+      {
+        "id": "nest_96_wellplate_100ul_pcr_full_skirt",
+        "label": "96-well PCR plate \u00b7 NEST 100 uL",
+        "category": "labware"
+      },
+      {
+        "id": "nest_12_reservoir_15ml",
+        "label": "12-channel reservoir \u00b7 NEST 15 mL",
+        "category": "labware"
+      },
+      {
+        "id": "opentrons_96_tiprack_300ul",
+        "label": "96-tip rack \u00b7 300 uL",
+        "category": "tiprack",
+        "when": {
+          "pipette": [
+            "p300_single_gen2",
+            "p300_multi_gen2"
+          ]
+        }
+      },
+      {
+        "id": "opentrons_96_tiprack_20ul",
+        "label": "96-tip rack \u00b7 20 uL",
+        "category": "tiprack",
+        "when": {
+          "pipette": [
+            "p20_single_gen2",
+            "p20_multi_gen2"
+          ]
+        }
+      },
+      {
+        "id": "opentrons_flex_96_tiprack_1000ul",
+        "label": "Flex 96-tip rack \u00b7 1000 uL",
+        "category": "tiprack",
+        "when": {
+          "pipette": [
+            "flex_1channel_1000"
+          ]
+        }
+      },
+      {
+        "id": "opentrons_flex_96_tiprack_50ul",
+        "label": "Flex 96-tip rack \u00b7 50 uL",
+        "category": "tiprack",
+        "when": {
+          "pipette": [
+            "flex_1channel_50"
+          ]
+        }
+      },
+      {
+        "id": "temperature module gen2",
+        "label": "Temperature Module",
+        "category": "module"
+      },
+      {
+        "id": "heaterShakerModuleV1",
+        "label": "Heater-Shaker",
+        "category": "module"
+      },
+      {
+        "id": "magnetic module gen2",
+        "label": "Magnetic Module",
+        "category": "module"
+      },
+      {
+        "id": "magneticBlockV1",
+        "label": "Magnetic Block",
+        "category": "module"
+      },
+      {
+        "id": "thermocyclerModuleV2",
+        "label": "Thermocycler",
+        "category": "module",
+        "footprints": {
+          "7": [
+            "7",
+            "8",
+            "10",
+            "11"
+          ]
+        }
+      }
+    ],
+    "scope": "Schematic proposed placement. Driver validation and resident preflight remain authoritative; no hardware detection or physical move."
+  },
+  "template": {
+    "robot_type": "OT-2",
+    "api_level": "2.20",
+    "pipette": "p300_single_gen2",
+    "mount": "right",
+    "tiprack": {
+      "load_name": "opentrons_96_tiprack_300ul",
+      "slot": "2"
+    },
+    "labware": {
+      "tubes": {
+        "load_name": "opentrons_24_tuberack_eppendorf_2ml_safelock_snapcap",
+        "slot": "1"
+      }
+    },
+    "bindings": {
+      "entry.s0::alloc": {
+        "labware": "tubes",
+        "well": "A1"
+      },
+      "entry.s1::alloc": {
+        "labware": "tubes",
+        "well": "A2"
+      }
+    }
+  },
+  "fields": [
+    {
+      "path": [
+        "robot_type"
+      ],
+      "label": "Robot",
+      "section": "platform",
+      "options": [
+        "OT-2",
+        "Flex"
+      ]
+    },
+    {
+      "path": [
+        "api_level"
+      ],
+      "label": "API level",
+      "section": "platform",
+      "options": [
+        "2.20"
+      ]
+    },
+    {
+      "path": [
+        "pipette"
+      ],
+      "label": "Pipette",
+      "section": "instruments",
+      "options": [
+        "p300_single_gen2",
+        "p20_single_gen2",
+        "p300_multi_gen2",
+        "p20_multi_gen2",
+        "flex_1channel_1000",
+        "flex_1channel_50"
+      ]
+    },
+    {
+      "path": [
+        "mount"
+      ],
+      "label": "Mount",
+      "section": "instruments",
+      "options": [
+        "left",
+        "right"
+      ]
+    },
+    {
+      "path": [
+        "tiprack",
+        "load_name"
+      ],
+      "label": "Tip rack definition",
+      "section": "layout"
+    },
+    {
+      "path": [
+        "tiprack",
+        "slot"
+      ],
+      "label": "Tip rack slot",
+      "section": "layout"
+    },
+    {
+      "path": [
+        "transfer_policy",
+        "tip_policy"
+      ],
+      "label": "Tip policy",
+      "section": "transfer",
+      "options": [
+        "fresh_per_stroke"
+      ],
+      "default": "fresh_per_stroke"
+    },
+    {
+      "path": [
+        "transfer_policy",
+        "stroke_mode"
+      ],
+      "label": "Stroke mode",
+      "section": "transfer",
+      "options": [
+        "single",
+        "balanced_split"
+      ],
+      "default": "single"
+    },
+    {
+      "path": [
+        "transfer_policy",
+        "aspirate_flow_rate_uL_s"
+      ],
+      "label": "Aspirate flow rate (uL/s)",
+      "section": "transfer",
+      "type": "number",
+      "optional": true
+    },
+    {
+      "path": [
+        "transfer_policy",
+        "dispense_flow_rate_uL_s"
+      ],
+      "label": "Dispense flow rate (uL/s)",
+      "section": "transfer",
+      "type": "number",
+      "optional": true
+    }
+  ],
+  "maps": [
+    {
+      "path": [
+        "labware"
+      ],
+      "label": "Labware",
+      "section": "layout",
+      "columns": [
+        "load_name",
+        "slot",
+        "module"
+      ]
+    },
+    {
+      "path": [
+        "bindings"
+      ],
+      "label": "Program bindings",
+      "section": "program-bindings",
+      "columns": [
+        "labware",
+        "well"
+      ]
+    }
+  ],
+  "summaries": [
+    {
+      "path": [
+        "modules"
+      ],
+      "section": "instruments",
+      "label": "Configured modules",
+      "columns": [
+        "model",
+        "slot",
+        "adapter"
+      ]
+    }
+  ],
+  "advanced": [
+    "modules",
+    "labware_moves",
+    "transfer_policy"
+  ],
+  "validation_scope": "Static plugin rules and labware definitions; not program preflight or live readiness",
+  "driver": "opentrons-simulator"
+}

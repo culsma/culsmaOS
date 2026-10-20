@@ -77,7 +77,38 @@ class CulsmaOSCLI:
         console.add_argument("--drafts-db", type=Path, default=Path("run-artifacts/console/drafts.sqlite3"))
         console.add_argument("--program-root", type=Path, help="Allow console selection of .culs files under this directory")
         console.add_argument("--program-store", type=Path, default=Path("run-artifacts/console/programs"))
+        desktop = commands.add_parser("desktop", help="Start the local desktop console and resident as one product")
+        desktop.add_argument("--state-dir", type=Path, default=Path("run-artifacts/desktop"))
+        desktop.add_argument("--socket", type=Path, help="Attach to this existing resident instead of starting one")
+        desktop.add_argument("--driver", default="opentrons-simulator")
+        desktop.add_argument("--driver-config", type=Path)
+        desktop.add_argument("--program-root", type=Path)
+        desktop.add_argument("--drafts-db", type=Path)
+        desktop.add_argument("--application", type=Path, help="Built Flutter executable; normally installed with the product")
         args = parser.parse_args(argv)
+        if args.command == "desktop":
+            import sys
+            from culsma_os.console.models import ConsoleSettings
+            from culsma_os.console.providers import ConsoleApplicationFactory
+            state = args.state_dir.resolve()
+            socket = args.socket.resolve() if args.socket else state / 'station.sock'
+            application = args.application or Path(__file__).parent / 'console/native/culsma_console.app/Contents/MacOS/culsma_console'
+            if not application.is_file():
+                parser.exit(2, "DESKTOP_APPLICATION_NOT_INSTALLED: build the bundled console or supply --application\n")
+            if not args.socket and args.driver_config is None:
+                parser.exit(2, "DESKTOP_DRIVER_CONFIGURATION_REQUIRED\n")
+            resident_command = None if args.socket else [sys.executable, '-m', 'culsma_os.cli', 'serve',
+                '--socket', str(socket), '--host-db', str(state / 'os.sqlite3'), '--driver', args.driver,
+                '--driver-config', str(args.driver_config.resolve()), '--station-id', 'desktop',
+                '--artifacts-dir', str(state / 'runs')]
+            settings = ConsoleSettings(socket, 0, args.drafts_db.resolve() if args.drafts_db else state / 'drafts.sqlite3',
+                args.program_root.resolve() if args.program_root else None, state / 'programs')
+            try:
+                application = ConsoleApplicationFactory().build_desktop(settings, application.resolve(), resident_command, state / 'resident.log')
+                result = application.execute()
+            except (ValueError, OSError) as error:
+                parser.exit(2, f"{error}\n")
+            raise SystemExit(result)
         if args.command == "console":
             from culsma_os.console.models import ConsoleSettings
             from culsma_os.console.providers import ConsoleApplicationFactory

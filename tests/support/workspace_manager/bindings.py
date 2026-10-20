@@ -6,6 +6,9 @@ from tests.support.program_manager.console_program import ProgramCommandFixture
 
 
 class BindingProfileFixture:
+    def describe(self):
+        return {'profiles': [{'driver': 'fixture'}]}
+
     def validate(self, driver, configuration):
         valid = configuration.get('valid',True)
         return {'valid':valid,'diagnostics':[] if valid else [{'code':'TEST_PROFILE_INVALID'}]}

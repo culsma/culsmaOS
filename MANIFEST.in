@@ -10,3 +10,11 @@ prune run-artifacts
 prune build
 prune dist
 global-exclude __pycache__ *.py[cod] .DS_Store
+recursive-include frontend/console *.dart *.yaml *.lock *.json .fvmrc *.md *.ttf *.png *.swift *.plist *.xcconfig *.entitlements *.pbxproj *.xcscheme *.xcworkspacedata *.xib *.xcassets .gitignore LICENSE.txt
+prune frontend/console/.dart_tool
+prune frontend/console/.fvm
+prune frontend/console/build
+prune frontend/console/macos/Flutter/ephemeral
+prune frontend/console/macos/Pods
+prune frontend/console/test/failures
+prune src/culsma_os/console/native

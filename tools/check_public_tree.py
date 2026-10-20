@@ -65,11 +65,17 @@ class PublicTreeCheck:
 
     def inspect(self, root):
         problems, scanned, images, brands = [], 0, 0, 0
+        manifest = root / 'tools/public-assets.json'
+        native_assets = {row['path']: row for row in json.loads(manifest.read_text())['files']} if manifest.is_file() else {}
         for name in self.files(root):
             path = root / name
             if (name.startswith(self.internal_docs)
                     or (name.startswith('docs/') and re.search(r'20\d{6}', name))):
                 problems.append({'path': name, 'error': 'INTERNAL_RECORD_IN_PUBLIC_TREE'})
+            if name in native_assets:
+                if sha256(path.read_bytes()).hexdigest() != native_assets[name]['sha256']:
+                    problems.append({'path': name, 'error': 'REVIEWED_ASSET_HASH_MISMATCH'})
+                continue
             if path.suffix == '.png':
                 if name in self.brand_images:
                     if sha256(path.read_bytes()).hexdigest() != self.brand_images[name]:

@@ -30,3 +30,9 @@ license files for that platform-specific inventory.
 Upstream sources: [Opentrons](https://github.com/Opentrons/opentrons),
 [PyLabRobot license](https://github.com/PyLabRobot/pylabrobot/blob/main/LICENSE),
 [Apache-2.0 terms](https://www.apache.org/licenses/LICENSE-2.0).
+
+### Flutter console fonts
+
+The desktop console includes Roboto Regular and Medium under the Apache License 2.0.
+The font license is provided in `frontend/console/assets/fonts/LICENSE.txt`.
+Flutter itself and its SDK components retain their respective upstream licenses.

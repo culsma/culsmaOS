@@ -100,3 +100,15 @@ def test_independent_repositories_converge_on_revision_conflict(tmp_path):
         assert results.count('CONFIGURATION_REVISION_CONFLICT')==1
     assert first.repository.get(draft['draft_id']).revision==11
     assert first.repository.get(draft['draft_id'],1).as_dict()==draft
+
+
+def test_offline_configuration_cannot_enter_station_activation(tmp_path):
+    from culsma_os.workspace_manager.interactors import ConfigurationDraftInteractor
+    fixture = ConfigurationFixture(tmp_path/'drafts.sqlite3')
+    record = create(fixture)
+    profile = type('OfflineProfiles', (), {
+        'describe': lambda self: {'profiles': [{'driver': 'test-profile', 'activation_supported': False}]},
+        'validate': lambda *args: {'valid': True},
+    })()
+    with pytest.raises(ConfigurationError, match='CONFIGURATION_OFFLINE_ONLY'):
+        ConfigurationDraftInteractor(fixture.repository, profile).validated(record['draft_id'], 1)

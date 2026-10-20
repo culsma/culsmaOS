@@ -631,6 +631,9 @@ class ConfigurationDraftInteractor:
         draft = self.repository.get(draft_id).as_dict()
         if draft['revision'] != revision:
             raise ConfigurationError('CONFIGURATION_REVISION_CONFLICT','conflict')
+        profile = next((p for p in self.profiles.describe()['profiles'] if p['driver'] == draft['driver']), None)
+        if profile is not None and profile.get('activation_supported') is False:
+            raise ConfigurationError('CONFIGURATION_OFFLINE_ONLY')
         if not self.profiles.validate(draft['driver'],draft['configuration'])['valid']:
             raise ConfigurationError('CONFIGURATION_ACTIVATION_INVALID')
         return draft

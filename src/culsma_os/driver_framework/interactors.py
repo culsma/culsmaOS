@@ -368,8 +368,9 @@ class FeedbackContractInteractor:
 
 class DriverProfileInteractor:
     """Optional configuration capability on installed driver factories."""
-    def __init__(self, candidates=None):
+    def __init__(self, candidates=None, configuration_candidates=None):
         self.candidates = candidates
+        self.configuration_candidates = configuration_candidates
 
     def discover(self):
         candidates = self.candidates if self.candidates is not None else entry_points(group='culsma.drivers')
@@ -383,6 +384,16 @@ class DriverProfileInteractor:
                 if candidate.name in profiles:
                     raise ValueError('PROFILE_NAME_CONFLICT')
                 profiles[candidate.name] = capability()
+            except Exception:
+                unavailable.append(candidate.name)
+        # Offline configuration plugins need not pretend to be executable drivers.
+        standalone = (self.configuration_candidates if self.configuration_candidates is not None
+                      else entry_points(group='culsma.configuration_profiles') if self.candidates is None else ())
+        for candidate in standalone:
+            try:
+                if candidate.name in profiles:
+                    raise ValueError('PROFILE_NAME_CONFLICT')
+                profiles[candidate.name] = candidate.load()()
             except Exception:
                 unavailable.append(candidate.name)
         for name in unavailable:

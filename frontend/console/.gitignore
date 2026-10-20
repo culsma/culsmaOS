@@ -1,0 +1,13 @@
+.dart_tool/
+.fvm/
+.flutter-plugins*
+.packages
+build/
+coverage/
+*.iml
+macos/Flutter/ephemeral/
+macos/Pods/
+macos/Runner.xcworkspace/xcuserdata/
+macos/Runner.xcodeproj/xcuserdata/
+test/failures/
+.idea/

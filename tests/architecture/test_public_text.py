@@ -73,3 +73,20 @@ class TestPublicText:
         result = checker.inspect(tmp_path)
         assert result['checks'] == ('failed' if changed else 'passed')
         assert result['errors'] == ([{'path': relative, 'error': 'BRAND_IMAGE_HASH_MISMATCH'}] if changed else [])
+
+    @pytest.mark.parametrize('changed', [False, True])
+    def test_native_binary_baselines_require_reviewed_exact_bytes(self, tmp_path, monkeypatch, changed):
+        from hashlib import sha256
+        import json
+        relative = 'frontend/console/test/goldens/layout.png'
+        path = tmp_path/relative
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b'changed' if changed else b'reviewed')
+        (tmp_path/'tools').mkdir()
+        (tmp_path/'tools/public-assets.json').write_text(json.dumps({'files':[
+            {'path':relative,'kind':'golden','sha256':sha256(b'reviewed').hexdigest()}]}))
+        checker = module.PublicTreeCheck()
+        monkeypatch.setattr(checker, 'files', lambda root: [relative])
+        result = checker.inspect(tmp_path)
+        assert result['checks'] == ('failed' if changed else 'passed')
+        assert result['errors'] == ([{'path':relative,'error':'REVIEWED_ASSET_HASH_MISMATCH'}] if changed else [])
