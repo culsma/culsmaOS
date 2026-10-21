@@ -515,12 +515,12 @@ class StationConfigurationInteractor(AuthorizedInteractor):
             return self.profiles.describe()
         if request.action == 'list':
             return {'drafts':[draft.as_dict() for draft in self.repository.list()]}
-        if request.action not in {'create','get','save','validate','export'}:
+        if request.action not in {'create','get','save','validate','export','export_layout'}:
             raise ConfigurationError('CONFIGURATION_ACTION_UNSUPPORTED')
         if request.action != 'create' and (not isinstance(request.draft_id,str)
                 or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',request.draft_id) is None):
             raise ConfigurationError('CONFIGURATION_ID_INVALID')
-        if (request.action in {'save','validate','export'} or (request.action == 'get' and request.revision is not None)) and (type(request.revision) is not int or request.revision < 1):
+        if (request.action in {'save','validate','export','export_layout'} or (request.action == 'get' and request.revision is not None)) and (type(request.revision) is not int or request.revision < 1):
             raise ConfigurationError('CONFIGURATION_REVISION_REQUIRED')
         if request.action in {'create','save'}:
             if (not isinstance(request.title,str) or not 1 <= len(request.title.strip()) <= 120
@@ -548,10 +548,19 @@ class StationConfigurationInteractor(AuthorizedInteractor):
         validation = self.profiles.validate(record['driver'],record['configuration'])
         result = {'draft_id':record['draft_id'],'revision':record['revision'],
                   'fingerprint':record['fingerprint'],'validation':validation,'activation':'not_applied'}
-        if request.action == 'export':
+        if request.action in {'export','export_layout'}:
             if not validation['valid']:
                 raise ConfigurationError('CONFIGURATION_EXPORT_INVALID')
             result['configuration'] = record['configuration']
+        if request.action == 'export_layout':
+            export = getattr(self.profiles, 'export_layout', None)
+            try:
+                artifact = export(record['driver'], record['configuration']) if callable(export) else None
+            except ValueError as error:
+                raise ConfigurationError(getattr(error, 'code', 'CONFIGURATION_LAYOUT_EXPORT_FAILED')) from error
+            if artifact is None:
+                raise ConfigurationError('CONFIGURATION_LAYOUT_EXPORT_UNAVAILABLE')
+            result['layout_artifact'] = artifact
         return result
 
 

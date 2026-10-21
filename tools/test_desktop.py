@@ -51,5 +51,5 @@ class DesktopE2E:
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--with-hamilton', action='store_true', help='Also exercise an installed offline Hamilton configuration profile')
+    parser.add_argument('--with-hamilton', action='store_true', help='Also exercise the Hamilton profile and native export; requires CULSMA_HAMILTON_LABWARE_ROOT')
     DesktopE2E().run(parser.parse_args().with_hamilton)

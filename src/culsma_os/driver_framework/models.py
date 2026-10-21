@@ -200,3 +200,12 @@ class DeviceProfilePort(Protocol):
 class ProgramBindingProfilePort(Protocol):
     """Optional offline projection; concrete configuration keys stay external."""
     def program_bindings(self, configuration: dict) -> dict: ...
+
+
+class LayoutExportProfilePort(Protocol):
+    """Optional vendor-owned native layout export; no station activation."""
+    def export_layout(self, configuration: dict) -> dict: ...
+
+
+class LayoutExportError(ValueError):
+    code = 'PROFILE_LAYOUT_EXPORT_INVALID'

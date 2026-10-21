@@ -130,6 +130,39 @@ class DeviceProfileInteractor:
                 'scope':'No device or program preflight performed'}
         return profiles[driver].validate(configuration)
 
+    def export_layout(self, driver, configuration):
+        profiles, _ = self.discovery.discover()
+        profile = profiles.get(driver)
+        if profile is None or profile.describe().get('layout_export_supported') is not True:
+            return None
+        artifact = profile.export_layout(configuration)
+        self.validate_layout_archive(artifact, configuration)
+        return artifact
+
+    def validate_layout_archive(self, artifact, configuration):
+        import base64
+        import binascii
+        import hashlib
+        import json
+        import re
+        from ..driver_framework.models import LayoutExportError
+        if (not isinstance(artifact, dict) or artifact.get('encoding') != 'base64'
+                or artifact.get('media_type') != 'application/zip'
+                or not isinstance(artifact.get('name'), str)
+                or re.fullmatch(r'[A-Za-z0-9_-]+\.zip', artifact['name']) is None
+                or not isinstance(artifact.get('content'), str) or len(artifact['content']) > 4000000):
+            raise LayoutExportError('Invalid native layout archive descriptor')
+        try:
+            content = base64.b64decode(artifact['content'], validate=True)
+        except (ValueError, binascii.Error) as error:
+            raise LayoutExportError('Invalid layout archive encoding') from error
+        fingerprint = hashlib.sha256(json.dumps(configuration,sort_keys=True,
+            separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+        if (not content.startswith(b'PK\x03\x04')
+                or hashlib.sha256(content).hexdigest() != artifact.get('sha256')
+                or fingerprint != artifact.get('configuration_sha256')):
+            raise LayoutExportError('Layout archive differs from the saved configuration')
+
     def program_bindings(self, driver, configuration):
         profiles, _ = self.discovery.discover()
         profile = profiles.get(driver)

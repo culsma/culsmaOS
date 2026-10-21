@@ -83,6 +83,7 @@ class TrackBoard extends StatelessWidget {
                 final left = covered.map((p) => p.x).reduce(min);
                 final right = covered.map((p) => p.x + p.width).reduce(max);
                 final sites = definition.sites(item);
+                final narrow = covered.length < 4;
                 final children = definition
                     .items(configuration)
                     .where((i) => i.parent == item.name)
@@ -105,7 +106,7 @@ class TrackBoard extends StatelessWidget {
                           ? () => onSelect(item.position!)
                           : null,
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.all(8),
+                        padding: EdgeInsets.all(narrow ? 1 : 8),
                         backgroundColor: isSelected
                             ? const Color(0xffe4eef8)
                             : const Color(0xfff2f5f8),
@@ -128,7 +129,7 @@ class TrackBoard extends StatelessWidget {
                             return Expanded(
                               child: Container(
                                 margin: const EdgeInsets.symmetric(vertical: 3),
-                                padding: const EdgeInsets.all(5),
+                                padding: EdgeInsets.all(narrow ? 1 : 5),
                                 width: double.infinity,
                                 decoration: BoxDecoration(
                                   color: child == null

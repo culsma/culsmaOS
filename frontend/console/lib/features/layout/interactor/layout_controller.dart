@@ -1,11 +1,16 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+import '../repository/layout_archive_repository.dart';
 import 'package:flutter/foundation.dart';
 import '../../../api/console_api.dart';
 import '../model/layout_model.dart';
 
 class LayoutController extends ChangeNotifier {
   final ConsoleApi api;
+  final LayoutArchiveRepository? archives;
+  String? exportedLayout;
   Map<String, dynamic>? active, draft, proposal, profile;
   List<Map<String, dynamic>> profiles = [], drafts = [];
   String? selectedPosition, message, pendingRequest;
@@ -13,6 +18,7 @@ class LayoutController extends ChangeNotifier {
   final Duration pollInterval;
   LayoutController(
     this.api, {
+    this.archives,
     this.pollInterval = const Duration(milliseconds: 300),
   });
 
@@ -90,6 +96,7 @@ class LayoutController extends ChangeNotifier {
   void selectDraft(Map<String, dynamic> record) {
     if (dirty || writeUncertain || pendingRequest != null)
       throw const FormatException('LAYOUT_UNSAVED_CHANGES');
+    exportedLayout = null;
     draft = LayoutData.copy(record);
     proposal = LayoutData.copy(record['configuration']);
     profile = profiles
@@ -146,6 +153,7 @@ class LayoutController extends ChangeNotifier {
   void edit(Map<String, dynamic> value) {
     if (busy || writeUncertain || pendingRequest != null) return;
     proposal = value;
+    exportedLayout = null;
     try {
       if (selectedPosition != null &&
           !(definition?.positions.any((p) => p.id == selectedPosition) ??
@@ -220,6 +228,26 @@ class LayoutController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void changePlacement(
+    Map<String, dynamic> Function(LayoutDefinition, Map<String, dynamic>)
+    change,
+  ) {
+    try {
+      edit(change(definition!, proposal!));
+    } on FormatException catch (error) {
+      message = error.message.toString();
+      notifyListeners();
+    }
+  }
+
+  void remove(LayoutItem item) => changePlacement((d, c) => d.remove(c, item));
+
+  void replaceModel(LayoutItem item, String model) =>
+      changePlacement((d, c) => d.replaceModel(c, item, model));
+
+  void relocateChild(LayoutItem item, LayoutItem parent, String site) =>
+      changePlacement((d, c) => d.relocateChild(c, item, parent, site));
+
   Future<void> save() => perform(() async {
     if (!dirty || writeUncertain || pendingRequest != null) return;
     final result = await api.command('/api/v1/configuration/drafts', {
@@ -258,6 +286,51 @@ class LayoutController extends ChangeNotifier {
         : diagnostics
               .map((e) => '${e['path']}: ${e['message'] ?? e['code']}')
               .join('\n');
+  });
+
+  bool get canExportLayout =>
+      archives != null &&
+      profile?['layout_export_supported'] == true &&
+      !busy &&
+      !dirty &&
+      valid &&
+      !writeUncertain &&
+      pendingRequest == null;
+
+  Future<void> exportLayout() => perform(() async {
+    if (archives == null ||
+        profile?['layout_export_supported'] != true ||
+        dirty ||
+        !valid ||
+        writeUncertain ||
+        pendingRequest != null)
+      return;
+    final result = await api.command('/api/v1/configuration/drafts', {
+      'action': 'export_layout',
+      'draft_id': draft!['draft_id'],
+      'revision': draft!['revision'],
+    });
+    final artifact = result['layout_artifact'];
+    if (result['fingerprint'] != draft!['fingerprint'] ||
+        artifact is! Map ||
+        artifact['encoding'] != 'base64' ||
+        artifact['media_type'] != 'application/zip' ||
+        artifact['configuration_sha256'] != draft!['fingerprint'] ||
+        artifact['name'] is! String ||
+        artifact['content'] is! String ||
+        !RegExp(r'^[A-Za-z0-9_-]+\.zip$').hasMatch(artifact['name'])) {
+      throw const FormatException('LAYOUT_EXPORT_IDENTITY_INVALID');
+    }
+    final bytes = base64Decode(artifact['content']);
+    if (bytes.isEmpty || bytes.length > 3000000) {
+      throw const FormatException('LAYOUT_EXPORT_SIZE_INVALID');
+    }
+    if (sha256.convert(bytes).toString() != artifact['sha256']) {
+      throw const FormatException('LAYOUT_EXPORT_HASH_INVALID');
+    }
+    exportedLayout = await archives!.save(artifact['name'], bytes);
+    message =
+        'Layout exported for vendor validation. The active station is unchanged.';
   });
 
   Future<void> apply() async {

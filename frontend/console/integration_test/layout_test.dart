@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:culsma_console/features/layout/repository/layout_archive_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:culsma_console/api/console_api.dart';
@@ -122,7 +124,10 @@ void main() {
       final api = LocalConsoleApi(
         DesktopConnection(Uri.parse(origin), 'native-e2e-fixture-only'),
       );
-      final controller = LayoutController(api);
+      final controller = LayoutController(
+        api,
+        archives: FileLayoutArchiveRepository(),
+      );
       await controller.load();
       final before = await api.read('/api/v1/configuration/active');
       expect(
@@ -181,6 +186,30 @@ void main() {
       await tester.ensureVisible(find.byKey(const Key('place-site-labware')));
       await tester.tap(find.byKey(const Key('place-site-labware')));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Edit placement'));
+      await tester.tap(find.text('Edit placement'));
+      await tester.pumpAndSettle();
+      final replacement = find.byKey(
+        const ValueKey('replace-carriers/plates-CAR_5DWP'),
+      );
+      await tester.ensureVisible(replacement);
+      await tester.tap(replacement);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('5-site plate carrier · 7 tracks').last);
+      await tester.pumpAndSettle();
+      final relocated = find.byKey(
+        const ValueKey('relocate-labware/source-plates-1'),
+      );
+      await tester.ensureVisible(relocated);
+      await tester.tap(relocated);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('plates · Site 5').last);
+      await tester.pumpAndSettle();
+      expect(
+        controller.proposal!['carriers']['plates']['model'],
+        'PLT_CAR_L5FLEX_MD_A00',
+      );
+      expect(controller.proposal!['labware']['source']['site'], '5');
       await tester.ensureVisible(find.byKey(const Key('save-layout')));
       await tester.tap(find.byKey(const Key('save-layout')));
       await waitIdle(tester, controller);
@@ -207,7 +236,27 @@ void main() {
       );
       final after = await api.read('/api/v1/configuration/active');
       expect(after['active']['fingerprint'], before['active']['fingerprint']);
-      expect(controller.proposal!['labware']['source']['site'], '1');
+      expect(controller.proposal!['labware']['source']['site'], '5');
+      expect(
+        controller.profile!['layout_export_supported'],
+        isTrue,
+        reason: 'Set CULSMA_HAMILTON_LABWARE_ROOT for native export E2E',
+      );
+      await tester.ensureVisible(find.byKey(const Key('export-native-layout')));
+      await tester.tap(find.byKey(const Key('export-native-layout')));
+      await waitIdle(tester, controller);
+      expect(controller.exportedLayout, isNotNull, reason: controller.message);
+      final archive = File(controller.exportedLayout!);
+      final bytes = await archive.readAsBytes();
+      expect(bytes.take(2).toList(), [80, 75]);
+      expect(
+        (await api.read(
+          '/api/v1/configuration/active',
+        ))['active']['fingerprint'],
+        before['active']['fingerprint'],
+      );
+      await archive.parent.delete(recursive: true);
+      controller.dispose();
     },
     skip: !const bool.fromEnvironment('E2E_HAMILTON'),
   );

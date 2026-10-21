@@ -186,3 +186,25 @@ These markers describe the page; they grant no authority and expose no credentia
 or alternate command API. Configuration conflicts retain local edits. The page
 cannot identify a human versus an AI that uses the same browser session; separate
 client identity, attribution and MCP access are future work.
+
+
+## Native Hamilton layout export
+
+The optional Hamilton configuration plugin supplies native layout export. Set
+`CULSMA_HAMILTON_LABWARE_ROOT` to a local directory containing the matching vendor
+labware definitions before starting the console. In Layout, save and check a
+Hamilton setup, then choose **Export VENUS layout**. The desktop saves a ZIP in a
+new temporary directory and displays its path; copy it elsewhere to retain it.
+
+`export_layout` on the existing configuration endpoint requires the exact saved
+revision and returns a driver-owned archive with its configuration fingerprint and
+SHA-256. Ordinary configuration JSON export is unchanged. Export does not activate
+a station or establish vendor/physical validation. Supported native deck and model
+scope is declared by the installed plugin.
+
+Local native E2E, including Hamilton layout export:
+
+```sh
+CULSMA_HAMILTON_LABWARE_ROOT=/path/to/Hamilton/Labware \
+  python tools/test_desktop.py --with-hamilton
+```

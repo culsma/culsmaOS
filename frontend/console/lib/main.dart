@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'api/console_api.dart';
 import 'app.dart';
 import 'features/layout/interactor/layout_controller.dart';
+import 'features/layout/repository/layout_archive_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +15,10 @@ Future<void> main() async {
         .first
         .timeout(const Duration(seconds: 10));
     final connection = DesktopConnection.fromJson(jsonDecode(line));
-    final controller = LayoutController(LocalConsoleApi(connection));
+    final controller = LayoutController(
+      LocalConsoleApi(connection),
+      archives: FileLayoutArchiveRepository(),
+    );
     runApp(CulsmaConsole(controller: controller));
     await controller.load();
   } catch (_) {

@@ -211,6 +211,7 @@ class LayoutDefinition {
     LayoutItem parent,
     String site,
   ) {
+    parent = current(configuration, parent);
     final entry = catalogueEntry(model);
     if (!collection.editable ||
         !collection.keyed ||
@@ -282,6 +283,7 @@ class LayoutDefinition {
     LayoutItem item,
     String target,
   ) {
+    item = current(configuration, item);
     if (!item.collection.editable ||
         item.parent != null ||
         !destinations(configuration, item).any((p) => p.id == target)) {
@@ -295,6 +297,134 @@ class LayoutDefinition {
         : values;
     spec[item.collection.positionField] = target;
     return updated;
+  }
+
+  LayoutItem current(Map<String, dynamic> configuration, LayoutItem item) {
+    final value = items(
+      configuration,
+    ).where((i) => i.id == item.id).firstOrNull;
+    if (value == null) throw const FormatException('LAYOUT_ITEM_MISSING');
+    return value;
+  }
+
+  Map<String, dynamic> relocateChild(
+    Map<String, dynamic> configuration,
+    LayoutItem item,
+    LayoutItem parent,
+    String site,
+  ) {
+    item = current(configuration, item);
+    parent = current(configuration, parent);
+    if (item.parent == null || parent.parent != null) {
+      throw const FormatException('LAYOUT_SITE_REJECTED');
+    }
+    final updated = remove(configuration, item);
+    return placeChild(
+      updated,
+      item.collection,
+      item.name,
+      item.model,
+      parent,
+      site,
+    );
+  }
+
+  Map<String, dynamic> remove(
+    Map<String, dynamic> configuration,
+    LayoutItem item,
+  ) {
+    item = current(configuration, item);
+    if (!item.collection.editable ||
+        !item.collection.keyed ||
+        items(configuration).any((i) => i.parent == item.name)) {
+      throw const FormatException('LAYOUT_REMOVE_REJECTED');
+    }
+    final updated = LayoutData.copy(configuration);
+    (LayoutData.at(updated, item.collection.path) as Map<String, dynamic>)
+        .remove(item.name);
+    return updated;
+  }
+
+  Map<String, dynamic> replaceModel(
+    Map<String, dynamic> configuration,
+    LayoutItem item,
+    String model,
+  ) {
+    item = current(configuration, item);
+    final entry = catalogueEntry(model);
+    if (!item.collection.editable ||
+        !catalogue(
+          item.collection,
+          configuration,
+        ).any((e) => e['id'] == model)) {
+      throw const FormatException('LAYOUT_REPLACEMENT_REJECTED');
+    }
+    if (item.parent == null) {
+      if (item.position == null ||
+          !fits(
+            configuration,
+            model,
+            item.position!,
+            item.collection.category,
+            except: item.id,
+          ) ||
+          items(configuration)
+              .where((i) => i.parent == item.name)
+              .any(
+                (i) =>
+                    !(catalogueEntry(i.model)?['parents'] as List? ?? [])
+                        .contains(model) ||
+                    !(entry?['sites'] as List? ?? []).contains(i.position),
+              )) {
+        throw const FormatException('LAYOUT_REPLACEMENT_REJECTED');
+      }
+    } else {
+      final parent = items(
+        configuration,
+      ).where((i) => i.parent == null && i.name == item.parent).firstOrNull;
+      if (parent == null ||
+          !(entry?['parents'] as List? ?? []).contains(parent.model)) {
+        throw const FormatException('LAYOUT_REPLACEMENT_REJECTED');
+      }
+    }
+    final updated = LayoutData.copy(configuration);
+    final values =
+        LayoutData.at(updated, item.collection.path) as Map<String, dynamic>;
+    final spec = item.collection.keyed
+        ? values[item.name] as Map<String, dynamic>
+        : values;
+    spec[item.collection.modelField] = model;
+    return updated;
+  }
+
+  List<Map<String, dynamic>> replacementModels(
+    Map<String, dynamic> configuration,
+    LayoutItem item,
+  ) => catalogue(item.collection, configuration).where((entry) {
+    try {
+      replaceModel(configuration, item, entry['id']);
+      return true;
+    } on FormatException {
+      return false;
+    }
+  }).toList();
+
+  List<({LayoutItem parent, String site})> childDestinations(
+    Map<String, dynamic> configuration,
+    LayoutItem item,
+  ) {
+    final result = <({LayoutItem parent, String site})>[];
+    for (final parent in items(configuration).where((i) => i.parent == null)) {
+      for (final site in sites(parent)) {
+        try {
+          relocateChild(configuration, item, parent, site);
+          result.add((parent: parent, site: site));
+        } on FormatException {
+          // Occupied and incompatible destinations are excluded by the model.
+        }
+      }
+    }
+    return result;
   }
 
   Map<String, dynamic> add(

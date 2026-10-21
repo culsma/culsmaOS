@@ -210,6 +210,15 @@ class LayoutPageState extends State<LayoutPage> {
                       : c.validate,
                   child: const Text('Check layout'),
                 ),
+                if (c.profile?['layout_export_supported'] == true)
+                  OutlinedButton(
+                    key: const Key('export-native-layout'),
+                    onPressed: c.canExportLayout ? c.exportLayout : null,
+                    child: Text(
+                      c.profile?['layout_export_label'] ??
+                          'Export device layout',
+                    ),
+                  ),
                 FilledButton(
                   key: const Key('apply-layout'),
                   onPressed: c.canApply ? c.apply : null,
@@ -217,6 +226,16 @@ class LayoutPageState extends State<LayoutPage> {
                 ),
               ],
             ),
+            if (c.exportedLayout != null) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'Exported layout archive (temporary file; copy it to retain):',
+              ),
+              SelectableText(
+                c.exportedLayout!,
+                key: const Key('exported-layout-path'),
+              ),
+            ],
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Apply the checked setup to the idle station'),
@@ -315,6 +334,32 @@ class LayoutPageState extends State<LayoutPage> {
           else
             const Text(
               'Installed module placement is read-only in this editor.',
+            ),
+          if (occupied.collection.editable)
+            Material(
+              color: Colors.transparent,
+              child: ExpansionTile(
+                key: ValueKey('placement-actions-${occupied.id}'),
+                title: const Text('Edit placement'),
+                children: [
+                  placementActions(definition, occupied, enabled),
+                  ...definition
+                      .items(c.proposal!)
+                      .where((i) => i.parent == occupied.name)
+                      .map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(item.name),
+                              placementActions(definition, item, enabled),
+                            ],
+                          ),
+                        ),
+                      ),
+                ],
+              ),
             ),
           if (definition.sites(occupied).isNotEmpty)
             siteEditor(context, definition, occupied, enabled),
@@ -451,6 +496,10 @@ class LayoutPageState extends State<LayoutPage> {
         const SizedBox(height: 12),
         if (sites.isEmpty)
           const Text('All sites are occupied')
+        else if (models.isEmpty)
+          const Text(
+            'No compatible labware is enabled for native export on this carrier.',
+          )
         else ...[
           DropdownButtonFormField<String>(
             key: ValueKey('child-site-${parent.id}-${children.length}'),
@@ -464,7 +513,9 @@ class LayoutPageState extends State<LayoutPage> {
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             key: ValueKey('child-model-${parent.id}'),
-            initialValue: childModel,
+            initialValue: models.any((m) => m['id'] == childModel)
+                ? childModel
+                : null,
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Compatible labware'),
             items: models
@@ -507,6 +558,86 @@ class LayoutPageState extends State<LayoutPage> {
             child: const Text('Place in site'),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget placementActions(
+    LayoutDefinition definition,
+    LayoutItem item,
+    bool enabled,
+  ) {
+    final c = widget.controller;
+    final models = definition.replacementModels(c.proposal!, item);
+    final destinations = item.parent == null
+        ? <({LayoutItem parent, String site})>[]
+        : definition.childDestinations(c.proposal!, item);
+    final removable =
+        item.collection.keyed &&
+        !definition.items(c.proposal!).any((i) => i.parent == item.name);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownButtonFormField<String>(
+          key: ValueKey('replace-${item.id}-${item.model}'),
+          initialValue: models.any((m) => m['id'] == item.model)
+              ? item.model
+              : null,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: 'Model for ${item.name}'),
+          items: models
+              .map(
+                (m) => DropdownMenuItem<String>(
+                  value: m['id'],
+                  child: Text(m['label'], overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: enabled
+              ? (model) {
+                  if (model != null) c.replaceModel(item, model);
+                }
+              : null,
+        ),
+        if (item.parent != null)
+          DropdownButtonFormField<String>(
+            key: ValueKey(
+              'relocate-${item.id}-${item.parent}-${item.position}',
+            ),
+            initialValue:
+                destinations.any(
+                  (d) =>
+                      d.parent.name == item.parent && d.site == item.position,
+                )
+                ? '${item.parent}/${item.position}'
+                : null,
+            isExpanded: true,
+            decoration: InputDecoration(labelText: 'Position for ${item.name}'),
+            items: destinations
+                .map(
+                  (d) => DropdownMenuItem(
+                    value: '${d.parent.name}/${d.site}',
+                    child: Text('${d.parent.name} · Site ${d.site}'),
+                  ),
+                )
+                .toList(),
+            onChanged: enabled
+                ? (value) {
+                    if (value == null) return;
+                    final destination = destinations.firstWhere(
+                      (d) => '${d.parent.name}/${d.site}' == value,
+                    );
+                    c.relocateChild(item, destination.parent, destination.site);
+                  }
+                : null,
+          ),
+        TextButton(
+          key: ValueKey('remove-${item.id}'),
+          onPressed: enabled && removable ? () => c.remove(item) : null,
+          child: Text('Remove ${item.name}'),
+        ),
+        if (!removable && item.collection.keyed)
+          const Text('Remove child labware before removing its carrier.'),
       ],
     );
   }
