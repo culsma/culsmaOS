@@ -16,7 +16,7 @@
     {
       "path": "frontend/console/test/goldens/layout-1100.png",
       "kind": "golden",
-      "sha256": "569c9afe8ce64968a7546faa8f40f09c2f32d5736170218b12430c32710b7cd9",
+      "sha256": "499fd829ff38238e8a41e601e1b21a9a3cb27accda65ceac5ef44e0c5e553def",
       "source": "Reviewed deterministic Flutter reference image; not a generated test report"
     },
     {
@@ -70,8 +70,14 @@
     {
       "path": "frontend/console/test/goldens/hamilton-1400.png",
       "kind": "golden",
-      "sha256": "5e098f169cc3cc58255c854faa641f0ba486ee07d5f70fc11ee5aa2244ad1afe",
+      "sha256": "bb22b1ac2f22df11f0127d1da6f59a5649314304696a6f683a77e96ba62c7550",
       "source": "Reviewed deterministic Flutter reference image; not a generated test report"
+    },
+    {
+      "path": "frontend/console/test/goldens/hamilton-export-1400.png",
+      "kind": "golden",
+      "source": "Reviewed deterministic Flutter reference image; not a generated test report",
+      "sha256": "6e1322a1ad183fe65ca90803ac02a2470f62e954265c06b369c063c3c1e71b2f"
     }
   ]
 }
