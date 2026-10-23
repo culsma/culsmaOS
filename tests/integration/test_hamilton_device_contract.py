@@ -86,7 +86,7 @@ def test_transfer_session_does_not_advertise_unimplemented_processing(fixture):
         assert snapshot.supports_transfer is True
         assert snapshot.processing_capabilities == {}
         assert snapshot.motion_capabilities == {}
-        assert snapshot.feedback_capabilities.completion_units == ('operation',)
+        assert snapshot.feedback_capabilities.completion_units == ('operation', 'batch')
     finally:
         port.close()
 
