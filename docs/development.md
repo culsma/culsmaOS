@@ -184,8 +184,9 @@ acknowledgements, applied/rejected results and unavailable responses.
 
 These markers describe the page; they grant no authority and expose no credential
 or alternate command API. Configuration conflicts retain local edits. The page
-cannot identify a human versus an AI that uses the same browser session; separate
-client identity, attribution and MCP access are future work.
+cannot identify a human versus an AI that uses the same browser session. MCP uses
+a separate process identity and restricted capability; it cannot attest physical
+loading. Browser agents sharing the operator session still share that authority.
 
 
 ## Native Hamilton layout export
@@ -208,3 +209,85 @@ Local native E2E, including Hamilton layout export:
 CULSMA_HAMILTON_LABWARE_ROOT=/path/to/Hamilton/Labware \
   python tools/test_desktop.py --with-hamilton
 ```
+
+## Hamilton loading preparation
+
+The `hamilton-agent` device profile now stops at `awaiting_setup`. Its loading
+plan includes automatic or pinned locations, initial contents and one checklist
+entry per physical labware. Candidates come from the declared driver layout;
+this does not detect loaded stock, invent carrier positions or verify calibration.
+Explicit logical-well maps remain required for semantic plates.
+
+```sh
+culsma-os setup RUN_ID --socket /tmp/station.sock --action show
+culsma-os setup RUN_ID --socket /tmp/station.sock --action begin --fingerprint PLAN_SHA --request-id BEGIN_ID
+culsma-os setup RUN_ID --socket /tmp/station.sock --action status --request-id BEGIN_ID
+# Place the labware and contents exactly as listed before acknowledging.
+culsma-os setup RUN_ID --socket /tmp/station.sock --action confirm --fingerprint PLAN_SHA --acknowledge --request-id CONFIRM_ID
+culsma-os setup RUN_ID --socket /tmp/station.sock --action status --request-id CONFIRM_ID
+```
+
+Resident mutations return durable request receipts; admission is not application.
+`--action revise --preferences '{"fixed":{"ALLOCATION_ID":{"labware":"LABWARE_ID","well":"A1"}}}'`
+pins a location. `preferred` uses the same shape with a reported fallback.
+Revision invalidates confirmation while preserving the loading reservation.
+Operator attestation is recorded separately from sensor evidence. Gun-tip counts
+and native parameter bounds still receive driver preparation checks; the checklist
+reports declared tip stock, not an independently computed whole-protocol minimum.
+
+For a saved one-shot run, replace `--socket` with `--host-db`, `--driver` and
+`--driver-config`; inspect, begin, confirm, then use the existing `resume` command.
+Existing preconfigured simulator profiles keep their declared-input workflow.
+The run detail's **Prepare and load** card presents this same persisted plan.
+Placement selectors support automatic, fixed and preferred addresses; changing a
+plan invalidates its confirmation. MCP changes appear through the existing console
+polling, with shared request receipts. Unsaved console edits retain their original
+fingerprint and require reloading when another client changes the plan.
+
+## External AI through MCP
+
+There is no embedded AI. Start the existing resident normally, then launch the
+optional stdio bridge from an **isolated environment** containing the same OS
+wheel and language dependency. The MCP SDK and vendor simulator have conflicting
+Pydantic/JSON Schema pins; do not combine the `mcp` and `simulator` extras.
+
+```sh
+python3.11 -m venv .venv-mcp
+.venv-mcp/bin/pip install --find-links /path/to/current-build-wheels 'culsma-os[mcp]'
+.venv-mcp/bin/culsma-os mcp --socket /tmp/station.sock \
+  --program-root /path/to/programs --program-store /path/to/reviewed-snapshots
+```
+
+Configure an external MCP client to launch that command; keep the snapshot store
+outside the program root. Both clients must point to the same resident socket.
+No device plugin is needed in the bridge environment. The MCP SDK is optional;
+normal OS/console installation and simulator operation do not load it.
+
+| Tools | Responsibility |
+| --- | --- |
+| `station_status`, `list_runs`, `run_status` | Read existing OS observations |
+| `list_programs`, `inspect_program`, `submit_program`, `control_run` | Review source snapshots and request queue/control actions |
+| `loading_plan`, `revise_loading_plan` | Read or revise the fingerprinted loading plan |
+| `begin_loading`, `loading_request_status` | Reserve for loading and inspect durable command outcomes |
+
+There is deliberately no MCP loading-confirmation tool or capability. The operator
+loads the listed items, ticks the console acknowledgement and confirms the exact
+plan. This is operator attestation, not sensor evidence. Operations are attributed
+to the local console or MCP process; these are not multi-user login identities.
+Neither transport starts a second runtime or bypasses dispatch/resource gates.
+
+Optional local E2E uses an isolated Chrome profile and a labelled Hamilton backend
+double, without contacting an Agent, VENUS or an instrument:
+
+```sh
+CULSMA_OS_MCP_SDK_PATH=/path/to/isolated-sdk-packages \
+CULSMA_OS_BROWSER_MODULES=/path/to/node_modules \
+CULSMA_OS_CHROME=/path/to/chrome \
+python -m pytest tests/integration/test_shared_setup_mcp.py \
+  tests/integration/test_shared_setup_browser.py -q
+```
+
+The browser test uses Playwright Core, PNGJS and Pixelmatch. Reviewed visual
+references live under `tests/modules/console/goldens`; generated screenshots and
+diffs remain in ignored `run-artifacts/ui-tests`. Reference refresh is explicit
+(`CULSMA_OS_CAPTURE_GOLDEN=1`) and requires visual review before replacing a golden.

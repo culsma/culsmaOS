@@ -33,3 +33,15 @@ nav{flex-wrap:wrap;gap:12px 24px}
 @media(max-width:600px){.configuration-context{align-items:flex-start;flex-direction:column}}
 
 @media(max-width:600px){.config-map-row{grid-template-columns:1fr}}
+
+.setup-labware { border: 1px solid #dbe3ed; border-radius: 12px; padding: 1rem; margin: 1rem 0; }
+.setup-placement { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .7rem; padding: .8rem 0; border-bottom: 1px solid #dbe3ed; }
+.setup-placement h4 { grid-column: 1 / -1; margin: .2rem 0; }
+[data-region="run-setup"] label { display: flex; align-items: center; gap: .6rem; margin: 1rem 0; }
+@media(max-width: 720px) { .setup-placement { grid-template-columns: 1fr; } }
+
+[data-region="setup-activity"] table { table-layout: fixed; min-width: 640px; }
+[data-region="setup-activity"] th:nth-child(1) { width: 15%; }
+[data-region="setup-activity"] th:nth-child(2) { width: 28%; }
+[data-region="setup-activity"] th:nth-child(3) { width: 17%; }
+[data-region="setup-activity"] th:nth-child(4) { width: 40%; }

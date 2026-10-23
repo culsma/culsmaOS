@@ -179,6 +179,17 @@ class OSApplicationFactory:
             motions=motions,
             conditions=conditions,
         )
+        from .program_manager.repositories.setup import SqliteRunSetupRepository
+        from .program_manager.interactors.setup import RunSetupInteractor
+        from .program_manager.interactors.setup_requirements import SetupRequirementsInteractor
+        from .workspace_manager.interactors import WorkspacePlanningInteractor
+        catalogue = port.describe_workspace() if snapshot.setup_required else None
+        space.setup_addresses = ({(p['labware'], p['well']) for p in catalogue['locations']}
+                                 if catalogue is not None else {(a.labware, a.well) for a in positions.values()})
+        setup = RunSetupInteractor(SqliteRunSetupRepository(connections[0]), tasks, state, host, codec,
+            SetupRequirementsInteractor(codec), WorkspacePlanningInteractor(), catalogue, snapshot, reservations, evidence, space.workspaces, device)
+        tasks.setup = setup
+        gateway.setup = setup
         runs = RunSchedulerInteractor(tasks, execution, reservations, device, evidence)
         finalization = RunFinalizationInteractor(tasks, state, safety, reservations, conditions, resource, evidence)
         recovery = RecoveryInteractor(
@@ -196,7 +207,7 @@ class OSApplicationFactory:
             conditions,
             finalization,
         )
-        report = RunReportInteractor(tasks, execution, material)
+        report = RunReportInteractor(tasks, execution, material, setup)
         client = CulsmaOSClient(tasks, lifecycle, execution, report)
         return OSApplication(
             OSRunHostInteractor(
@@ -262,7 +273,10 @@ class OSApplicationFactory:
             WorkspaceCheckpointInteractor(RuntimeCheckpointCodecInteractor())), state)
         execution = ExecutionHostInteractor(tasks, host, state)
         material = MaterialInteractor(LocalMaterialRepository(connections[1]), RuntimeCheckpointCodecInteractor())
-        report = RunReportInteractor(tasks, execution, material)
+        from .program_manager.repositories.setup import SqliteRunSetupRepository
+        from .program_manager.interactors.setup import RunSetupInspectionInteractor
+        report = RunReportInteractor(tasks, execution, material,
+            RunSetupInspectionInteractor(SqliteRunSetupRepository(connections[0])))
         from .storage import ReadOnlyDatabaseSnapshot
         from .program_manager.interactors.run_evidence import RunEvidenceInteractor
         from .event_journal.interactors.inspection import EvidenceInspectionInteractor
@@ -288,6 +302,10 @@ class OSApplicationFactory:
     def build_run_controller(self):
         from .program_manager.interactors.control import RunControlInteractor
         return RunControlInteractor(self, HostOwnershipInteractor(HostLeaseFactory()))
+
+    def build_setup_commands(self):
+        from .program_manager.interactors.setup_command import RunSetupCommandInteractor
+        return RunSetupCommandInteractor(self, HostOwnershipInteractor(HostLeaseFactory()))
 
     def build_program_runner(self):
         from .program_manager.interactors.command import ProgramRunInteractor
@@ -335,6 +353,9 @@ class ResidentCommandFactory:
         from .program_manager.interactors.resident import ResidentCommandInteractor
         inspector = self.applications.build_run_inspector(context)
         queue = SqliteRunQueueRepository(inspector.tasks.repository.connection)
+        from .program_manager.repositories.setup import SqliteRunSetupRepository
+        from .program_manager.interactors.setup import RunSetupRequestInteractor
+        setup_requests = RunSetupRequestInteractor(SqliteRunSetupRepository(inspector.tasks.repository.connection), inspector.tasks)
         return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
             HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
-            self.applications.build_device_inspector(context),configuration)
+            self.applications.build_device_inspector(context),configuration,setup_requests)

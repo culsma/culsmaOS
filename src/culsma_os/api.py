@@ -17,6 +17,18 @@ class CulsmaOSClient:
     def submit_run(self, request: RunRequest):
         return self.tasks.submit(request)
 
+    def setup_plan(self, run_id):
+        return self.tasks.setup.get(run_id)
+
+    def revise_setup(self, run_id, preferences):
+        return self.tasks.setup.plan(run_id, preferences)
+
+    def begin_setup(self, run_id, fingerprint):
+        return self.tasks.setup.begin_loading(run_id, fingerprint)
+
+    def confirm_setup(self, run_id, fingerprint, acknowledged=False, source='operator_attestation'):
+        return self.tasks.setup.confirm(run_id, fingerprint, acknowledged, source)
+
     def get_run(self, run_id):
         return self.tasks.get(run_id)
 

@@ -1,3 +1,5 @@
+from copy import deepcopy
+from math import isfinite
 from .repository import WorkspaceInspectionRepository
 from hashlib import sha256
 import json
@@ -94,7 +96,7 @@ class SpaceInteractor:
     def configured_positions(self, workspace):
         if workspace is None:
             return self.positions
-        allowed = {(a.labware, a.well) for a in self.positions.values()}
+        allowed = getattr(self, 'setup_addresses', {(a.labware, a.well) for a in self.positions.values()})
         positions = {}
         for step_id, value in workspace['bindings'].items():
             address = WorkspaceAddress(**value)
@@ -114,7 +116,8 @@ class SpaceInteractor:
             raise ValueError('WORKSPACE_EFFECT_SCOPE_INVALID')
         return pending.effect_id[:-len(suffix)]
 
-    def declared_geometry(self, step):
+    @staticmethod
+    def declared_geometry(step):
         dimensions = []
         for name in ("carrier_rows", "carrier_cols"):
             value = step.args.get(name)
@@ -646,3 +649,135 @@ class ConfigurationDraftInteractor:
         if not self.profiles.validate(draft['driver'],draft['configuration'])['valid']:
             raise ConfigurationError('CONFIGURATION_ACTIVATION_INVALID')
         return draft
+
+
+
+
+class WorkspacePlanningInteractor:
+    """Deterministic allocation over driver-declared locations; never invent hardware."""
+    def validate_catalogue(self, catalogue):
+        if not isinstance(catalogue, dict) or catalogue.get('schema') != 'culsma_workspace_catalogue_v1':
+            raise ValueError('SETUP_CATALOGUE_UNSUPPORTED')
+        locations = catalogue.get('locations')
+        if not isinstance(locations, list) or not locations or len(locations) > 4096:
+            raise ValueError('SETUP_CATALOGUE_INVALID')
+        seen = set()
+        for item in locations:
+            if (not isinstance(item, dict) or any(type(item.get(k)) is not str or not item[k] for k in ('labware', 'well'))
+                    or type(item.get('capacity_uL')) not in (int, float)
+                    or not isfinite(item['capacity_uL']) or item['capacity_uL'] <= 0
+                    or not isinstance(item.get('kinds'), list) or not item['kinds']
+                    or set(item['kinds']) - {'tube', 'well'}):
+                raise ValueError('SETUP_CATALOGUE_INVALID')
+            key = item['labware'], item['well']
+            if key in seen:
+                raise ValueError('SETUP_LOCATION_DUPLICATE')
+            seen.add(key)
+        return deepcopy(locations)
+
+    def compatible(self, demand, location):
+        if location.get('available', True) is not True:
+            return False
+        if demand['kind'] not in location['kinds'] or demand['capacity_uL'] > location['capacity_uL']:
+            return False
+        if demand.get('carrier') is not None:
+            return (location.get('geometry') == demand['geometry'] and location['well'] == demand['well'])
+        return True
+
+    def plan(self, demands, catalogue, preferences=None):
+        locations = self.validate_catalogue(catalogue)
+        order = {(p['labware'], p['well']): n for n, p in enumerate(locations)}
+        preferences = {} if preferences is None else deepcopy(preferences)
+        if not isinstance(preferences, dict) or set(preferences) - {'fixed', 'preferred'}:
+            raise ValueError('SETUP_PREFERENCES_INVALID')
+        ids = {d['allocation_id'] for d in demands}
+        if len(ids) != len(demands):
+            raise ValueError('SETUP_ALLOCATION_DUPLICATE')
+        for values in preferences.values():
+            if not isinstance(values, dict) or set(values) - ids:
+                raise ValueError('SETUP_PREFERENCES_INVALID')
+            for address in values.values():
+                if (not isinstance(address, dict) or set(address) != {'labware', 'well'}
+                        or any(type(v) is not str or not v for v in address.values())):
+                    raise ValueError('SETUP_PREFERENCES_INVALID')
+        fixed, preferred = preferences.get('fixed', {}), preferences.get('preferred', {})
+        units = {}
+        for demand in demands:
+            key = demand.get('carrier') or demand['allocation_id']
+            units.setdefault(key, []).append(demand)
+        choices = []
+        for group in units.values():
+            # An entire semantic plate is one allocation unit; never scatter its wells.
+            options = []
+            if group[0].get('carrier'):
+                for labware in sorted({p['labware'] for p in locations}):
+                    rows = []
+                    for demand in group:
+                        candidate = next((p for p in locations if p['labware'] == labware and self.compatible(demand, p)), None)
+                        if candidate is None:
+                            break
+                        rows.append(candidate)
+                    if len(rows) == len(group):
+                        options.append(rows)
+            else:
+                options = [[p] for p in locations if self.compatible(group[0], p)]
+            options = [rows for rows in options if all(
+                d['allocation_id'] not in fixed or fixed[d['allocation_id']] == {'labware': p['labware'], 'well': p['well']}
+                for d, p in zip(group, rows))]
+            options.sort(key=lambda rows: (
+                -sum(preferred.get(d['allocation_id']) == {'labware': p['labware'], 'well': p['well']}
+                     for d, p in zip(group, rows)),
+                tuple(order[p['labware'], p['well']] for p in rows)))
+            if not options:
+                raise ValueError('SETUP_NO_FEASIBLE_LOCATION')
+            choices.append((group, options))
+        # Constrained units first, then stable input order; bounded complete search.
+        choices.sort(key=lambda value: len(value[1]))
+        budget = [10000]
+        selected = self.assign(choices, 0, set(), {}, set(), budget)
+        if selected is None:
+            raise ValueError('SETUP_NO_FEASIBLE_LAYOUT')
+        bindings, items = {}, []
+        for demand in demands:
+            location = selected[demand['allocation_id']]
+            address = {'labware': location['labware'], 'well': location['well']}
+            bindings[demand['allocation_id']] = address
+            items.append({**deepcopy(demand), 'address': address, 'placement': deepcopy(location.get('placement', {})),
+                          'model': location.get('model'), 'selection': 'fixed' if demand['allocation_id'] in fixed else 'automatic',
+                          'preferred_satisfied': demand['allocation_id'] not in preferred or preferred[demand['allocation_id']] == address})
+        return {'bindings': bindings, 'items': items, 'candidates': deepcopy(locations),
+                'loadout': self.loading_checklist(items),
+                'supplies': deepcopy(catalogue.get('supplies', [])),
+                'scope': 'Declared layout and initial material only; not sensed inventory, calibration or collision proof'}
+
+    def loading_checklist(self, items):
+        labware = {}
+        for item in items:
+            name = item['address']['labware']
+            row = labware.setdefault(name, {'labware': name, 'model': item.get('model'),
+                'placement': deepcopy(item.get('placement', {})), 'containers': [],
+                'instruction': 'Place or confirm this labware, then load the listed initial contents'})
+            row['containers'].append({'name': item.get('name'), 'well': item['address']['well'],
+                'volume_uL': item.get('initial_volume_uL', 0), 'contents': deepcopy(item.get('initial_contents', {}))})
+        return list(labware.values())
+
+    def assign(self, choices, index, occupied, selected, plates, budget):
+        budget[0] -= 1
+        if budget[0] < 0:
+            raise ValueError('SETUP_SEARCH_LIMIT')
+        if index == len(choices):
+            return selected
+        group, options = choices[index]
+        for rows in options:
+            keys = {(p['labware'], p['well']) for p in rows}
+            labware = {p['labware'] for p in rows}
+            whole_plate = group[0].get('carrier') is not None
+            if (len(keys) != len(rows) or keys & occupied or labware & plates
+                    or whole_plate and any(name in labware for name, _ in occupied)):
+                continue
+            answer = self.assign(choices, index + 1, occupied | keys,
+                {**selected, **{d['allocation_id']: p for d, p in zip(group, rows)}},
+                plates | labware if whole_plate else plates, budget)
+            if answer is not None:
+                return answer
+        return None

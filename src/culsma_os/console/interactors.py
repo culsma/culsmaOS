@@ -50,3 +50,12 @@ class DesktopConsoleInteractor:
         finally:
             self.server.server_close()
         # The resident outlives this UI. Closing a window is not a station shutdown command.
+
+
+class MCPHostInteractor:
+    def __init__(self, tokens, server):
+        self.tokens, self.server = tokens, server
+
+    def execute(self):
+        # Credential is process-local, never persisted or exposed as a tool argument.
+        return self.server.serve('Bearer ' + self.tokens.issue_automation_session())

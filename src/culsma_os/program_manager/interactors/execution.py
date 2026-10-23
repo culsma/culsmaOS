@@ -13,6 +13,8 @@ class ExecutionHostInteractor:
         record = self.tasks.get(run_id)
         if record.status != "ready":
             return record
+        if self.tasks.setup is not None:
+            self.tasks.setup.require_dispatch(run_id)
         checkpoint = self.host.advance(record.checkpoint)
         data, _ = self.host.restore(checkpoint)
         if data["pending"]:

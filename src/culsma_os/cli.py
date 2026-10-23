@@ -54,6 +54,20 @@ class CulsmaOSCLI:
             control.add_argument("--workspace-config", type=Path)
             control.add_argument("--artifacts-dir", type=Path, default=Path("run-artifacts"))
             control.add_argument("--station-id")
+        setup = commands.add_parser('setup', help='Inspect and confirm a saved run loading plan')
+        setup.add_argument('run_id')
+        setup.add_argument('--action', choices=['show','revise','begin','confirm','status'], default='show')
+        setup_target = setup.add_mutually_exclusive_group(required=True)
+        setup_target.add_argument('--host-db', type=Path)
+        setup_target.add_argument('--socket', type=Path)
+        setup.add_argument('--request-id')
+        setup.add_argument('--driver', default='hamilton-agent')
+        setup.add_argument('--driver-config', type=Path)
+        setup.add_argument('--station-id')
+        setup.add_argument('--artifacts-dir', type=Path, default=Path('run-artifacts'))
+        setup.add_argument('--fingerprint')
+        setup.add_argument('--preferences', type=json.loads)
+        setup.add_argument('--acknowledge', action='store_true')
         serve = commands.add_parser("serve", help="Start the persistent local OS host")
         serve.add_argument("--socket", type=Path, required=True)
         serve.add_argument("--host-db", type=Path, required=True)
@@ -77,6 +91,10 @@ class CulsmaOSCLI:
         console.add_argument("--drafts-db", type=Path, default=Path("run-artifacts/console/drafts.sqlite3"))
         console.add_argument("--program-root", type=Path, help="Allow console selection of .culs files under this directory")
         console.add_argument("--program-store", type=Path, default=Path("run-artifacts/console/programs"))
+        mcp = commands.add_parser('mcp', help='Expose a local resident to an external AI over MCP stdio')
+        mcp.add_argument('--socket',type=Path,required=True)
+        mcp.add_argument('--program-root',type=Path)
+        mcp.add_argument('--program-store',type=Path,default=Path('run-artifacts/console/programs'))
         desktop = commands.add_parser("desktop", help="Start the local desktop console and resident as one product")
         desktop.add_argument("--state-dir", type=Path, default=Path("run-artifacts/desktop"))
         desktop.add_argument("--socket", type=Path, help="Attach to this existing resident instead of starting one")
@@ -86,6 +104,37 @@ class CulsmaOSCLI:
         desktop.add_argument("--drafts-db", type=Path)
         desktop.add_argument("--application", type=Path, help="Built Flutter executable; normally installed with the product")
         args = parser.parse_args(argv)
+        if args.command == 'setup' and args.socket:
+            from culsma_os.program_manager.adapters.resident import ResidentClientAdapter
+            payload = {'action':'setup-'+args.action,'run_id':args.run_id,
+                'setup_fingerprint':args.fingerprint,'setup_preferences':args.preferences,
+                'setup_acknowledged':args.acknowledge,'request_id':args.request_id}
+            try:
+                result = ResidentClientAdapter(args.socket).execute(payload)
+            except (ValueError, OSError) as error:
+                parser.exit(2, f'{error}\n')
+            print(json.dumps(result, default=str))
+            raise SystemExit(0)
+        if args.command == 'setup':
+            from culsma_os.program_manager.models import RunSetupCommandRequest
+            request = RunSetupCommandRequest(args.action, args.run_id,
+                HostBuildContext(args.host_db, args.driver, args.driver_config, args.artifacts_dir / 'driver', args.station_id),
+                args.fingerprint, args.preferences, args.acknowledge)
+            try:
+                result = OSApplicationFactory().build_setup_commands().execute(request)
+            except (ValueError, OSError, KeyError) as error:
+                parser.exit(2, f'{error}\n')
+            print(json.dumps(result, default=str))
+            raise SystemExit(0)
+        if args.command == 'mcp':
+            from culsma_os.console.models import ConsoleSettings
+            from culsma_os.console.providers import ConsoleApplicationFactory
+            try:
+                ConsoleApplicationFactory().build_mcp(ConsoleSettings(args.socket,program_root=args.program_root,
+                    program_store=args.program_store)).execute()
+            except (ImportError,ValueError,OSError) as error:
+                parser.exit(2,f'{error}\n')
+            return
         if args.command == "desktop":
             import sys
             from culsma_os.console.models import ConsoleSettings

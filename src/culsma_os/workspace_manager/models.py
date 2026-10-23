@@ -133,3 +133,8 @@ class ProgramBindingRequest:
     revision: int
     program_id: str
     snapshot_id: str
+
+
+class WorkspaceCataloguePort(Protocol):
+    """Driver-declared loading candidates, independent of vendor coordinates."""
+    def describe_workspace(self) -> dict: ...

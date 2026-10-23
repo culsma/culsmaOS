@@ -78,6 +78,12 @@
       "kind": "golden",
       "source": "Reviewed deterministic Flutter reference image; not a generated test report",
       "sha256": "6e1322a1ad183fe65ca90803ac02a2470f62e954265c06b369c063c3c1e71b2f"
+    },
+    {
+      "path": "tests/modules/console/goldens/run-setup-1280.png",
+      "kind": "golden",
+      "sha256": "ca7b5ae5fcb30e1ca806fcd58347135335eec33f16e0be2b912a476921ffd8b3",
+      "source": "Reviewed deterministic browser loading-screen reference; not a generated test report"
     }
   ]
 }

@@ -164,9 +164,13 @@ class DriverGatewayInteractor:
                 return replace(receipt, outcome="unknown")
             return receipt
 
+    @contextmanager
     def dispatch_guard(self, permit, run_id):
         from contextlib import nullcontext
-        return self.reservations.permit_guard(permit, run_id) if self.reservations else nullcontext()
+        with self.reservations.permit_guard(permit, run_id) if self.reservations else nullcontext():
+            if getattr(self, 'setup', None) is not None:
+                self.setup.require_dispatch(run_id)
+            yield
 
     def require_selection(self, intent, context):
         from culsma_os.transfer_engine.interactors import TransferConstraintInteractor

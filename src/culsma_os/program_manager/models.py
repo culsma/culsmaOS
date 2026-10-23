@@ -15,6 +15,7 @@ from culsma_os.resource_manager.models import RunReleaseConfirmation
 class RunRequest:
     plan: PlanProgram
     state: RuntimeState
+    setup_preferences: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -267,6 +268,10 @@ class ResidentCommand:
     configuration_origin: dict | None = None
     configuration_fingerprint: str | None = None
     driver: str | None = None
+    setup_fingerprint: str | None = None
+    setup_preferences: dict | None = None
+    setup_acknowledged: bool = False
+    setup_origin: str | None = None
 
 class ResidentAdmissionError(ValueError):
     def __init__(self, code, diagnostics=()):
@@ -335,3 +340,23 @@ class ProgramSourceRepository(Protocol):
 
 class ResidentCommandPort(Protocol):
     def execute(self, payload: dict[str, Any]) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class RunSetupCommandRequest:
+    action: str
+    run_id: str
+    context: HostBuildContext
+    fingerprint: str | None = None
+    preferences: dict | None = None
+    acknowledged: bool = False
+
+
+@dataclass(frozen=True)
+class SetupInteractionRequest:
+    action: str
+    run_id: str
+    request_id: str | None = None
+    fingerprint: str | None = None
+    preferences: dict | None = None
+    acknowledged: bool = False

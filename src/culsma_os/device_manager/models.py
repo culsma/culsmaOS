@@ -32,8 +32,11 @@ class DeviceConfigurationSnapshot:
     supports_transfer: bool | None = None
     motion_capabilities: dict = field(default_factory=dict)
     transfer_requirements: tuple[str, ...] = ()
+    setup_required: bool = False
 
     def __post_init__(self):
+        if type(self.setup_required) is not bool:
+            raise ValueError("DEVICE_SETUP_CAPABILITY_INVALID")
         if self.supports_transfer is not None and type(self.supports_transfer) is not bool:
             raise ValueError("DEVICE_TRANSFER_CAPABILITY_INVALID")
         values = self.transfer_requirements

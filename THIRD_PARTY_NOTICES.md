@@ -8,6 +8,7 @@ and retain their own licenses and notices.
 | Culsma | Independent language compiler and runtime | Apache-2.0 |
 | Culsma Opentrons simulator plugin | External Culsma integration; not an official vendor product | Apache-2.0 |
 | Opentrons Python API and shared data 8.8.2 | Official simulator used by the external plugin | Apache-2.0 |
+| MCP Python SDK 2.3.0 | Optional, separately installed stdio bridge for external AI clients | MIT |
 | Pydantic and pydantic-settings | External plugin configuration | MIT |
 
 The release includes separately built compatibility wheels for the Culsma language

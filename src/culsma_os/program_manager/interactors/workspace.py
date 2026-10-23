@@ -112,3 +112,6 @@ class RunWorkspaceInteractor:
         if len(self.frozen) > 64:
             self.frozen.popitem(last=False)
         return deepcopy(value)
+
+    def invalidate(self, run_id):
+        self.frozen.pop(run_id, None)

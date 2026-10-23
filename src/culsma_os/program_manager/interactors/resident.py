@@ -6,12 +6,16 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
         self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
+        self.setup_requests = setup_requests
 
     def execute(self, request):
+        if request.action.startswith('setup-'):
+            self.require_run(request.run_id)
+            return self.setup_requests.execute(request)
         if request.action in {'configuration-status','activation-status'}:
             return self.configuration.describe(self.status,request.request_id if request.action=='activation-status' else None)
         if request.action == 'configure':
@@ -131,7 +135,8 @@ class ResidentWorkerInteractor:
             try:
                 if action == 'resume':
                     head = self.queue.head()
-                    if head is not None and head.run_id == run_id:
+                    if (head is not None and head.run_id == run_id
+                            and self.application.client.get_run(run_id).status != 'awaiting_setup'):
                         self.ensure_owned(run_id)
                     self.application.client.resume_run(run_id)
                 elif action == 'pause':
@@ -151,6 +156,9 @@ class ResidentWorkerInteractor:
             self.admitted.add(run_id)
 
     def tick(self):
+        setup = self.application.client.tasks.setup
+        if setup is not None:
+            setup.process_requests()
         self.process_controls()
         if self.status.worker_should_stop():
             return
@@ -159,6 +167,19 @@ class ResidentWorkerInteractor:
             self.status.note_blocked(None, None)
             return
         record = self.application.client.get_run(head.run_id)
+        if setup is not None and setup.enabled():
+            try:
+                setup.get(head.run_id)
+            except KeyError:
+                try:
+                    setup.plan(head.run_id)
+                except ValueError as error:
+                    self.status.note_blocked(head.run_id, str(error))
+                    return
+            record = self.application.client.get_run(head.run_id)
+            if record.status == 'awaiting_setup':
+                self.status.note_blocked(head.run_id, record.error or 'awaiting_setup')
+                return
         if record.status == 'paused':
             self.status.note_blocked(head.run_id, 'paused')
             return

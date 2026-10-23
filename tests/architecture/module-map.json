@@ -280,6 +280,46 @@
         {
           "component": "ResidentCommandFactory",
           "path": "src/culsma_os/bootstrap.py"
+        },
+        {
+          "component": "RunSetupInteractor",
+          "path": "src/culsma_os/program_manager/interactors/setup.py"
+        },
+        {
+          "component": "SetupRequirementsInteractor",
+          "path": "src/culsma_os/program_manager/interactors/setup_requirements.py"
+        },
+        {
+          "component": "RunSetupCommandInteractor",
+          "path": "src/culsma_os/program_manager/interactors/setup_command.py"
+        },
+        {
+          "component": "SqliteRunSetupRepository",
+          "path": "src/culsma_os/program_manager/repositories/setup.py"
+        },
+        {
+          "component": "RunSetupRequestInteractor",
+          "path": "src/culsma_os/program_manager/interactors/setup.py"
+        },
+        {
+          "component": "SetupInteractionInteractor",
+          "path": "src/culsma_os/program_manager/interactors/setup_interaction.py"
+        },
+        {
+          "component": "SetupConfirmationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/setup_interaction.py"
+        },
+        {
+          "component": "AutomationObservationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/setup_interaction.py"
+        },
+        {
+          "component": "RunSetupInspectionInteractor",
+          "path": "src/culsma_os/program_manager/interactors/setup.py"
+        },
+        {
+          "component": "SetupInteractionRequest",
+          "path": "src/culsma_os/program_manager/models.py"
         }
       ]
     },
@@ -482,6 +522,14 @@
         {
           "component": "ConfigurationDraftInteractor",
           "path": "src/culsma_os/workspace_manager/interactors.py"
+        },
+        {
+          "component": "WorkspacePlanningInteractor",
+          "path": "src/culsma_os/workspace_manager/interactors.py"
+        },
+        {
+          "component": "WorkspaceCataloguePort",
+          "path": "src/culsma_os/workspace_manager/models.py"
         }
       ]
     },
@@ -1020,6 +1068,14 @@
         {
           "component": "ConsoleHTTPHandler",
           "path": "src/culsma_os/console/adapters/http.py"
+        },
+        {
+          "component": "MCPServerAdapter",
+          "path": "src/culsma_os/console/adapters/mcp.py"
+        },
+        {
+          "component": "MCPHostInteractor",
+          "path": "src/culsma_os/console/interactors.py"
         }
       ]
     },

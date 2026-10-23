@@ -18,8 +18,8 @@ class RunStateInteractor:
             return replace(record, status="finalizing", body_outcome=self.terminal_outcomes[record.status], body_error=record.error)
         return record
 
-    def create_run(self, run_id, checkpoint, queue_submission=None):
-        record = RunRecord(run_id, "ready", checkpoint)
+    def create_run(self, run_id, checkpoint, queue_submission=None, setup_required=False):
+        record = RunRecord(run_id, "awaiting_setup" if setup_required else "ready", checkpoint)
         if queue_submission is not None:
             return self.repository.save(record, queue_submission=queue_submission)
         return self.repository.save(record)
@@ -117,3 +117,17 @@ class RunStateInteractor:
                 continue  # Never publish an unverified legacy terminal claim.
             self.evidence.record_run_event(event)
             self.repository.mark_published(event.event_id)
+
+    def replace_setup(self, run_id, checkpoint):
+        record = self.get(run_id)
+        if record.body_outcome is not None or record.status not in {'awaiting_setup', 'ready'}:
+            raise ValueError('SETUP_STATE_INVALID')
+        return self.repository.save(replace(record, checkpoint=checkpoint, status='awaiting_setup', error=None))
+
+    def confirm_setup(self, run_id):
+        record = self.get(run_id)
+        if record.status == 'ready':
+            return record
+        if record.status != 'awaiting_setup':
+            raise ValueError('SETUP_STATE_INVALID')
+        return self.repository.save(replace(record, status='ready', error=None))

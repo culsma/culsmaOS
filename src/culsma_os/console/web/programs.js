@@ -220,7 +220,7 @@ export class ConsolePrograms {
     card.append(a.element('p','Requests enter the existing worker control queue. Pause applies at an execution boundary; cancel does not undo completed actions. An acknowledgement is not proof that a control has been applied.','note'));
     const key = `control:${run.run_id}`;
     const pending = this.pending(key);
-    const actions = pending ? (pending.acknowledged ? []:[pending.action]) : run.status === 'paused' ? ['resume','cancel'] : ['ready','running','waiting','finalizing'].includes(run.status) ? ['pause','cancel'] : [];
+    const actions = pending ? (pending.acknowledged ? []:[pending.action]) : run.status === 'awaiting_setup' ? ['cancel'] : run.status === 'paused' ? ['resume','cancel'] : ['ready','running','waiting','finalizing'].includes(run.status) ? ['pause','cancel'] : [];
     for (const action of actions) {
       const button = a.configButton(pending ? `Retry same ${action} request` : `${action[0].toUpperCase()+action.slice(1)} run`,() => this.control(run.run_id,action),'',{action:`run.${action}`,entity:run.run_id});
       button.disabled = this.working;card.append(button);

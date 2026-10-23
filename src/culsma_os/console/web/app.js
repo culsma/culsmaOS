@@ -1,3 +1,4 @@
+import {ConsoleRunSetup} from './setup.js';
 import {ConsolePrograms} from './programs.js';
 import {ConsoleInteraction} from './interaction.js';
 import {ConsoleActivation} from './activation.js';
@@ -22,6 +23,7 @@ class StationConsoleApp {
     this.configDrafts = [];
     this.configValidation = null;
     this.programs = new ConsolePrograms(this);
+    this.setup = new ConsoleRunSetup(this);
     this.activation = new ConsoleActivation(this);
     this.configuration = new ConsoleConfiguration(this);
     this.systemInformation = new ConsoleSystemInformation(this);
@@ -44,7 +46,7 @@ class StationConsoleApp {
     return node;
   }
 
-  syncBusy() { this.interaction.busy(this.busy || this.configSaving || this.programs.working); }
+  syncBusy() { this.interaction.busy(this.busy || this.configSaving || this.programs.working || this.setup.working); }
 
   display(value, fallback = 'Not recorded') {
     return value === null || value === undefined || value === '' ? fallback : String(value);
@@ -264,7 +266,7 @@ class StationConsoleApp {
       material.append(this.element('p', 'No registered material snapshot is available for this run.', 'empty'));
     }
     const diagnostics = (result.alerts || []).map(item => typeof item === 'string' ? item : item.code || 'Diagnostic');
-    this.content.replaceChildren(back, state, this.programs.renderControls(data), semantic, this.renderEvidence(data.execution_evidence), material);
+    this.content.replaceChildren(back, state, this.programs.renderControls(data), this.setup.render(data), semantic, this.renderEvidence(data.execution_evidence), material);
     this.showAlert(data.error || data.body_error || (diagnostics.length ? diagnostics.join(' · ') : null));
   }
 
@@ -499,9 +501,12 @@ class StationConsoleApp {
       document.querySelector('#connection').className = '';
       document.querySelector('#connection').replaceChildren(this.badge('Connected'));
       document.querySelector('#observed').textContent = `Read ${new Date(snapshot.observed_at).toLocaleTimeString()} · OS records · separate snapshots`;
-      if (isRun) await this.programs.observeControl(snapshot.data.run_id);
+      if (isRun) {
+        await this.programs.observeControl(snapshot.data.run_id);
+        await this.setup.observe(snapshot.data);
+      }
       if (route !== (location.hash || '#station')) { this.pending = true; return; }
-      const key = route + JSON.stringify(snapshot.data) + (this.programs.controlMessages.get(snapshot.data.run_id) || '');
+      const key = route + JSON.stringify(snapshot.data) + (this.programs.controlMessages.get(snapshot.data.run_id) || '') + JSON.stringify(this.setup.plans.get(snapshot.data.run_id));
       if (key !== this.renderKey) {
         if (isRun) this.renderRun(snapshot.data);
         else if (route === '#runs') this.renderRuns(snapshot.data);

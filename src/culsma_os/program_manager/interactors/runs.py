@@ -1,4 +1,5 @@
 from uuid import uuid4
+from dataclasses import replace
 from ..models import RunRequest
 from ..repositories.runs import TaskRepository
 
@@ -6,11 +7,19 @@ from ..repositories.runs import TaskRepository
 class TaskInteractor:
     def __init__(self, repository: TaskRepository, preparation, state):
         self.repository, self.preparation, self.state = repository, preparation, state
+        self.setup = None
 
     def submit(self, request: RunRequest, queue_submission=None) -> str:
         run_id = str(uuid4())
         checkpoint = self.preparation.prepare(request, run_id)
-        self.state.create_run(run_id, checkpoint, queue_submission)
+        required = self.setup is not None and self.setup.enabled()
+        self.state.create_run(run_id, checkpoint, queue_submission, setup_required=required)
+        if required:
+            try:
+                self.setup.plan(run_id, request.setup_preferences)
+            except ValueError as error:
+                # Persist a blocked preparation, never a ready run without a valid plan.
+                self.repository.save(replace(self.state.get(run_id), error=str(error)))
         return run_id
 
     def get(self, run_id):

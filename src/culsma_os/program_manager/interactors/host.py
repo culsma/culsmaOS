@@ -35,8 +35,9 @@ class OSRunHostInteractor:
 
 
 class RunReportInteractor:
-    def __init__(self, tasks, execution, material):
+    def __init__(self, tasks, execution, material, setup=None):
         self.tasks, self.execution, self.material = tasks, execution, material
+        self.setup = setup
 
     def result(self, run_id):
         record = self.tasks.get(run_id)
@@ -66,6 +67,12 @@ class RunReportInteractor:
             "unresolved_material_effects": self.material.uncertainties(run_id),
         }
         report["os"]["preflight"] = self.execution.preflight_report(run_id)
+        if self.setup is not None:
+            try:
+                report['os']['setup'] = self.setup.get(run_id)
+            except KeyError:
+                if getattr(self.tasks, 'setup', None) is not None and self.tasks.setup.enabled():
+                    report['os']['setup'] = {'phase': 'planning_failed', 'error': record.error}
         try:
             mode, registered_state, version = self.material.get(run_id)
             report["os"]["registered_material"] = {"mode": mode, "version": version, "state": registered_state}
