@@ -18,8 +18,9 @@ Module packages use Interactor / Repository / Model. Visual functional units do 
 `ExecutionStrategyInteractor` owns execution-mode selection. The default is
 `stepwise`. An explicitly configured `batch` driver receives a privately projected
 typed action sequence in one submission. Official Hamilton VENUS simulation passes
-two consecutive add → move into HiG → spin → move back → withdraw programs in one
-OS instance, one combined method per program. Root receipts cover each whole batch;
+two consecutive programs per profile: HiG transport, HHS heat/shake with HiG
+centrifugation, and Cytomat incubation. Each pair uses one OS instance and one
+combined method per program. Root receipts cover each whole batch;
 member records are explicitly derived. Local tests cover unknown-outcome isolation
 and recovery without resubmission. Physical commissioning remains separate.
 
