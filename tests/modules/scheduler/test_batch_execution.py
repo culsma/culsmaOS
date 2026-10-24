@@ -77,6 +77,7 @@ class TestBatchExecution:
             assert ops.evidence.find_evidence(root.effect_id).consumed_resources == {'tips': 2}
             for member in root.context['member_effect_ids']:
                 evidence = ops.evidence.find_evidence(member)
+                assert evidence.payload['operation_kind'] == 'transfer'
                 assert evidence.payload['completion_coverage'] == 'derived_from_batch'
                 assert evidence.payload['shared_evidence_id'] == root.attempt_id + ':receipt'
                 assert evidence.consumed_resources == {}

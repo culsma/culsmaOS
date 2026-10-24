@@ -171,7 +171,8 @@ class EvidenceInteractor:
         context.pop('member_effect_ids', None)
         child = AttemptRecord(child_id, parent.run_id, identity, parent.mode, context)
         self.repository.record_intent(child)
-        payload = {**deepcopy(root.payload), 'shared_evidence_id': root.evidence_id,
+        payload = {**deepcopy(root.payload), 'operation_kind': descriptor['description']['operation_kind'],
+                   'shared_evidence_id': root.evidence_id,
                    'completion_coverage': 'derived_from_batch', 'root_effect_id': parent.effect_id}
         if descriptor['description']['operation_kind'] == 'labware_move':
             intent = descriptor['description']['motion_intent']
