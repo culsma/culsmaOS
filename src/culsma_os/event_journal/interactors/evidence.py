@@ -150,3 +150,34 @@ class EvidenceInteractor:
 
     def attempts_for_device(self, device_id):
         return self.repository.attempts_for_device(device_id)
+
+
+    def project_batch_member(self, parent, descriptor):
+        from copy import deepcopy
+        from hashlib import sha256
+        import json
+        stored = self.find_attempt(parent.effect_id)
+        same = stored is not None and json.dumps(asdict(stored), sort_keys=True) == json.dumps(asdict(parent), sort_keys=True)
+        root = self.find_evidence(parent.effect_id)
+        saved = parent.context['description']['execution_batch']['members']
+        if (not same or root is None
+                or root.mode != 'simulation' or root.outcome != 'completed'
+                or descriptor not in saved):
+            raise ValueError('BATCH_MEMBER_EVIDENCE_INCOMPLETE')
+        identity = descriptor['effect_id']
+        child_id = parent.attempt_id + '/member/' + sha256(identity.encode()).hexdigest()[:24]
+        context = {**deepcopy(parent.context), 'step_id': descriptor['step_id'],
+                   'description': deepcopy(descriptor['description'])}
+        context.pop('member_effect_ids', None)
+        child = AttemptRecord(child_id, parent.run_id, identity, parent.mode, context)
+        self.repository.record_intent(child)
+        payload = {**deepcopy(root.payload), 'shared_evidence_id': root.evidence_id,
+                   'completion_coverage': 'derived_from_batch', 'root_effect_id': parent.effect_id}
+        if descriptor['description']['operation_kind'] == 'labware_move':
+            intent = descriptor['description']['motion_intent']
+            payload.update(operation_kind='labware_move', phases={'move': 'returned'},
+                request={key: intent[key] for key in ('step_id','labware','source','destination','position_revision')})
+        evidence = ExecutionEvidence(child_id+':receipt', parent.run_id, identity, child_id,
+                                     parent.mode, 'completed', payload, {})
+        self.ingest(evidence)
+        return child, evidence

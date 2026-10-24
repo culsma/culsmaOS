@@ -43,6 +43,10 @@ class SemanticHostPort(Protocol):
 
     def result(self, checkpoint: str): ...
 
+    def resume_batch(self, checkpoint: str, confirmations): ...
+
+    def batch_applied(self, checkpoint: str, effect_ids: tuple[str, ...]) -> bool: ...
+
 
 @dataclass(frozen=True)
 class RunStateEvent:

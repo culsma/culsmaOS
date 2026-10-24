@@ -10,7 +10,7 @@ from typing import ContextManager
 from culsma.driver.base import Driver
 from culsma.pipeline.plan_nodes import PlanProgram
 from culsma.runtime.state import RuntimeState
-from culsma_os.workspace_manager.models import ResolvedContainerRef, LabwareMoveIntent
+from culsma_os.workspace_manager.models import ResolvedContainerRef, LabwareMoveIntent, SpaceBinding
 
 
 @dataclass(frozen=True)
@@ -36,9 +36,22 @@ class MaterialExpectationPort(Protocol):
 
 
 @dataclass(frozen=True)
-class PreparedDevicePlan:
+class BatchOperation:
     effect_id: str
     intent: LabwareMoveIntent | TransferIntent | ThermalHoldIntent | OrbitalShakeIntent | CentrifugeIntent | MagneticSeparationIntent | MagneticReleaseIntent
+    bindings: tuple[SpaceBinding, ...]
+
+
+@dataclass(frozen=True)
+class ExecutionBatchIntent:
+    step_id: str
+    operations: tuple[BatchOperation, ...]
+
+
+@dataclass(frozen=True)
+class PreparedDevicePlan:
+    effect_id: str
+    intent: LabwareMoveIntent | TransferIntent | ThermalHoldIntent | OrbitalShakeIntent | CentrifugeIntent | MagneticSeparationIntent | MagneticReleaseIntent | ExecutionBatchIntent
     context: PlanContext
     vendor_plan: Any
     description: dict[str, Any]
@@ -209,3 +222,8 @@ class LayoutExportProfilePort(Protocol):
 
 class LayoutExportError(ValueError):
     code = 'PROFILE_LAYOUT_EXPORT_INVALID'
+
+
+class BatchDeviceExecutionPort(DeviceExecutionPort, Protocol):
+    def prepare_batch(self, step_id: str, operations: tuple[BatchOperation, ...]): ...
+    def describe_batch(self, plan) -> dict: ...

@@ -225,6 +225,19 @@ class HostedRuntimeInteractor:
         data["pending"] = None
         return self.recompute(data)
 
+    def resume_batch(self, checkpoint, confirmations):
+        for expected, resolution in confirmations:
+            current = self.pending(checkpoint)
+            if self.codec.fingerprint(current) != self.codec.fingerprint(expected):
+                raise HostContractError('BATCH_REPLAY_MISMATCH')
+            checkpoint = self.resume(checkpoint, resolution)
+        return checkpoint
+
+    def batch_applied(self, checkpoint, effect_ids):
+        data, _ = self.restore(checkpoint)
+        recorded = tuple(record.effect_id for record in data['confirmed'])
+        return bool(effect_ids) and recorded[-len(effect_ids):] == tuple(effect_ids)
+
     def result(self, checkpoint):
         data, _ = self.restore(checkpoint)
         if data["finished"]:

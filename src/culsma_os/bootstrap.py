@@ -34,7 +34,7 @@ from .event_journal.interactors.evidence import EvidenceInteractor
 from .material_system.repositories.local import LocalMaterialRepository
 from .material_system.interactors import MaterialInteractor
 from .scheduler.repository import SqliteOperationRepository
-from .scheduler.interactors import RunSchedulerInteractor, OperationSchedulerInteractor, GroupOperationInteractor
+from .scheduler.interactors import RunSchedulerInteractor, OperationSchedulerInteractor, GroupOperationInteractor, ExecutionStrategyInteractor
 from .recovery_manager.interactors import RecoveryInteractor
 from .lifecycle_manager.interactors import LifecycleInteractor, RunFinalizationInteractor, HostOwnershipInteractor
 
@@ -80,7 +80,9 @@ class OpentronsSessionFactory:
 
 class OSApplicationFactory:
 
-    def __init__(self, session_factories=None):
+    def __init__(self, session_factories=None, execution_strategy_factory=None):
+        self.execution_strategy_factory = (ExecutionStrategyInteractor.configured if execution_strategy_factory is None
+                                           else execution_strategy_factory)
         self.session_factories = (
             {"opentrons-simulator": OpentronsSessionFactory()}
             if session_factories is None
@@ -192,8 +194,9 @@ class OSApplicationFactory:
         gateway.setup = setup
         runs = RunSchedulerInteractor(tasks, execution, reservations, device, evidence)
         finalization = RunFinalizationInteractor(tasks, state, safety, reservations, conditions, resource, evidence)
+        strategy = self.execution_strategy_factory(tasks, runs, operations)
         recovery = RecoveryInteractor(
-            tasks, execution, evidence, material, state, resource, projection, logical, finalization, motions
+            tasks, execution, evidence, material, state, resource, projection, logical, finalization, motions, strategy
         )
         lifecycle = LifecycleInteractor(
             tasks,
@@ -206,6 +209,7 @@ class OSApplicationFactory:
             snapshot.device_id,
             conditions,
             finalization,
+            execution_strategy=strategy,
         )
         report = RunReportInteractor(tasks, execution, material, setup)
         client = CulsmaOSClient(tasks, lifecycle, execution, report)

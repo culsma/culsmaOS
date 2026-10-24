@@ -3,11 +3,13 @@ from .repository import HostLeaseRepository, ResidentConfigurationRepository
 class LifecycleInteractor:
 
     def __init__(
-        self, tasks, runs, operations, recovery, state, device, evidence, device_id, conditions=None, finalization=None
+        self, tasks, runs, operations, recovery, state, device, evidence, device_id, conditions=None, finalization=None,
+        *, execution_strategy
     ):
         self.tasks = tasks
         self.runs = runs
         self.operations = operations
+        self.execution_strategy = execution_strategy
         self.recovery = recovery
         self.state = state
         self.device = device
@@ -34,14 +36,7 @@ class LifecycleInteractor:
         if not self.ready:
             raise ValueError("OS_NOT_STARTED")
         self.state.publish_pending_events()
-        record = self.tasks.get(run_id)
-        if record.status not in {"ready", "waiting"}:
-            return self.finish_terminal(record)
-        if record.status == "ready":
-            record = self.runs.advance_ready(run_id)
-        if record.status == "waiting":
-            self.operations.dispatch_ready(run_id)
-            record = self.tasks.get(run_id)
+        record = self.execution_strategy.execute(run_id)
         if record.status not in {"ready", "waiting"}:
             return self.finish_terminal(record)
         return record

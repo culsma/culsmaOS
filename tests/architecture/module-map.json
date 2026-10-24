@@ -320,6 +320,14 @@
         {
           "component": "SetupInteractionRequest",
           "path": "src/culsma_os/program_manager/models.py"
+        },
+        {
+          "component": "BatchProjectionInteractor",
+          "path": "src/culsma_os/program_manager/interactors/batch.py"
+        },
+        {
+          "component": "BatchProjectionEffectInteractor",
+          "path": "src/culsma_os/program_manager/interactors/batch.py"
         }
       ]
     },
@@ -327,6 +335,18 @@
       "module": "Scheduler",
       "directory": "src/culsma_os/scheduler/",
       "components": [
+        {
+          "component": "ExecutionStrategyInteractor",
+          "path": "src/culsma_os/scheduler/interactors.py"
+        },
+        {
+          "component": "ExecutionMode",
+          "path": "src/culsma_os/scheduler/models.py"
+        },
+        {
+          "component": "RunExecutionPort",
+          "path": "src/culsma_os/scheduler/models.py"
+        },
         {
           "component": "RunSchedulerInteractor",
           "path": "src/culsma_os/scheduler/interactors.py"
@@ -361,6 +381,14 @@
         },
         {
           "component": "OperationConditionPort",
+          "path": "src/culsma_os/scheduler/models.py"
+        },
+        {
+          "component": "BatchRunExecutionInteractor",
+          "path": "src/culsma_os/scheduler/interactors.py"
+        },
+        {
+          "component": "ExecutionRecoveryPort",
           "path": "src/culsma_os/scheduler/models.py"
         }
       ]
@@ -911,6 +939,18 @@
         },
         {
           "component": "ProgramBindingProfilePort",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "BatchOperation",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "ExecutionBatchIntent",
+          "path": "src/culsma_os/driver_framework/models.py"
+        },
+        {
+          "component": "BatchDeviceExecutionPort",
           "path": "src/culsma_os/driver_framework/models.py"
         }
       ]

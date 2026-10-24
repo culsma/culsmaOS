@@ -6,7 +6,7 @@
 | --- | --- |
 | Compilation and experimental semantics | Independent Culsma language |
 | Program admission, frozen workspace, hosted continuation | ProgramManager |
-| FIFO run ownership and operation dispatch | Scheduler / ResourceManager |
+| Centralized execution strategy, FIFO run ownership and operation dispatch | Scheduler / ResourceManager |
 | Typed identities and evidence-based material registration | MaterialSystem |
 | Physical bindings, positions and motion revisions | WorkspaceManager |
 | Liquid/group planning and processing requests | TransferEngine / ProcessingEngine |
@@ -14,6 +14,11 @@
 | Attempts, evidence, reconciliation and finalization | EventJournal / RecoveryManager / LifecycleManager |
 
 Module packages use Interactor / Repository / Model. Visual functional units do not add package layers. Vendor implementations remain external plugins. MeasurementSystem is reserved.
+
+`ExecutionStrategyInteractor` owns execution-mode selection. The default is
+`stepwise`. An explicitly configured `batch` driver receives a privately projected
+typed action sequence in one submission. Hamilton batch HSL generation and OS
+recovery are tested locally; combined-method VENUS acceptance remains pending.
 
 ## Transfer validation
 

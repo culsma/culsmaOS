@@ -1,14 +1,66 @@
 from uuid import uuid4
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from culsma_os.program_manager.models import PendingEffectGroup
 from culsma_os.driver_framework.models import GroupGatewayPort
 from culsma_os.transfer_engine.models import TransferRequest
-from .models import OperationRequest, OperationConditionPort
+from .models import OperationRequest, OperationConditionPort, ExecutionMode, RunExecutionPort
 from culsma_os.driver_framework.models import OperationPreparationRequest, OperationPreparationPort
 from .repository import OperationRepository
 from culsma_os.resource_manager.models import ResourceConflict
 from culsma_os.event_journal.models import LogicalCompletion
 from culsma_os.program_manager.models import GroupEffectResolution
+
+
+@dataclass(frozen=True)
+class ExecutionStrategyInteractor:
+    """Own mode selection for one host instance; consumers see one execute entry.
+
+    The batch port is an OS run executor, not a raw device/HSL runner. It must
+    preserve reservations, evidence and registration. Vendor method composition
+    is deliberately supplied separately; missing batch support never falls back
+    to per-operation dispatch. Completion-unit capabilities do not select a mode.
+    """
+
+    tasks: object
+    runs: object
+    operations: object
+    mode: ExecutionMode = ExecutionMode.STEPWISE
+    batch: RunExecutionPort | None = None
+
+    def __post_init__(self):
+        try:
+            mode = ExecutionMode(self.mode)
+        except (TypeError, ValueError) as error:
+            raise ValueError("EXECUTION_MODE_UNSUPPORTED") from error
+        object.__setattr__(self, "mode", mode)
+        if mode is ExecutionMode.BATCH and self.batch is None:
+            raise ValueError("EXECUTION_BATCH_NOT_CONFIGURED")
+
+    def execute(self, run_id):
+        record = self.tasks.get(run_id)
+        if record.status not in {"ready", "waiting"}:
+            return record
+        if self.mode is ExecutionMode.BATCH:
+            return self.batch.execute(run_id)
+        return self.execute_stepwise(run_id)
+
+    @classmethod
+    def configured(cls, tasks, runs, operations):
+        mode = operations.gateway.preferred_execution_mode
+        return cls(tasks, runs, operations, mode, BatchRunExecutionInteractor(tasks, runs, operations))
+
+    def reconcile(self, run_id):
+        reconcile = getattr(self.batch, 'reconcile', None)
+        return reconcile(run_id) if reconcile is not None else None
+
+    def execute_stepwise(self, run_id):
+        record = self.tasks.get(run_id)
+        if record.status == "ready":
+            record = self.runs.advance_ready(run_id)
+        if record.status == "waiting":
+            self.operations.dispatch_ready(run_id)
+            record = self.tasks.get(run_id)
+        return record
 
 
 class RunSchedulerInteractor:
@@ -498,3 +550,169 @@ class MotionSchedulerInteractor:
 
     def registered(self, attempt, evidence):
         return self.motion.is_move_attempt(attempt) and self.motion.registered(attempt.effect_id, evidence)
+
+
+class BatchRunExecutionInteractor:
+    """Prepare once, submit once and replay only confirmed shared evidence."""
+
+    def __init__(self, tasks, runs, operations):
+        self.tasks, self.runs, self.operations = tasks, runs, operations
+        self.execution = operations.execution
+        self.evidence, self.material = operations.evidence, operations.material
+        self.resource, self.state = operations.resource, operations.state
+
+    def root_attempt(self, run_id):
+        attempts = [a for a in self.evidence.attempts_for_run(run_id)
+                    if 'execution_batch' in a.context.get('description', {})]
+        if len(attempts) > 1:
+            raise ValueError('BATCH_INTENT_CONFLICT')
+        return attempts[0] if attempts else None
+
+    def execute(self, run_id):
+        record = self.tasks.get(run_id)
+        if record.status == 'ready':
+            record = self.runs.advance_ready(run_id)
+        if record.status != 'waiting':
+            return record
+        reservations = self.resource.reservations
+        try:
+            if reservations is None:
+                return self.execute_owned(run_id)
+            with reservations.run_guard(run_id):
+                return self.execute_owned(run_id)
+        except ResourceConflict:
+            return self.tasks.get(run_id)
+
+    def prepare(self, run_id):
+        from dataclasses import asdict
+        from hashlib import sha256
+        from culsma_os.driver_framework.models import ExecutionBatchIntent
+        from culsma_os.program_manager.models import PendingEffectGroup
+        units, operations = self.execution.project_batch(run_id)
+        if not units:
+            raise ValueError('BATCH_EMPTY_PROJECTION')
+        members = tuple(m for unit in units for m in (unit.members if isinstance(unit, PendingEffectGroup) else (unit,)))
+        first = members[0]
+        ops = self.operations
+        allocations = self.execution.allocations(run_id)
+        layout = ops.space.bind(run_id, first.before_material_state, allocations)
+        snapshot = ops.device.get(ops.transfer.device_id)
+        base = ops.transfer.prepare_context(run_id, layout, snapshot,
+            first.before_material_state if any(hasattr(o.intent, 'aliquots') for o in operations) else None)
+        resources = set(base.resource_ids)
+        for capability in snapshot.processing_capabilities.values():
+            resources.update(f'{snapshot.mode}:{snapshot.device_id}:module:{name}' for name in capability)
+        descriptions = []
+        for op in operations:
+            move = hasattr(op.intent, 'destination')
+            description = {'operation_kind': 'labware_move' if move else getattr(op.intent, 'capability', 'transfer')}
+            if move:
+                description['motion_intent'] = asdict(op.intent)
+                resources.update((f'{snapshot.mode}:{snapshot.device_id}:gripper',
+                    f'{snapshot.mode}:{snapshot.device_id}:slot:{op.intent.source}',
+                    f'{snapshot.mode}:{snapshot.device_id}:slot:{op.intent.destination}'))
+            descriptions.append({'effect_id': op.effect_id, 'step_id': op.intent.step_id, 'description': description})
+        checkpoint = self.tasks.get(run_id).checkpoint
+        step_id = 'batch-' + sha256(checkpoint.encode()).hexdigest()[:24]
+        context = replace(base, resource_ids=tuple(sorted(resources)))
+        manifest = {'schema': 'culsma_execution_batch_v1', **self.execution.describe_batch(units), 'members': descriptions,
+                    'initial_checkpoint': sha256(checkpoint.encode()).hexdigest()}
+        if not operations:
+            return units, None
+        intent = ExecutionBatchIntent(step_id, operations)
+        plan = ops.gateway.prepare_batch(f'{run_id}:{step_id}', intent, context, layout.bindings)
+        return units, replace(plan, description={**plan.description, 'execution_batch': manifest,
+            'member_effect_ids': [m.effect_id for m in members]})
+
+    def execute_owned(self, run_id):
+        attempt = self.root_attempt(run_id)
+        if attempt is not None:
+            return self.reconcile_attempt(attempt)
+        permit = None
+        try:
+            units, plan = self.prepare(run_id)
+            if plan is None:
+                return self.register_units(run_id, units, {})
+            attempt_id = str(uuid4())
+            self.material.bind(run_id, units[0].members[0] if isinstance(units[0], PendingEffectGroup) else units[0], plan.context.mode)
+            self.resource.require_consumables(plan)
+            permit = self.resource.acquire(plan, attempt_id)
+            self.operations.space.validate_snapshot(run_id, plan.context.layout_revision)
+            self.resource.validate_permit(permit)
+            attempt = self.evidence.record_intent(plan, attempt_id)
+            self.resource.authorize_dispatch(permit)
+            receipt = self.operations.gateway.execute(plan, permit, attempt_id)
+            self.evidence.ingest(self.evidence.normalize(attempt, receipt))
+            return self.reconcile_attempt(attempt)
+        except Exception as error:
+            if self.root_attempt(run_id) is not None:
+                return self.state.mark_reconciliation_required(run_id, f'BATCH_EXECUTION_UNCERTAIN: {type(error).__name__}: {error}')
+            if permit is not None:
+                self.resource.abandon_preparation(permit)
+            return self.state.mark_failed(run_id, f'BATCH_PREPARATION_REJECTED: {error}')
+
+    def reconcile(self, run_id):
+        from culsma_os.recovery_manager.models import RecoveryDecision
+        attempt = self.root_attempt(run_id)
+        if attempt is None:
+            return None
+        reservations = self.resource.reservations
+        if reservations is None:
+            record = self.reconcile_attempt(attempt)
+        else:
+            owner = reservations.get(run_id)
+            if owner is None or owner.status == 'released':
+                return None
+            with reservations.run_guard(run_id):
+                record = self.reconcile_attempt(attempt)
+        return RecoveryDecision(run_id, 'wait' if record.status == 'needs_reconciliation' else 'continue', record.status)
+
+    def reconcile_attempt(self, attempt):
+        fact = self.evidence.find_evidence(attempt.effect_id)
+        if fact is None or fact.outcome == 'unknown':
+            return self.state.mark_reconciliation_required(attempt.run_id, 'BATCH_EVIDENCE_INCOMPLETE')
+        if fact.outcome == 'rejected':
+            self.resource.settle(attempt.attempt_id, fact)
+            return self.state.mark_failed(attempt.run_id, 'BATCH_DEVICE_REJECTED')
+        facts = {}
+        try:
+            manifest = attempt.context['description']['execution_batch']
+            units = self.execution.restore_batch(manifest)
+            members = tuple(m for unit in units for m in (unit.members if isinstance(unit, PendingEffectGroup) else (unit,)))
+            if (manifest.get('schema') != 'culsma_execution_batch_v1'
+                    or [m.effect_id for m in members] != attempt.context['member_effect_ids']):
+                raise ValueError('BATCH_REPLAY_MISMATCH')
+            self.execution.verify_batch_snapshot(attempt.run_id, manifest, units)
+            for descriptor in manifest['members']:
+                child, evidence = self.evidence.project_batch_member(attempt, descriptor)
+                if descriptor['description']['operation_kind'] == 'labware_move':
+                    self.operations.motions.motion.register(child, evidence)
+                else:
+                    facts[descriptor['effect_id']] = evidence
+            record = self.register_units(attempt.run_id, units, facts)
+            self.resource.settle(attempt.attempt_id, fact)
+            return record
+        except Exception as error:
+            return self.state.mark_reconciliation_required(attempt.run_id, f'BATCH_REPLAY_MISMATCH: {error}')
+
+    def register_units(self, run_id, units, facts):
+        resolutions = []
+        for unit in units:
+            members = unit.members if isinstance(unit, PendingEffectGroup) else (unit,)
+            values = []
+            for member in members:
+                evidence = facts.get(member.effect_id)
+                if evidence is None:
+                    if self.operations.logical is None or not self.operations.logical.is_no_action(member):
+                        raise ValueError('BATCH_MEMBER_EVIDENCE_MISSING')
+                    value = self.operations.logical.complete(run_id, member, 'simulation')
+                else:
+                    self.material.bind(run_id, member, evidence.mode)
+                    result = self.material.reconcile(member, evidence)
+                    if not result.ready:
+                        raise ValueError('BATCH_MEMBER_REGISTRATION_INCOMPLETE')
+                    value = result.resolution
+                values.append(value)
+            resolutions.append(GroupEffectResolution(unit.effect_id, tuple(values)) if isinstance(unit, PendingEffectGroup) else values[0])
+        record = self.state.register_batch(run_id, units, tuple(resolutions))
+        return self.execution.advance(run_id) if record.status == 'ready' else record

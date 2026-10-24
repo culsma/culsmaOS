@@ -37,7 +37,10 @@ class RunSetupInteractor:
             document = {'schema': 'culsma_run_setup_v1', 'run_id': run_id, 'identity': identity,
                         'preferences': deepcopy(preferences or {}), **result}
             workspace = {'schema': 'culsma_run_workspace_v1', 'id': 'setup-' + run_id,
-                         'plan_fingerprint': data['plan_fingerprint'], 'bindings': result['bindings'], 'routes': {}}
+                         'plan_fingerprint': data['plan_fingerprint'], 'bindings': result['bindings'],
+                         'routes': self.routes_for_setup(data)}
+            if workspace['routes']:
+                document['routes'] = deepcopy(workspace['routes'])
             checkpoint = self.host.create(data['plan'], data['initial_state'], run_id)
             checkpoint = WorkspaceCheckpointInteractor(self.codec).attach(checkpoint, workspace)
             self.state.replace_setup(run_id, checkpoint)
@@ -50,13 +53,19 @@ class RunSetupInteractor:
             document.update(phase='loading' if previous['phase'] in {'loading', 'confirmed'} else 'planned', confirmation=None)
             return self.repository.save(run_id, document, previous['revision'])
 
+    def routes_for_setup(self, data):
+        """Preserve explicit program routes, including an intentional empty override."""
+        return deepcopy((data.get('workspace') or {}).get('routes',
+            self.snapshot.motion_capabilities.get('before_steps', {})))
+
     def validate(self, run_id, fingerprint):
         value = self.get(run_id)
         data = self.codec.loads(self.tasks.get(run_id).checkpoint)
         identity = {'plan': data['plan_fingerprint'], 'initial': data['initial_fingerprint'],
                     'configuration': self.snapshot.configuration_revision, 'catalogue': self.codec.fingerprint(self.catalogue)}
         if (value['fingerprint'] != fingerprint or value['identity'] != identity
-                or data.get('workspace', {}).get('bindings') != value['bindings']):
+                or data.get('workspace', {}).get('bindings') != value['bindings']
+                or data.get('workspace', {}).get('routes', {}) != value.get('routes', {})):
             raise ValueError('SETUP_PLAN_STALE')
         payload = {k: v for k, v in value.items() if k not in {'revision', 'fingerprint', 'phase', 'confirmation'}}
         if self.codec.fingerprint(payload) != fingerprint:

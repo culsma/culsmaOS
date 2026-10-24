@@ -4,10 +4,12 @@ from copy import deepcopy
 
 class ExecutionHostInteractor:
 
-    def __init__(self, tasks, host: SemanticHostPort, state):
+    def __init__(self, tasks, host: SemanticHostPort, state, codec=None):
         self.tasks = tasks
         self.host = host
         self.state = state
+        from .codec import RuntimeCheckpointCodecInteractor
+        self.codec = codec or RuntimeCheckpointCodecInteractor()
 
     def advance(self, run_id):
         record = self.tasks.get(run_id)
@@ -48,3 +50,30 @@ class ExecutionHostInteractor:
 
     def plan(self, run_id):
         return deepcopy(self.host.restore(self.tasks.get(run_id).checkpoint)[0]["plan"])
+
+
+    def project_batch(self, run_id):
+        from .batch import BatchProjectionInteractor
+        return BatchProjectionInteractor(self.host).prepare(self.tasks.get(run_id).checkpoint)
+
+
+    def describe_batch(self, units):
+        return {'units': self.codec.dumps(units), 'units_fingerprint': self.codec.fingerprint(units)}
+
+    def restore_batch(self, manifest):
+        from ..models import PendingEffect, PendingEffectGroup
+        units = self.codec.loads(manifest['units'])
+        if (not isinstance(units, tuple) or not units
+                or any(not isinstance(unit, (PendingEffect, PendingEffectGroup)) for unit in units)
+                or self.codec.fingerprint(units) != manifest['units_fingerprint']):
+            raise ValueError('BATCH_REPLAY_MISMATCH')
+        return units
+
+
+    def verify_batch_snapshot(self, run_id, manifest, units):
+        from hashlib import sha256
+        checkpoint = self.tasks.get(run_id).checkpoint
+        if self.host.batch_applied(checkpoint, tuple(unit.effect_id for unit in units)):
+            return
+        if sha256(checkpoint.encode()).hexdigest() != manifest['initial_checkpoint']:
+            raise ValueError('BATCH_SNAPSHOT_STALE')

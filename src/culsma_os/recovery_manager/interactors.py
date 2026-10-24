@@ -1,11 +1,12 @@
 from .models import RecoveryDecision
+from culsma_os.scheduler.models import ExecutionRecoveryPort
 from culsma_os.program_manager.models import PendingEffectGroup
 from culsma_os.event_journal.models import LogicalCompletion
 
 
 class RecoveryInteractor:
 
-    def __init__(self, tasks, execution, evidence, material, state, resources, projection=None, logical=None, finalization=None, motions=None):
+    def __init__(self, tasks, execution, evidence, material, state, resources, projection=None, logical=None, finalization=None, motions=None, execution_batches: ExecutionRecoveryPort | None = None):
         self.tasks = tasks
         self.execution = execution
         self.evidence = evidence
@@ -16,8 +17,13 @@ class RecoveryInteractor:
         self.logical = logical
         self.finalization = finalization
         self.motions = motions
+        self.execution_batches = execution_batches
 
     def reconcile(self, run_id):
+        if self.execution_batches is not None:
+            decision = self.execution_batches.reconcile(run_id)
+            if decision is not None:
+                return decision
         record = self.tasks.get(run_id)
         if self.finalization is not None and (record.body_outcome is not None or record.status == "cancel_requested"):
             result = self.finalization.finalize(run_id)

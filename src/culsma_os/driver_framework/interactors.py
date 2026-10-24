@@ -58,6 +58,32 @@ class DriverGatewayInteractor:
         return PreparedDevicePlan(effect_id, intent, context, vendor_plan,
             self.feedback.freeze(description, context, "operation", (intent.step_id,)))
 
+    @property
+    def preferred_execution_mode(self):
+        return getattr(self.port, 'execution_mode', 'stepwise')
+
+    def prepare_batch(self, effect_id, intent, context, bindings):
+        from .models import BatchDeviceExecutionPort
+        port = cast(BatchDeviceExecutionPort, self.port)
+        if not callable(getattr(port, 'prepare_batch', None)):
+            raise ValueError('BATCH_DEVICE_UNSUPPORTED')
+        self.device.validate_ready(context)
+        self.feedback.require_unit(context, 'batch')
+        self.validate_material(context, bindings)
+        identities = tuple(op.intent.step_id for op in intent.operations)
+        if (not identities or len(set(identities)) != len(identities)
+                or len({op.effect_id for op in intent.operations}) != len(identities)):
+            raise ValueError('BATCH_OPERATION_COVERAGE_INVALID')
+        for op in intent.operations:
+            if hasattr(op.intent, 'aliquots'):
+                self.require_selection(op.intent, context)
+        vendor = port.prepare_batch(intent.step_id, intent.operations)
+        description = port.describe_batch(vendor)
+        if description.get('member_step_ids') != list(identities):
+            raise ValueError('BATCH_OPERATION_COVERAGE_INVALID')
+        return PreparedDevicePlan(effect_id, intent, context, vendor,
+            self.feedback.freeze(description, context, 'batch', identities))
+
     def execute(self, plan, permit, attempt_id):
         with self.dispatch_guard(permit, plan.context.run_id):
             if (

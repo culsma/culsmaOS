@@ -70,6 +70,18 @@ class RunStateInteractor:
         return self.repository.save(replace(record, checkpoint=checkpoint,
             status=record.status if record.status in {"paused", "cancel_requested"} else "ready", error=None))
 
+    def register_batch(self, run_id, units, resolutions):
+        record = self.get(run_id)
+        if len(units) != len(resolutions) or not units:
+            raise ValueError('BATCH_RESOLUTION_COVERAGE_INVALID')
+        if self.host.batch_applied(record.checkpoint, tuple(unit.effect_id for unit in units)):
+            return record
+        if record.body_outcome is not None:
+            raise ValueError('RUN_TRANSITION_INVALID')
+        checkpoint = self.host.resume_batch(record.checkpoint, tuple(zip(units, resolutions)))
+        return self.repository.save(replace(record, checkpoint=checkpoint,
+            status=record.status if record.status in {'paused', 'cancel_requested'} else 'ready', error=None))
+
     def mark_reconciliation_required(self, run_id, reason):
         record = self.get(run_id)
         if record.status == "needs_reconciliation" and record.error == reason:
