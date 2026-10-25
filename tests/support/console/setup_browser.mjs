@@ -38,7 +38,8 @@ try {
   await page.locator('#operation-status').evaluate(node=>{node.style.visibility='hidden';});
   const png=await card.screenshot({path:screenshot,animations:'disabled',maskColor:'#e7edf4',mask:[card.locator('[data-region="setup-activity"] tbody tr td:last-child')]});
   await page.locator('#operation-status').evaluate(node=>{node.style.removeProperty('visibility');});
-  if(process.env.CULSMA_OS_CAPTURE_GOLDEN!=='1') {
+  if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1') writeFileSync(baseline,png);
+  else {
     if(!existsSync(baseline)) throw new Error('Reviewed loading-screen golden is missing');
     const reference=PNG.sync.read(readFileSync(baseline));const actual=PNG.sync.read(png);
     if(reference.width!==actual.width||reference.height!==actual.height) throw new Error('Golden dimensions changed');

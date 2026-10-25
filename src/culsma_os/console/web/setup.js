@@ -1,3 +1,5 @@
+import {RunSetupLayout} from './setup-layout.js';
+
 export class ConsoleRunSetup {
   constructor(app) {
     this.app = app;
@@ -6,6 +8,7 @@ export class ConsoleRunSetup {
     this.confirmations = new Map();
     this.expanded = new Set();
     this.working = false;
+    this.layout = new RunSetupLayout(app);
   }
 
   async request(payload, confirmation = false) {
@@ -59,6 +62,14 @@ export class ConsoleRunSetup {
       'One shared plan for console and MCP. Place the listed labware and contents, then confirm this exact plan. No physical detection is implied.','note'));
     if (!plan.fingerprint) {card.append(a.element('p',plan.error || 'Waiting for a valid loading plan.','notice'));return card;}
     const editable = run.status === 'awaiting_setup';
+    const steps = a.element('ol','','loading-steps');
+    const active = plan.phase === 'planned' ? 0 : plan.phase === 'loading' ? 1 : 2;
+    ['Review positions','Reserve station and load','Confirm this loading plan'].forEach((text,index) => {
+      const step = a.element('li',text);if (index === active) step.setAttribute('aria-current','step');steps.append(step);
+    });
+    card.append(steps,this.layout.render(plan,run));
+    const checklist = a.element('details','','loading-checklist');
+    checklist.append(a.element('summary','Complete loading checklist'));
     for (const item of plan.loadout || []) {
       const section = a.element('section','','setup-labware');
       section.dataset.labwareId = item.labware;
@@ -69,8 +80,9 @@ export class ConsoleRunSetup {
       section.append(a.table(['Container','Position','Initial volume (µL)','Contents'],(item.containers || []).map(c => [
         c.name,c.well,c.volume_uL,this.contents(c.contents)
       ])));
-      card.append(section);
+      checklist.append(section);
     }
+    card.append(checklist);
     if ((plan.supplies || []).length) card.append(a.table(['Supply','Model','Placement','Available positions','Declared available','Requirement check'],plan.supplies.map(s => [
       s.id,s.model,`Carrier ${s.carrier || '—'} · track ${s.track || '—'} · site ${s.site || '—'}`,
       (s.positions || []).join(', '),s.available,s.requirement_status === 'checked_during_driver_preparation' ? 'Checked before execution':s.requirement_status

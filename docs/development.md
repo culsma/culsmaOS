@@ -239,6 +239,10 @@ For a saved one-shot run, replace `--socket` with `--host-db`, `--driver` and
 `--driver-config`; inspect, begin, confirm, then use the existing `resume` command.
 Existing preconfigured simulator profiles keep their declared-input workflow.
 The run detail's **Prepare and load** card presents this same persisted plan.
+Its loading diagram groups required labware and supplies by declared carrier,
+track or slot. Select an item to inspect initial contents and explicitly mapped
+plate wells. This is a schematic of the required initial placement, not live
+physical detection; the operator still confirms the exact plan before execution.
 Placement selectors support automatic, fixed and preferred addresses; changing a
 plan invalidates its confirmation. MCP changes appear through the existing console
 polling, with shared request receipts. Unsaved console edits retain their original
