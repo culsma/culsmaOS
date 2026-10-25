@@ -199,6 +199,12 @@ class StationConsoleApp {
     }
     card.append(this.element('h3', 'Device execution attempts'));
     const attempts = evidence.attempts || [];
+    if (attempts.some(item => item.evidence?.payload?.backend?.source === 'local_model')) {
+      const origin = this.element('p', 'Local model simulation · not an official vendor simulator or a physical measurement.', 'notice');
+      origin.dataset.region = 'evidence-source';
+      origin.dataset.source = 'local_model';
+      card.append(origin);
+    }
     if (!attempts.length) card.append(this.element('p', 'No device attempts are recorded in this snapshot.', 'empty'));
     for (const item of attempts) {
       const row = this.element('article', '', 'evidence-attempt');
