@@ -13,6 +13,14 @@ try {
   await page.goto(`${url}#run/${runId}`);
   const card=page.locator('[data-region="run-setup"]'),graph=card.locator('[data-region="loading-layout"]');
   await graph.waitFor();
+  const deck=graph.locator('[data-region="loading-deck"]');
+  await deck.waitFor();
+  if(await deck.locator('.setup-deck-track').count()!==54) throw new Error('Missing full track ruler');
+  const carrier=deck.locator('[data-carrier-id="plates"]');
+  if(await carrier.getAttribute('data-track-start')!=='4' || await carrier.getAttribute('data-track-span')!=='6')
+    throw new Error('Carrier footprint does not match driver geometry');
+  await deck.getByRole('button',{name:/^Inspect deck item destination_plate /}).click();
+
   const before=await graph.getAttribute('data-setup-fingerprint');
   const plate=graph.getByRole('button',{name:/^Inspect destination_plate /});
   await plate.focus();await plate.press('Enter');

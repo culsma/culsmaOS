@@ -240,7 +240,9 @@ For a saved one-shot run, replace `--socket` with `--host-db`, `--driver` and
 Existing preconfigured simulator profiles keep their declared-input workflow.
 The run detail's **Prepare and load** card presents this same persisted plan.
 Its loading diagram groups required labware and supplies by declared carrier,
-track or slot. Select an item to inspect initial contents and explicitly mapped
+track or slot. When the driver supplies a layout descriptor, the plan freezes it
+and displays the complete deck ruler, carrier footprints and declared sites.
+Older plans without geometry retain the location checklist. Select an item to inspect initial contents and explicitly mapped
 plate wells. This is a schematic of the required initial placement, not live
 physical detection; the operator still confirms the exact plan before execution.
 Placement selectors support automatic, fixed and preferred addresses; changing a

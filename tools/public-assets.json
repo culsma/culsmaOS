@@ -82,20 +82,20 @@
     {
       "path": "tests/modules/console/goldens/run-setup-1280.png",
       "kind": "golden",
-      "sha256": "f6172c28410d1cd58910d546bf52ce9a9f6cf437f09cc11359c1cea4f1830df5",
+      "sha256": "04814571649c89e4d8dbfc962f058c06ee0714f524b87c627228b8834441d506",
       "source": "Reviewed deterministic browser loading-screen reference; not a generated test report"
     },
     {
       "path": "tests/modules/console/goldens/loading-layout-1280.png",
       "kind": "golden",
       "source": "Reviewed deterministic browser loading-screen reference; not a generated test report",
-      "sha256": "81437a0313f6f9eae2227eb44a54b870a4756beef4477dad68e2bc2596cdd088"
+      "sha256": "91a5efcd0efc54c8ec54bf308eae4d520fd986ad8d1e8fc0df1b118fa18ba256"
     },
     {
       "path": "tests/modules/console/goldens/loading-layout-390.png",
       "kind": "golden",
       "source": "Reviewed deterministic browser loading-screen reference; not a generated test report",
-      "sha256": "aa26b1fe26cfbeb7e4c880cb0269d479863c9042fed3c8c221008cd6ed0215af"
+      "sha256": "995836f78e20df29b2ae7473be3bbd8904a3e2b97bb16a72115ebb02e2d55132"
     }
   ]
 }

@@ -747,6 +747,7 @@ class WorkspacePlanningInteractor:
                           'preferred_satisfied': demand['allocation_id'] not in preferred or preferred[demand['allocation_id']] == address})
         return {'bindings': bindings, 'items': items, 'candidates': deepcopy(locations),
                 'loadout': self.loading_checklist(items),
+                **({'layout': deepcopy(catalogue['layout'])} if catalogue.get('layout') is not None else {}),
                 'supplies': deepcopy(catalogue.get('supplies', [])),
                 'scope': 'Declared layout and initial material only; not sensed inventory, calibration or collision proof'}
 

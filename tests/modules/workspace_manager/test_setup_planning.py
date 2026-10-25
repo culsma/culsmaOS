@@ -80,3 +80,14 @@ def test_unusable_locations_are_rejected(fault):
         catalogue['locations'][0]['available'] = False
     with pytest.raises(ValueError):
         WorkspacePlanningInteractor().plan([demand], catalogue, preferences)
+
+
+def test_driver_layout_is_frozen_with_the_same_plan_without_vendor_interpretation():
+    f=PlanningFixture
+    catalogue=f.catalogue(f.location('rack'))
+    catalogue['layout']={'definition':{'schema':'culsma_layout_v1'},'configuration':{'device_specific':'preserved'}}
+    result=WorkspacePlanningInteractor().plan([f.demand('a')],catalogue)
+    assert result['layout']==catalogue['layout']
+    catalogue['layout']['configuration']['device_specific']='changed'
+    assert result['layout']['configuration']['device_specific']=='preserved'
+    assert 'layout' not in WorkspacePlanningInteractor().plan([f.demand('a')],f.catalogue(f.location('rack')))

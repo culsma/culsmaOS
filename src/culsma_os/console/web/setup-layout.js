@@ -1,3 +1,5 @@
+import {RunSetupDeck} from './setup-deck.js';
+
 /** Read-only projection of the exact run loading plan; no live configuration queries. */
 export class RunSetupLayout {
   constructor(app) {
@@ -90,6 +92,12 @@ export class RunSetupLayout {
       heading.append(a.element('h3','Loading layout'),a.element('span','Required initial placement','label'));
       region.append(heading,a.element('p',
         'Select an item to inspect its location, contents and wells. Groups show declared carriers or slots; spacing is schematic, not a live image or a scale drawing.','note'));
+      const inspect = id => {
+        this.selected.set(run.run_id,id);render();
+        [...region.querySelectorAll('[data-labware-id]')].find(node => node.dataset.labwareId === id)?.focus({preventScroll:true});
+      };
+      const scene = RunSetupDeck.scene(plan);
+      if (scene) region.append(RunSetupDeck.render(a,scene,items,selected.id,inspect));
       const board = a.element('div','','loading-board');
       for (const group of RunSetupLayout.groups(items)) {
         const carrier = a.element('section','','loading-carrier');
