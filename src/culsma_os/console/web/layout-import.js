@@ -1,3 +1,5 @@
+import {RunSetupDeck} from './setup-deck.js';
+
 /** Configuration import review. Native decoding belongs to the installed profile. */
 export class ConfigurationLayoutImport {
   constructor(app) {this.app = app;this.result = null;this.busy = false;}
@@ -40,6 +42,52 @@ export class ConfigurationLayoutImport {
     if (use) use.disabled = !!a.configSaving || this.result?.import_report.complete !== true;
   }
 
+  preview() {
+    const a = this.app,report = this.result.import_report;
+    const profile = a.configProfiles.find(row => row.driver === this.result.driver);
+    const scene = RunSetupDeck.scene({layout:{definition:profile?.layout,configuration:report.candidate_configuration}});
+    const region = a.element('section','','loading-layout');region.dataset.region = 'import-layout-preview';
+    region.setAttribute('aria-label','Converted layout preview');
+    region.append(a.element('h3','Converted layout preview'));
+    if (!scene) {region.append(a.element('p','No graphical preview is available for this configuration profile.','note'));return region;}
+    const items = scene.carriers.flatMap(carrier => carrier.placements);
+    const selected = items.find(row => row.id === this.selected) || items[0];
+    this.selected = selected?.id;
+    region.append(a.element('p',`${scene.carriers.length} converted carriers · ${items.length} converted labware · ${report.objects.length} source objects retained for review`,'note'));
+    if (!report.complete) region.append(a.element('p','Partial configuration preview. This is not the complete source layout; native placement differences remain unresolved.','notice'));
+    const inspect = id => {
+      const previous = region.querySelector('.setup-deck-scroll')?.scrollLeft || 0;
+      this.selected = id;const next = this.preview();region.replaceWith(next);
+      const viewport = next.querySelector('.setup-deck-scroll');viewport.scrollLeft = previous;
+      const button = [...next.querySelectorAll('[data-labware-id]')].find(row => row.dataset.labwareId === id);
+      if (button) {
+        const view = viewport.getBoundingClientRect(),target = button.getBoundingClientRect();
+        if (target.left < view.left) viewport.scrollLeft += target.left-view.left-8;
+        else if (target.right > view.right) viewport.scrollLeft += target.right-view.right+8;
+      }
+    };
+    region.append(RunSetupDeck.render(a,scene,items,selected?.id,inspect,{
+      label:'Converted configuration deck preview',action:'configuration.inspect-imported-labware',
+      description:'Positions and carrier widths come from the converted configuration. Blue sites have converted objects; vertical spacing is schematic.',
+      unplacedLabel:'No converted object',inactiveScope:'not represented in this candidate',
+      footer:'Blank areas may contain unconverted source objects. This preview does not certify source coordinates or physical loading.'}));
+    if (selected) {
+      region.append(a.configField('Preview object',selected.id,inspect,items.map(row => row.id),{field:'/layout-import/preview-object'}));
+      const source = report.objects.find(row => row.id === selected.id);
+      const carrier = scene.carriers.find(row => row.placements.some(item => item.id === selected.id));
+      const panel = a.element('section','','loading-inspector');panel.dataset.region = 'import-layout-selection';panel.dataset.objectId = selected.id;
+      panel.append(a.element('h4',selected.id),a.table(['Setting','Value'],[
+        ['Model',selected.model],['Candidate carrier',carrier.id],['Candidate tracks',`${carrier.first}–${carrier.last}`],
+        ['Candidate site',selected.site],['Source origin (mm)',source?.origin_mm.join(', ') || 'Not recorded'],
+        ['Source angle',source?.angle_deg ?? 'Not recorded']]));
+      const diagnostics = report.diagnostics.filter(row => row.object_id === selected.id);
+      if (diagnostics.length) panel.append(a.element('p','Source placement needs review; the candidate is not a verified reproduction.','notice'),
+        a.table(['Code','Reason'],diagnostics.map(row => [row.code,row.message])));
+      region.append(panel);
+    }
+    return region;
+  }
+
   review() {
     const a = this.app,report = this.result.import_report,node = a.element('section','','config-advanced');
     node.dataset.region = 'layout-import-review';node.dataset.complete = String(report.complete);
@@ -47,6 +95,7 @@ export class ConfigurationLayoutImport {
       a.element('p','Source SHA-256: '+report.source.sha256,'mono'),a.element('p',report.scope,'note'));
     if (!report.complete) node.append(a.element('p',
       'This file cannot yet become an accepted configuration. Unsupported objects and native differences are retained in this review.','notice'));
+    node.append(this.preview());
     const counts = new Map();
     for (const row of report.diagnostics) counts.set(row.code,(counts.get(row.code) || 0)+1);
     node.append(a.table(['Diagnostic','Count'],[...counts],'All native fields are represented by the regenerated configuration.'));

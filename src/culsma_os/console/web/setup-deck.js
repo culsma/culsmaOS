@@ -33,11 +33,11 @@ export class RunSetupDeck {
     return {label:variant.label,positions,carriers:rows.sort((a,b) => a.start-b.start)};
   }
 
-  static render(app,scene,items,selected,onInspect) {
+  static render(app,scene,items,selected,onInspect,options = {}) {
     const section = app.element('section','','setup-deck');section.dataset.region = 'loading-deck';
-    section.setAttribute('aria-label',scene.label+' loading overview');
+    section.setAttribute('aria-label',options.label || scene.label+' loading overview');
     section.append(app.element('h4',scene.label),app.element('p',
-      'Track numbers run left to right. Carrier widths follow the declared layout; vertical site spacing is schematic. Blue items belong to this loading checklist.','note'));
+      options.description || 'Track numbers run left to right. Carrier widths follow the declared layout; vertical site spacing is schematic. Blue items belong to this loading checklist.','note'));
     const viewport = app.element('div','','setup-deck-scroll');viewport.tabIndex = 0;
     viewport.setAttribute('aria-label','Scroll the complete deck horizontally');
     const board = app.element('div','','setup-deck-board');
@@ -57,23 +57,23 @@ export class RunSetupDeck {
       const sites = app.element('div','','setup-deck-sites');
       carrier.sites.forEach(site => {
         const placed = carrier.placements.find(p => p.site === site),item = items.find(row => row.id === placed?.id);
-        const label = placed ? placed.id : 'No labware declared';
+        const label = placed ? placed.id : options.unplacedLabel || 'No labware declared';
         const cell = app.element(item ? 'button':'div',carrier.span < 3 ? site : `${site} · ${label}`,'setup-deck-site');
         cell.dataset.site = site;cell.title = `Site ${site} · ${label}`;
         if (item) {
           cell.type = 'button';cell.dataset.labwareId = item.id;cell.dataset.required = 'true';
           cell.setAttribute('aria-label',`Inspect deck item ${item.id} · carrier ${carrier.id} · site ${site}`);
           cell.setAttribute('aria-pressed',String(item.id === selected));
-          app.interaction.identify(cell,{action:'setup.inspect-deck-item',entity:item.id});
+          app.interaction.identify(cell,{action:options.action || 'setup.inspect-deck-item',entity:item.id});
           cell.addEventListener('click',() => onInspect(item.id));
-        } else {cell.dataset.required = 'false';cell.setAttribute('aria-label',`Site ${site} · ${label}; outside this loading checklist`);}
+        } else {cell.dataset.required = 'false';cell.setAttribute('aria-label',`Site ${site} · ${label}; ${options.inactiveScope || 'outside this loading checklist'}`);}
         sites.append(cell);
       });
       frame.append(sites);board.append(frame);
       legend.append(app.element('li',`${tag} · ${carrier.id} · tracks ${range} · ${carrier.model}`));
     });
     viewport.append(board);section.append(viewport,legend,app.element('p',
-      'Unhighlighted sites show declared layout only; their current physical contents have not been detected. Use the commissioned labware orientation.','note'));
+      options.footer || 'Unhighlighted sites show declared layout only; their current physical contents have not been detected. Use the commissioned labware orientation.','note'));
     return section;
   }
 }

@@ -37,4 +37,4 @@ const oversized=make(54,6);oversized.layout.definition.variants.declared.width=1
 def test_deck_presentation_has_no_hamilton_geometry_or_current_configuration_lookup():
     source=(ROOT/'src/culsma_os/console/web/setup-deck.js').read_text()
     assert not any(value in source for value in ['fetch(', 'configurationFetch(', 'localStorage', 'innerHTML', 'STAR-54', 'CAR_5DWP'])
-    assert 'plan.layout' in source and "action:'setup.inspect-deck-item'" in source
+    assert 'plan.layout' in source and "action:options.action || 'setup.inspect-deck-item'" in source

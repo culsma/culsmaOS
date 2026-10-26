@@ -16,3 +16,6 @@ def test_layout_import_preserves_the_existing_authorized_configuration_boundary(
     presentation=(ROOT/'src/culsma_os/console/web/layout-import.js').read_text()
     assert not any(value in presentation for value in ['DECKLAY','Labware.Cnt','TForm.','HAM_LAYOUT_','innerHTML','apply_configuration'])
     assert 'use.disabled = !report.complete' in presentation
+    assert 'RunSetupDeck.scene' in presentation and 'report.candidate_configuration' in presentation
+    assert 'Partial configuration preview' in presentation
+    assert 'configuration.inspect-imported-labware' in presentation

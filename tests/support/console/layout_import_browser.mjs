@@ -17,6 +17,15 @@ try {
  const review=page.locator('[data-region="layout-import-review"]');
  await page.waitForFunction(()=>document.querySelector('[data-region="layout-import-review"]')?.dataset.complete==='false');
  if(await review.getByRole('button',{name:'Use converted layout as configuration',exact:true}).isEnabled()) throw new Error('Incomplete conversion was accepted');
+ const preview=review.locator('[data-region="import-layout-preview"]');
+ if(await preview.locator('[data-carrier-id]').count()!==6) throw new Error('Wrong converted carrier count');
+ const hhs=preview.locator('[data-carrier-id="CAR_HHS_3DWP_0001"]');
+ if(await hhs.getAttribute('data-track-start')!=='29' || await hhs.getAttribute('data-track-span')!=='7') throw new Error('Imported carrier position differs');
+ await preview.getByLabel('Preview object',{exact:true}).selectOption('DWP96_E4');
+ const selected=preview.locator('[data-region="import-layout-selection"]');
+ if(await selected.getAttribute('data-object-id')!=='DWP96_E4') throw new Error('Preview selection was not applied');
+ await selected.getByRole('cell',{name:'691.7, 152.5, 182.7',exact:true}).waitFor();
+ await selected.getByText('Source placement needs review; the candidate is not a verified reproduction.',{exact:true}).waitFor();
  await review.getByText('91 layout objects',{exact:true}).click();
  await review.locator('[data-region="layout-import-objects"]').getByRole('cell',{name:'ST_L.rck',exact:true}).first().waitFor();
  await review.locator('[data-region="layout-import-objects"]').getByRole('cell',{name:'DWP96_E4',exact:true}).waitFor();
@@ -24,6 +33,15 @@ try {
  await page.locator('#operation-status').evaluate(node=>{node.style.visibility='hidden';});
  for(const width of [1280,390]) {
   await page.setViewportSize({width,height:960});
+  await preview.getByLabel('Preview object',{exact:true}).selectOption('DWP96_E1');
+  await preview.getByLabel('Preview object',{exact:true}).selectOption('DWP96_E4');
+  const inView=await preview.evaluate(node=>{
+   const view=node.querySelector('.setup-deck-scroll').getBoundingClientRect();
+   const target=node.querySelector('[data-labware-id="DWP96_E4"]').getBoundingClientRect();
+   return target.left>=view.left && target.right<=view.right;
+  });
+  if(!inView) throw new Error(`Selected imported position is outside the visible deck at ${width}`);
+
   const actual=await review.screenshot({path:output.replace('.png',`-${width}.png`),animations:'disabled'});
   const baseline=`${baselines}/layout-import-${width}.png`;
   if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1') writeFileSync(baseline,actual);
