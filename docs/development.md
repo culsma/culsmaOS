@@ -250,6 +250,17 @@ plan invalidates its confirmation. MCP changes appear through the existing conso
 polling, with shared request receipts. Unsaved console edits retain their original
 fingerprint and require reloading when another client changes the plan.
 
+## Import an existing instrument layout
+
+In **Configuration -> Advanced**, choose the installed profile and select a file
+under **Import instrument layout**. Parsing and conversion belong to the driver;
+the console only consumes the configuration import report. Import is a preview:
+it changes neither the station nor saved drafts. Review diagnostics and retained
+objects, then use an accepted conversion as a new configuration proposal. An
+incomplete conversion has no accepted configuration and cannot use that control.
+Hamilton imports require matching local definitions for regeneration comparison;
+arbitrary existing VENUS layouts may exceed the supported editable catalogue.
+
 ## External AI through MCP
 
 There is no embedded AI. Start the existing resident normally, then launch the

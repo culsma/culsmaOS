@@ -96,6 +96,18 @@
       "kind": "golden",
       "source": "Reviewed deterministic browser loading-screen reference; not a generated test report",
       "sha256": "995836f78e20df29b2ae7473be3bbd8904a3e2b97bb16a72115ebb02e2d55132"
+    },
+    {
+      "path": "tests/modules/console/goldens/layout-import-1280.png",
+      "kind": "golden",
+      "sha256": "6834f2f4f236e3d60e8220c0fd6af8ffee2b959d23664c3451da2e4a1b79a012",
+      "source": "Reviewed deterministic browser layout-import reference; not a generated test report"
+    },
+    {
+      "path": "tests/modules/console/goldens/layout-import-390.png",
+      "kind": "golden",
+      "sha256": "d817150032ed11e218dfe827747f9eff94c4582412a6d267386456bf82af2631",
+      "source": "Reviewed deterministic browser layout-import reference; not a generated test report"
     }
   ]
 }

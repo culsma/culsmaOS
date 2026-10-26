@@ -514,6 +514,8 @@ class StationConfigurationInteractor(AuthorizedInteractor):
         from uuid import uuid4
         if not isinstance(request,StationConfigurationRequest):
             raise ConfigurationError('CONFIGURATION_REQUEST_INVALID')
+        if request.action == 'import_layout':
+            return self.import_layout(request)
         if request.action == 'profiles':
             return self.profiles.describe()
         if request.action == 'list':
@@ -565,6 +567,19 @@ class StationConfigurationInteractor(AuthorizedInteractor):
                 raise ConfigurationError('CONFIGURATION_LAYOUT_EXPORT_UNAVAILABLE')
             result['layout_artifact'] = artifact
         return result
+
+
+    def import_layout(self, request):
+        import re
+        if not isinstance(request.driver,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,100}',request.driver) is None:
+            raise ConfigurationError('CONFIGURATION_DRIVER_INVALID')
+        try:
+            result = self.profiles.import_layout(request.driver,request.layout_source)
+        except ValueError as error:
+            raise ConfigurationError(getattr(error,'code','CONFIGURATION_LAYOUT_IMPORT_FAILED')) from error
+        if result is None:
+            raise ConfigurationError('CONFIGURATION_LAYOUT_IMPORT_UNAVAILABLE')
+        return {'driver':request.driver,'import_report':result}
 
 
 class ProgramBindingInteractor(AuthorizedInteractor):

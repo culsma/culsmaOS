@@ -394,6 +394,7 @@ class StationConsoleApp {
     }
     this.configuration.updateChangeSummary();
     this.activation.updateActions();
+    this.configuration.layoutImport.updateActions();
     if (state) state.textContent = this.configuration.jsonEdited ? 'Unapplied JSON edits · update the proposal in Advanced, or discard edits'
       : this.configuration.invalidFields.size ? 'Correct invalid numeric fields before saving' : dirty ? `Unsaved changes · based on ${this.configDraft ? `revision ${this.configDraft.revision}`:'a new draft'} · save before validation` : `Saved revision ${this.configDraft.revision} · ${this.configDraft.fingerprint.slice(0,12)}`;
   }

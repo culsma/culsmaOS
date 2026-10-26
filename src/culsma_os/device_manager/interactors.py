@@ -163,6 +163,66 @@ class DeviceProfileInteractor:
                 or fingerprint != artifact.get('configuration_sha256')):
             raise LayoutExportError('Layout archive differs from the saved configuration')
 
+    def import_layout(self, driver, source):
+        import base64
+        import binascii
+        import hashlib
+        import json
+        from ..driver_framework.models import LayoutImportError
+        if (not isinstance(source, dict) or set(source) != {'name','encoding','content'}
+                or source['encoding'] != 'base64' or not isinstance(source['name'],str)
+                or not 1 <= len(source['name']) <= 180 or '/' in source['name'] or '\\' in source['name']
+                or not isinstance(source['content'],str) or len(source['content']) > 1400000):
+            raise LayoutImportError('Invalid bounded layout source')
+        try:
+            content = base64.b64decode(source['content'],validate=True)
+        except (ValueError,binascii.Error) as error:
+            raise LayoutImportError('Invalid layout source encoding') from error
+        if not 1 <= len(content) <= 1024*1024:
+            raise LayoutImportError('Layout source size is outside the import limit')
+        profiles, _ = self.discovery.discover()
+        profile = profiles.get(driver)
+        if profile is None or profile.describe().get('layout_import_supported') is not True:
+            return None
+        result = profile.import_layout(content,source['name'])
+        self.validate_layout_import(result,source['name'],hashlib.sha256(content).hexdigest())
+        if result['complete'] and not profile.validate(result['configuration']).get('valid'):
+            raise LayoutImportError('Imported configuration is not valid for its owning profile')
+        return json.loads(json.dumps(result,allow_nan=False))
+
+    def validate_layout_import(self, result, name, fingerprint):
+        import json
+        from ..driver_framework.models import LayoutImportError
+        if (not isinstance(result,dict) or result.get('schema') != 'culsma_layout_import_v1'
+                or result.get('source') != {'name':name,'sha256':fingerprint}
+                or type(result.get('complete')) is not bool or not isinstance(result.get('candidate_configuration'),dict)
+                or not isinstance(result.get('objects'),list) or not 1 <= len(result['objects']) <= 4096
+                or not isinstance(result.get('diagnostics'),list) or len(result['diagnostics']) > 8192
+                or result.get('activation') != 'not_applied' or result.get('physical_observation') is not False):
+            raise LayoutImportError('Invalid configuration import report')
+        if (result['complete'] and (result.get('configuration') != result['candidate_configuration'] or result['diagnostics'])
+                or not result['complete'] and result.get('configuration') is not None):
+            raise LayoutImportError('Incomplete conversion cannot supply an accepted configuration')
+        try:
+            encoded = json.dumps(result,allow_nan=False)
+            if len(encoded.encode()) > 2000000:
+                raise ValueError()
+            from math import isfinite
+            for row in result['objects']:
+                if (not isinstance(row,dict) or any(not isinstance(row.get(k),str) for k in ('id','model','category','parent','site'))
+                        or type(row.get('mapped')) is not bool or not isinstance(row.get('origin_mm'),list)
+                        or len(row['origin_mm']) != 3 or any(type(v) not in (int,float) or not isfinite(v) for v in row['origin_mm'])
+                        or type(row.get('angle_deg')) not in (int,float) or not isfinite(row['angle_deg'])):
+                    raise ValueError()
+            names = [row['id'] for row in result['objects']]
+            if len(set(names)) != len(names) or any(not isinstance(name,str) or not name for name in names):
+                raise ValueError()
+            for row in result['diagnostics']:
+                if not isinstance(row.get('code'),str) or not isinstance(row.get('message'),str):
+                    raise ValueError()
+        except (ValueError,TypeError,KeyError,AttributeError,RecursionError) as error:
+            raise LayoutImportError('Malformed configuration import data') from error
+
     def program_bindings(self, driver, configuration):
         profiles, _ = self.discovery.discover()
         profile = profiles.get(driver)

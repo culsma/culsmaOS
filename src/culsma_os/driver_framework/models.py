@@ -227,3 +227,12 @@ class LayoutExportError(ValueError):
 class BatchDeviceExecutionPort(DeviceExecutionPort, Protocol):
     def prepare_batch(self, step_id: str, operations: tuple[BatchOperation, ...]): ...
     def describe_batch(self, plan) -> dict: ...
+
+
+class LayoutImportProfilePort(Protocol):
+    """Optional vendor parser; returns detached configuration and conversion diagnostics."""
+    def import_layout(self, content: bytes, source_name: str) -> dict: ...
+
+
+class LayoutImportError(ValueError):
+    code = 'PROFILE_LAYOUT_IMPORT_INVALID'

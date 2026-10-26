@@ -1,7 +1,10 @@
+import {ConfigurationLayoutImport} from './layout-import.js';
+
 /** Current-station presentation. Choices and fields come from installed profiles. */
 export class ConsoleConfiguration {
   constructor(app) {
     this.app = app;
+    this.layoutImport = new ConfigurationLayoutImport(app);
     this.activeRecord = null;
     this.invalidFields = new Set();
     this.invalidValues = new Map();
@@ -163,8 +166,9 @@ export class ConsoleConfiguration {
   renderAdvanced() {
     const a = this.app;const node = a.element('details','','card section config-advanced');
     node.append(a.element('summary','Advanced · configuration presets and JSON'));
-    const profile = a.configProfiles.find(item => item.driver === a.configDriver) || a.configProfiles[0];let selected = profile?.driver;
-    node.append(a.configField('Installed profile',selected,value => {selected = value;},a.configProfiles.map(item => item.driver),{field:'/profile'}));
+    node.open = !!this.advancedExpanded;node.addEventListener('toggle',() => {this.advancedExpanded = node.open;});
+    const profile = a.configProfiles.find(item => item.driver === a.configDriver) || a.configProfiles[0];let selected = this.layoutImport.driver || profile?.driver;
+    node.append(a.configField('Installed profile',selected,value => {selected = value;this.layoutImport.driver = value;},a.configProfiles.map(item => item.driver),{field:'/profile'}));
     node.append(a.configButton('New from profile',() => {
       if (a.configWorking && a.configDirty()) {a.showAlert('Save current edits before loading another configuration.');return;}
       const item = a.configProfiles.find(value => value.driver === selected);
@@ -184,6 +188,7 @@ export class ConsoleConfiguration {
         a.startConfigDraft(selected || '',value,file.name);
       } catch (error) {a.showAlert(error.message);}
     });node.append(upload);
+    if (a.configProfiles.some(profile => profile.layout_import_supported)) node.append(this.layoutImport.render(() => selected));
     if (!a.configWorking) return node;
     node.append(a.configField('Configuration name',a.configTitle,value => {a.configTitle = value;},null,{field:'/title'}));
     const legacy = a.element('details','','config-advanced');legacy.append(a.element('summary','Legacy program bindings'));

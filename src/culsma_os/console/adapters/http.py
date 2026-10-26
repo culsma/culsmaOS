@@ -33,6 +33,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
         "/interaction.js": ("interaction.js", "text/javascript; charset=utf-8"),
         "/programs.js": ("programs.js", "text/javascript; charset=utf-8"),
+        "/layout-import.js": ("layout-import.js", "text/javascript; charset=utf-8"),
         "/configuration.js": ("configuration.js", "text/javascript; charset=utf-8"),
         "/setup.js": ("setup.js", "text/javascript; charset=utf-8"),
         "/setup-deck.js": ("setup-deck.js", "text/javascript; charset=utf-8"),
@@ -121,6 +122,12 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             raise ConsoleReadError('CONSOLE_CONFIGURATION_REQUEST_INVALID','invalid_request')
         return StationConfigurationRequest(**payload)
 
+    def layout_import_request(self, payload):
+        if (not isinstance(payload,dict) or set(payload) != {'driver','layout_source'}
+                or not isinstance(payload['driver'],str) or not isinstance(payload['layout_source'],dict)):
+            raise ConsoleReadError('CONSOLE_LAYOUT_IMPORT_REQUEST_INVALID','invalid_request')
+        return StationConfigurationRequest('import_layout',driver=payload['driver'],layout_source=payload['layout_source'])
+
     def program_request(self, payload):
         allowed = {'action','program_id','snapshot_id','request_id','run_id','configuration_fingerprint'}
         if (not isinstance(payload,dict) or set(payload)-allowed or not isinstance(payload.get('action'),str)
@@ -163,6 +170,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                          '/api/v1/configuration/activation':(self.server.activation,self.activation_request,'culsma_configuration_v1'),
                          '/api/v1/configuration/program-bindings':(self.server.bindings,self.binding_request,'culsma_configuration_v1'),
                          '/api/v1/configuration/drafts':(self.server.configuration,self.configuration_request,'culsma_configuration_v1'),
+                         '/api/v1/configuration/layout-import':(self.server.configuration,self.layout_import_request,'culsma_configuration_v1'),
                          '/api/v1/programs':(self.server.programs,self.program_request,'culsma_program_console_v1')}
             if url.path not in endpoints or endpoints[url.path][0] is None:
                 self.reject_method()
@@ -175,7 +183,8 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             if len(lengths) != 1 or not lengths[0].isdigit() or self.headers.get('Transfer-Encoding') is not None:
                 raise ConsoleReadError('CONSOLE_BODY_INVALID','invalid_request')
             length = int(lengths[0])
-            if not 1 <= length <= 250000 or self.headers.get('Content-Type','').split(';')[0] != 'application/json':
+            limit = 1500000 if url.path == '/api/v1/configuration/layout-import' else 250000
+            if not 1 <= length <= limit or self.headers.get('Content-Type','').split(';')[0] != 'application/json':
                 raise ConsoleReadError('CONSOLE_BODY_INVALID','invalid_request')
             try:
                 body = self.rfile.read(length)

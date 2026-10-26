@@ -97,6 +97,7 @@ class StationConfigurationRequest:
     title: str | None = None
     driver: str | None = None
     configuration: dict | None = None
+    layout_source: dict | None = None
 
 
 class ConfigurationError(ValueError):
