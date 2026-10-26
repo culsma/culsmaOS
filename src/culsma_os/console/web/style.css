@@ -94,10 +94,14 @@ nav{flex-wrap:wrap;gap:12px 24px}
 .setup-deck-site[aria-pressed=true] {outline: 2px solid #246399; outline-offset: -2px; background: #bed9f0; font-weight: 700;}
 .setup-deck-legend {list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 11px; color: #526b82; overflow-wrap: anywhere;}
 
-.instance-layout-scroll {overflow-x:auto; margin:16px 0; border:1px solid #d4dee8; border-radius:8px;}
-.instance-layout-board {position:relative; min-width:900px; height:420px; background:repeating-linear-gradient(90deg,transparent,transparent 44px,#e7edf3 44px,#e7edf3 45px),#f7f9fc;}
-.instance-layout-axis {position:absolute; bottom:8px; left:16px; font-size:11px; color:#64798c;}
-.instance-layout-point {position:absolute; width:23px; height:23px; padding:0; border-radius:50%; background:#e3edf8; color:#235477; border:1px solid #96aec7; font-size:9px; transform:translate(-50%,-50%);}
-.instance-layout-point[data-category=carrier] {background:#d5dfe9; border-radius:3px;}
-.instance-layout-point[data-category=cover] {background:#fff4d9; color:#87621f;}
-.instance-layout-point[aria-pressed=true] {z-index:2; outline:3px solid #568dc7; background:#193d65; color:white;}
+.setup-deck-board[data-stacked=true] {height:480px;}
+.setup-deck-stack {flex:1; display:flex; flex-direction:column; gap:2px; min-height:0; overflow:hidden; border:1px solid #c0cedb; padding:2px; border-radius:3px; background:#f6f8fa;}
+.setup-deck-stack-label {font-size:9px; color:#61768a; white-space:nowrap;}
+.setup-deck-stack .setup-deck-site {flex:1; font-size:9px; line-height:1.4;}
+.layout-equipment {margin:16px 0; font-size:12px;}
+.layout-equipment summary {cursor:pointer; color:#175a8b;}
+.layout-equipment-grid {display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-top:12px;}
+.layout-equipment-card {padding:12px; border:1px solid #c5d1df; border-radius:6px; background:#f6f8fa; min-width:0;}
+.layout-equipment-card h4 {margin:0 0 8px; font-size:12px; overflow-wrap:anywhere;}
+.layout-equipment-card button {display:block; width:100%; margin:4px 0; padding:6px; font-size:11px; overflow-wrap:anywhere;}
+.layout-equipment-card button[aria-pressed=true] {background:#d8e8f7; border-color:#6a96bc;}

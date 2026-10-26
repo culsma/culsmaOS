@@ -18,7 +18,10 @@ try {
  await page.waitForFunction(()=>document.querySelector('[data-region="layout-import-review"]')?.dataset.complete==='true');
  if(!await review.getByRole('button',{name:'Use converted layout as configuration',exact:true}).isEnabled()) throw new Error('Lossless instance conversion was blocked');
  const preview=review.locator('[data-region="import-layout-preview"]');
- if(await preview.locator('[data-object-id]').count()!==92) throw new Error('Missing recorded objects');
+ if(await preview.getByLabel('Recorded object',{exact:true}).locator('option').count()!==91) throw new Error('Missing recorded objects');
+ if(await preview.locator('[data-carrier-id]').count()!==12) throw new Error('Track layout was not restored');
+ if(await preview.locator('[data-carrier-id="CAR_HHS_3DWP_0001"]').getAttribute('data-track-start')!=='29') throw new Error('Wrong HHS track');
+ if(await preview.locator('[data-carrier-id="CAR_5STACK_0002"]').getByRole('button',{name:/DWP96_G1_000/}).count()!==2) throw new Error('Stacked plates were omitted');
  await preview.getByLabel('Recorded object',{exact:true}).selectOption('DWP96_E4');
  const selected=preview.locator('[data-region="recorded-object-selection"]');
  await selected.getByRole('cell',{name:'691.7, 152.5, 182.7',exact:true}).waitFor();

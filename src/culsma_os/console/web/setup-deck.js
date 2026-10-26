@@ -41,6 +41,7 @@ export class RunSetupDeck {
     const viewport = app.element('div','','setup-deck-scroll');viewport.tabIndex = 0;
     viewport.setAttribute('aria-label','Scroll the complete deck horizontally');
     const board = app.element('div','','setup-deck-board');
+    if (options.stacked) board.dataset.stacked='true';
     board.style.setProperty('--deck-tracks',scene.positions.length);board.style.minWidth = `${scene.positions.length*18}px`;
     const rails = app.element('div','','setup-deck-rails');rails.setAttribute('aria-hidden','true');
     scene.positions.forEach(position => rails.append(app.element('span',position.label || position.id,'setup-deck-track')));
@@ -56,6 +57,20 @@ export class RunSetupDeck {
       const header = app.element('div',tag,'setup-deck-carrier-tag');header.title = `${carrier.id} · ${carrier.model} · tracks ${range}`;frame.append(header);
       const sites = app.element('div','','setup-deck-sites');
       carrier.sites.forEach(site => {
+        if (options.stacked) {
+          const stack=carrier.placements.filter(p=>p.site===site),slot=app.element('div','','setup-deck-stack');slot.dataset.site=site;
+          slot.append(app.element('span',`Site ${site}`,'setup-deck-stack-label'));
+          if(!stack.length) slot.append(app.element('span','—','note'));
+          for(const placed of stack) {
+            const cell=app.element('button',carrier.span<3 ? site:placed.id,'setup-deck-site');cell.type='button';
+            cell.dataset.labwareId=placed.id;cell.dataset.required='true';cell.dataset.association=placed.association;
+            cell.title=placed.id;cell.setAttribute('aria-label',`Inspect deck item ${placed.id} · carrier ${carrier.id} · site ${site}`);
+            cell.setAttribute('aria-pressed',String(placed.id===selected));
+            app.interaction.identify(cell,{action:options.action || 'setup.inspect-deck-item',entity:placed.id});
+            cell.addEventListener('click',()=>onInspect(placed.id));slot.append(cell);
+          }
+          sites.append(slot);return;
+        }
         const placed = carrier.placements.find(p => p.site === site),item = items.find(row => row.id === placed?.id);
         const label = placed ? placed.id : options.unplacedLabel || 'No labware declared';
         const cell = app.element(item ? 'button':'div',carrier.span < 3 ? site : `${site} · ${label}`,'setup-deck-site');

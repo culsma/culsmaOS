@@ -100,13 +100,13 @@
     {
       "path": "tests/modules/console/goldens/layout-import-1280.png",
       "kind": "golden",
-      "sha256": "bf21fab4dc06a99512cfbbd3aa672ebda0861fae699f4f3aff5d925e1c0355f6",
+      "sha256": "65cd18f581527dd4803f068a943255486fc87719dd865f46d842a9cc98bd34d8",
       "source": "Reviewed deterministic browser layout-import reference; not a generated test report"
     },
     {
       "path": "tests/modules/console/goldens/layout-import-390.png",
       "kind": "golden",
-      "sha256": "b16446048917b2792f0009054e760d264eb5cc79ec4cfc9876b3565ddc6e018d",
+      "sha256": "0153f7b01ae551251b76705df68215d9be18ce0757cd15f8c9333cd85b70d592",
       "source": "Reviewed deterministic browser layout-import reference; not a generated test report"
     }
   ]

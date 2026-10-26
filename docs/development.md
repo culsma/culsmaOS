@@ -262,8 +262,9 @@ Then use an accepted conversion as a new configuration proposal. An
 incomplete conversion has no accepted configuration and cannot use that control.
 Hamilton imports require matching local definitions. Full instance configurations
 retain adjusted coordinates, rotations, stacked objects, sequences and device
-records; the console also displays their generic coordinate projection after a
-saved draft is reloaded. Conversion completeness does not grant operation support
+records; the console shows a track/carrier/site diagram with stacked objects and
+a supplementary fixed-equipment list. Recorded coordinates remain in the object
+inspector. Position-based display associations never change execution bindings. Conversion completeness does not grant operation support
 for every retained device or establish physical readiness. Configuration JSON is
 bounded to 1 MiB; the configuration HTTP routes allow the corresponding envelope.
 
