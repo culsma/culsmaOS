@@ -260,8 +260,12 @@ objects. The read-only deck preview uses the converted configuration; incomplete
 previews omit unrepresented source objects and keep source-coordinate warnings.
 Then use an accepted conversion as a new configuration proposal. An
 incomplete conversion has no accepted configuration and cannot use that control.
-Hamilton imports require matching local definitions for regeneration comparison;
-arbitrary existing VENUS layouts may exceed the supported editable catalogue.
+Hamilton imports require matching local definitions. Full instance configurations
+retain adjusted coordinates, rotations, stacked objects, sequences and device
+records; the console also displays their generic coordinate projection after a
+saved draft is reloaded. Conversion completeness does not grant operation support
+for every retained device or establish physical readiness. Configuration JSON is
+bounded to 1 MiB; the configuration HTTP routes allow the corresponding envelope.
 
 ## External AI through MCP
 

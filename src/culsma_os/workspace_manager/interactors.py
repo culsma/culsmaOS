@@ -536,7 +536,7 @@ class StationConfigurationInteractor(AuthorizedInteractor):
                 encoded = json.dumps(request.configuration,sort_keys=True,separators=(',',':'),allow_nan=False)
             except (ValueError,TypeError,RecursionError):
                 raise ConfigurationError('CONFIGURATION_JSON_INVALID') from None
-            if len(encoded.encode()) > 200000:
+            if len(encoded.encode()) > 1024 * 1024:
                 raise ConfigurationError('CONFIGURATION_TOO_LARGE')
             value = {'title':request.title.strip(),'driver':request.driver,
                      'configuration':json.loads(encoded),'fingerprint':hashlib.sha256(encoded.encode()).hexdigest()}

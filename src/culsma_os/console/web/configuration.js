@@ -1,4 +1,5 @@
 import {ConfigurationLayoutImport} from './layout-import.js';
+import {LayoutInstancesView} from './layout-instances.js';
 
 /** Current-station presentation. Choices and fields come from installed profiles. */
 export class ConsoleConfiguration {
@@ -113,6 +114,9 @@ export class ConsoleConfiguration {
   renderEditor() {
     const a = this.app;const editor = a.card('Layout');editor.dataset.region = 'station-settings';
     editor.append(a.element('p',`Proposal: ${a.configTitle}${a.configDraft ? ` · r${a.configDraft.revision}`:''}`,'label'));
+    if (a.configWorking.layout?.schema === 'culsma_layout_instances_v1') {
+      editor.append(LayoutInstancesView.render(a,a.configWorking.layout));return editor;
+    }
     const section = this.section(this.definition(),'layout');
     if (section.fields.length) editor.append(this.fields(section.fields));
     for (const map of section.maps) editor.append(this.map(map));
@@ -183,7 +187,7 @@ export class ConsoleConfiguration {
     upload.addEventListener('change',async () => {
       try {
         if (a.configWorking && a.configDirty()) throw new Error('Save current edits before importing another configuration.');
-        const file = upload.files[0];if (!file) return;if (file.size > 200000) throw new Error('CONFIGURATION_TOO_LARGE');
+        const file = upload.files[0];if (!file) return;if (file.size > 1024*1024) throw new Error('CONFIGURATION_TOO_LARGE');
         const value = JSON.parse(await file.text());if (!value || Array.isArray(value) || typeof value !== 'object') throw new Error('CONFIGURATION_JSON_INVALID');
         a.startConfigDraft(selected || '',value,file.name);
       } catch (error) {a.showAlert(error.message);}

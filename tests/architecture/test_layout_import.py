@@ -19,3 +19,10 @@ def test_layout_import_preserves_the_existing_authorized_configuration_boundary(
     assert 'RunSetupDeck.scene' in presentation and 'report.candidate_configuration' in presentation
     assert 'Partial configuration preview' in presentation
     assert 'configuration.inspect-imported-labware' in presentation
+
+
+def test_recorded_instance_view_consumes_only_generic_driver_projection():
+    view=(ROOT/'src/culsma_os/console/web/layout-instances.js').read_text()
+    assert not any(value in view for value in ['DECKLAY','TForm.','Labware.Cnt','culsma_driver_hamilton','innerHTML'])
+    assert 'configuration.inspect-recorded-object' in view
+    assert 'origin_mm' in view and 'angle_deg' in view

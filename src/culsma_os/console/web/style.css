@@ -93,3 +93,11 @@ nav{flex-wrap:wrap;gap:12px 24px}
 .setup-deck-site[data-required=true] {background: #d8e8f7; color: #174d78; border-color: #6a96bc;}
 .setup-deck-site[aria-pressed=true] {outline: 2px solid #246399; outline-offset: -2px; background: #bed9f0; font-weight: 700;}
 .setup-deck-legend {list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 11px; color: #526b82; overflow-wrap: anywhere;}
+
+.instance-layout-scroll {overflow-x:auto; margin:16px 0; border:1px solid #d4dee8; border-radius:8px;}
+.instance-layout-board {position:relative; min-width:900px; height:420px; background:repeating-linear-gradient(90deg,transparent,transparent 44px,#e7edf3 44px,#e7edf3 45px),#f7f9fc;}
+.instance-layout-axis {position:absolute; bottom:8px; left:16px; font-size:11px; color:#64798c;}
+.instance-layout-point {position:absolute; width:23px; height:23px; padding:0; border-radius:50%; background:#e3edf8; color:#235477; border:1px solid #96aec7; font-size:9px; transform:translate(-50%,-50%);}
+.instance-layout-point[data-category=carrier] {background:#d5dfe9; border-radius:3px;}
+.instance-layout-point[data-category=cover] {background:#fff4d9; color:#87621f;}
+.instance-layout-point[aria-pressed=true] {z-index:2; outline:3px solid #568dc7; background:#193d65; color:white;}

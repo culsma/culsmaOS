@@ -1,4 +1,5 @@
 import {RunSetupDeck} from './setup-deck.js';
+import {LayoutInstancesView} from './layout-instances.js';
 
 /** Configuration import review. Native decoding belongs to the installed profile. */
 export class ConfigurationLayoutImport {
@@ -44,6 +45,10 @@ export class ConfigurationLayoutImport {
 
   preview() {
     const a = this.app,report = this.result.import_report;
+    if (report.candidate_configuration.layout?.schema === 'culsma_layout_instances_v1') {
+      const region = LayoutInstancesView.render(a,report.candidate_configuration.layout,this.selected,id => {this.selected=id;});
+      region.dataset.region='import-layout-preview';return region;
+    }
     const profile = a.configProfiles.find(row => row.driver === this.result.driver);
     const scene = RunSetupDeck.scene({layout:{definition:profile?.layout,configuration:report.candidate_configuration}});
     const region = a.element('section','','loading-layout');region.dataset.region = 'import-layout-preview';
@@ -104,7 +109,7 @@ export class ConfigurationLayoutImport {
       diagnostics.append(a.table(['Object','Code','Reason'],report.diagnostics.map(row => [row.object_id || 'Layout',row.code,row.message])));node.append(diagnostics);
     }
     const objects = a.element('details','','config-advanced');objects.dataset.region = 'layout-import-objects';objects.append(a.element('summary',`${report.objects.length} layout objects`));
-    objects.append(a.table(['Object','Model','Parent / site','Origin (mm)','Angle','Editable'],report.objects.map(row => [
+    objects.append(a.table(['Object','Model','Parent / site','Origin (mm)','Angle','Represented'],report.objects.map(row => [
       row.id,row.model,`${row.parent} / ${row.site}`,row.origin_mm.join(', '),row.angle_deg,row.mapped ? 'yes':'no'])));node.append(objects);
     const proposal = a.element('details','','config-advanced');proposal.append(a.element('summary','Converted configuration candidate'));
     proposal.append(a.element('pre',JSON.stringify(report.candidate_configuration,null,2),'record-json'));node.append(proposal);

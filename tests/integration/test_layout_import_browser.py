@@ -20,10 +20,16 @@ def test_native_import_reviews_real_layout_and_only_accepts_lossless_conversion(
     generated=tmp_path/'generated.lay'
     generated.write_bytes(next(a.content for a in exported.artifacts if a.name=='layout_generated.lay'))
     original=driver/'examples/test32-water-plate-heat/revision2/test32_water_plate_heat_deck_r2.lay'
+    codec=build_layout_exporter(root).archive
+    raw=generated.read_bytes();section,end=codec.read_section(raw,8)
+    from dataclasses import replace
+    fields=dict(section.fields);fields['Labware.1.File']='unknown/missing.rck'
+    unsupported=tmp_path/'unsupported.lay'
+    unsupported.write_bytes(codec.wrap(raw[:8]+codec.write_section(replace(section,fields=tuple(sorted(fields.items()))))+raw[end:raw.rfind(b'\r\n* $$author=')]))
     output=ROOT/'run-artifacts/ui-tests/layout-import.png';output.parent.mkdir(parents=True,exist_ok=True)
     with SharedSetupHarness(tmp_path) as shared:
         result=subprocess.run([os.environ.get('CULSMA_OS_NODE','node'),str(ROOT/'tests/support/console/layout_import_browser.mjs'),
-            shared.url,str(original),str(generated),str(output),str(ROOT/'tests/modules/console/goldens')],capture_output=True,text=True,cwd=ROOT,timeout=60)
+            shared.url,str(original),str(generated),str(output),str(ROOT/'tests/modules/console/goldens'),str(unsupported)],capture_output=True,text=True,cwd=ROOT,timeout=60)
         assert result.returncode==0,result.stderr
         assert json.loads(result.stdout)['roundtrip_configuration']==config
         assert shared.status(shared.run_id)['status']=='awaiting_setup'

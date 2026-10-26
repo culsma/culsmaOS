@@ -34,6 +34,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         "/interaction.js": ("interaction.js", "text/javascript; charset=utf-8"),
         "/programs.js": ("programs.js", "text/javascript; charset=utf-8"),
         "/layout-import.js": ("layout-import.js", "text/javascript; charset=utf-8"),
+        "/layout-instances.js": ("layout-instances.js", "text/javascript; charset=utf-8"),
         "/configuration.js": ("configuration.js", "text/javascript; charset=utf-8"),
         "/setup.js": ("setup.js", "text/javascript; charset=utf-8"),
         "/setup-deck.js": ("setup-deck.js", "text/javascript; charset=utf-8"),
@@ -183,7 +184,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             if len(lengths) != 1 or not lengths[0].isdigit() or self.headers.get('Transfer-Encoding') is not None:
                 raise ConsoleReadError('CONSOLE_BODY_INVALID','invalid_request')
             length = int(lengths[0])
-            limit = 1500000 if url.path == '/api/v1/configuration/layout-import' else 250000
+            limit = 1500000 if url.path in {'/api/v1/configuration/layout-import','/api/v1/configuration/drafts'} else 250000
             if not 1 <= length <= limit or self.headers.get('Content-Type','').split(';')[0] != 'application/json':
                 raise ConsoleReadError('CONSOLE_BODY_INVALID','invalid_request')
             try:

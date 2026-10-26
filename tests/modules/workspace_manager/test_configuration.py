@@ -112,3 +112,13 @@ def test_offline_configuration_cannot_enter_station_activation(tmp_path):
     })()
     with pytest.raises(ConfigurationError, match='CONFIGURATION_OFFLINE_ONLY'):
         ConfigurationDraftInteractor(fixture.repository, profile).validated(record['draft_id'], 1)
+
+
+def test_full_layout_sized_configuration_saves_but_oversized_payload_does_not(tmp_path):
+    fixture=ConfigurationFixture(tmp_path/'drafts.sqlite3')
+    configuration={'valid':True,'retained_layout':'x'*310000}
+    draft=create(fixture,configuration)
+    assert fixture.execute(StationConfigurationRequest('get',draft['draft_id']))['draft']['configuration']==configuration
+    with pytest.raises(ConfigurationError,match='CONFIGURATION_TOO_LARGE'):
+        fixture.execute(StationConfigurationRequest('save',draft['draft_id'],1,'Too large','test-profile',{'valid':True,'data':'x'*(1024*1024)}))
+    assert fixture.repository.get(draft['draft_id']).revision==1
