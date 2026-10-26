@@ -4,6 +4,14 @@ export class RunSetupDeck {
 
   static scene(plan) {
     const {definition,configuration} = plan.layout || {};
+    if (definition?.schema === 'culsma_layout_instances_v1') {
+      const scene=definition.diagram?.scene;
+      if (!scene || !Array.isArray(scene.positions) || !scene.positions.length || scene.positions.length>128 ||
+          !Array.isArray(scene.carriers) || scene.carriers.length>128 || scene.carriers.some(row=>
+            !Number.isInteger(row.start) || !Number.isInteger(row.span) || row.start<0 || row.span<1 ||
+            row.start+row.span>scene.positions.length || !Array.isArray(row.sites) || !Array.isArray(row.placements))) return null;
+      return {...scene,stacked:true};
+    }
     if (definition?.schema !== 'culsma_layout_v1' || !configuration) return null;
     const variant = definition.variants?.[this.at(configuration,definition.selector_path)];
     if (variant?.presentation !== 'tracks' || !Number.isInteger(variant.width) || variant.width < 1 || variant.width > 128) return null;
@@ -62,12 +70,16 @@ export class RunSetupDeck {
           slot.append(app.element('span',`Site ${site}`,'setup-deck-stack-label'));
           if(!stack.length) slot.append(app.element('span','—','note'));
           for(const placed of stack) {
-            const cell=app.element('button',carrier.span<3 ? site:placed.id,'setup-deck-site');cell.type='button';
-            cell.dataset.labwareId=placed.id;cell.dataset.required='true';cell.dataset.association=placed.association;
+            const required=items.some(item=>item.id===placed.id);
+            const cell=app.element(required ? 'button':'div',carrier.span<3 ? site:placed.id,'setup-deck-site');
+            cell.dataset.labwareId=placed.id;cell.dataset.required=String(required);cell.dataset.association=placed.association;
             cell.title=placed.id;cell.setAttribute('aria-label',`Inspect deck item ${placed.id} · carrier ${carrier.id} · site ${site}`);
-            cell.setAttribute('aria-pressed',String(placed.id===selected));
-            app.interaction.identify(cell,{action:options.action || 'setup.inspect-deck-item',entity:placed.id});
-            cell.addEventListener('click',()=>onInspect(placed.id));slot.append(cell);
+            if(required) {
+              cell.type='button';cell.setAttribute('aria-pressed',String(placed.id===selected));
+              app.interaction.identify(cell,{action:options.action || 'setup.inspect-deck-item',entity:placed.id});
+              cell.addEventListener('click',()=>onInspect(placed.id));
+            }
+            slot.append(cell);
           }
           sites.append(slot);return;
         }

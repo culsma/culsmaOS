@@ -51,3 +51,27 @@ def test_loading_layout_has_no_mutation_or_current_configuration_dependency():
     setup=(ROOT/'src/culsma_os/console/web/setup.js').read_text()
     assert 'this.confirmations.delete(run.run_id)' in setup
     assert 'this.layout.render(plan,run)' in setup
+
+
+@pytest.mark.skipif(shutil.which('node') is None, reason='Optional client checks require Node.js')
+def test_imported_loading_scene_retains_full_deck_and_bounds_generic_geometry():
+    script = """
+import assert from 'node:assert/strict';
+import {RunSetupDeck as Deck} from './src/culsma_os/console/web/setup-deck.js';
+const scene={label:'Imported deck',positions:Array.from({length:54},(_,n)=>({id:String(n+1),label:String(n+1)})),
+ carriers:[{id:'frame',start:28,span:7,sites:['1','2','3','4'],
+ placements:[{id:'required-plate',site:'4'},{id:'unused-plate',site:'1'}]}]};
+const plan={layout:{definition:{schema:'culsma_layout_instances_v1',diagram:{scene}},configuration:{}}};
+const before=JSON.stringify(plan),shown=Deck.scene(plan);
+assert.equal(shown.stacked,true);
+assert.deepEqual(shown.carriers,scene.carriers);
+assert.equal(shown.positions.length,54);
+assert.equal(JSON.stringify(plan),before);
+for(const invalid of [{start:53,span:7},{start:-1},{span:0},{sites:null},{placements:null}]) {
+ const bad=structuredClone(plan);Object.assign(bad.layout.definition.diagram.scene.carriers[0],invalid);
+ assert.equal(Deck.scene(bad),null);
+}
+assert.equal(Deck.scene({layout:{definition:{schema:'culsma_layout_instances_v1'}}}),null);
+"""
+    result=subprocess.run([shutil.which('node'),'--input-type=module','-e',script],cwd=ROOT,capture_output=True,text=True,timeout=10)
+    assert result.returncode==0,result.stderr

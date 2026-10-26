@@ -97,7 +97,7 @@ export class RunSetupLayout {
         [...region.querySelectorAll('[data-labware-id]')].find(node => node.dataset.labwareId === id)?.focus({preventScroll:true});
       };
       const scene = RunSetupDeck.scene(plan);
-      if (scene) region.append(RunSetupDeck.render(a,scene,items,selected.id,inspect));
+      if (scene) region.append(RunSetupDeck.render(a,scene,items,selected.id,inspect,{stacked:scene.stacked}));
       const board = a.element('div','','loading-board');
       for (const group of RunSetupLayout.groups(items)) {
         const carrier = a.element('section','','loading-carrier');
