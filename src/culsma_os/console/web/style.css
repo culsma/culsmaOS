@@ -105,3 +105,32 @@ nav{flex-wrap:wrap;gap:12px 24px}
 .layout-equipment-card h4 {margin:0 0 8px; font-size:12px; overflow-wrap:anywhere;}
 .layout-equipment-card button {display:block; width:100%; margin:4px 0; padding:6px; font-size:11px; overflow-wrap:anywhere;}
 .layout-equipment-card button[aria-pressed=true] {background:#d8e8f7; border-color:#6a96bc;}
+
+/* Product navigation: resources, experiment tasks and read-only system facts. */
+.console-shell{display:grid;grid-template-columns:224px minmax(0,1fr);gap:30px;max-width:1480px;margin:auto;padding:0 24px}
+.console-shell main{max-width:none;width:100%;min-width:0;padding:30px 0;margin:0}
+.sidebar{min-width:0;padding:30px 0;align-self:start;position:sticky;top:0;max-height:100vh;overflow-y:auto}
+#console-navigation{display:flex;flex-direction:column;gap:24px;border:0;margin:0;padding:0}
+.navigation-group{display:flex;flex-direction:column;gap:3px;min-width:0}
+.navigation-group h2{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#728195;margin:0 10px 9px}
+#console-navigation a{border:0;padding:10px 12px;border-radius:7px;font-size:14px;font-weight:500;color:#53677c;white-space:normal;line-height:1.4}
+#console-navigation a[aria-current=page]{background:#e4edf7;color:#193f67;font-weight:700}
+.navigation-group[data-active=true] h2{color:#193f67}
+#navigation-toggle{display:none}
+.section-tabs{display:flex;gap:6px;border-bottom:1px solid #dce3ec;margin:20px 0;padding-bottom:10px;flex-wrap:wrap}
+.section-tabs [role=tab]{border:1px solid transparent;background:transparent;color:#64778c}
+.section-tabs [aria-selected=true]{background:#e4edf7;border-color:#abc2dd;color:#193f67}
+.run-stage[hidden]{display:none!important}
+.evidence-disclosure{background:white;border:1px solid #dce3ec;border-radius:10px;padding:18px;margin-top:20px}
+.evidence-disclosure>summary{cursor:pointer;font-weight:600;color:#193f67}
+.evidence-disclosure>.card{border:0;padding:20px 0 0;margin-bottom:0}
+.action-link{display:inline-block;border:1px solid #c5d1df;border-radius:7px;padding:9px 14px;margin:0 0 12px;font-weight:600}
+@media(max-width:900px){
+ .console-shell{grid-template-columns:minmax(0,1fr);gap:0;padding:0 18px}
+ .sidebar{position:static;padding:16px 0 0;max-height:none}
+ #navigation-toggle{display:block;width:100%;text-align:left}
+ #console-navigation{display:none;margin-top:12px;padding:16px;background:white;border:1px solid #dce3ec;border-radius:9px}
+ #console-navigation.menu-open{display:flex}
+ .console-shell main{padding-top:22px}
+ .topbar{padding:12px 18px}.brand{width:210px}.top-label{font-size:12px;white-space:normal}
+}

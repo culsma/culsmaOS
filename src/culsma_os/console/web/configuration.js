@@ -243,19 +243,41 @@ export class ConsoleSystemInformation {
   }
 
   render() {
-    const a = this.app;const model = this.model();
-    a.interaction.view('system',{loadState:'ready'});
-    const equipment = a.card('Configured equipment');
-    equipment.append(a.element('p','Source: the saved active configuration. These are declared settings, not detected hardware.','note'));
-    equipment.append(a.table(['Parameter','Configured value'],model.configured,'No matching saved configuration is available.'));
-    for (const module of model.modules) equipment.append(a.element('h3',module.label),a.table(['Name',...module.columns],module.rows,'None configured.'));
-    const definitions = a.card('Driver definitions');
-    definitions.append(a.element('p','Source: installed plugin metadata. Supported choices do not establish which hardware is connected.','note'));
-    for (const profile of model.definitions) definitions.append(a.element('h3',profile.label || profile.driver),
-      a.details([['Installed driver',profile.driver]]),a.table(['Parameter','Supported choices'],profile.rows));
-    const connection = a.card('Connection information');
-    connection.append(a.element('p','Serial ports, device network addresses, hardware identifiers and firmware versions are not collected by the current integration.','empty'));
-    connection.append(a.element('p','Hardware discovery and online service settings remain future extensions.','note'));
-    a.content.replaceChildren(a.activation.render(),equipment,definitions,connection);
+    const a=this.app,model=this.model(),section=a.navigation.constructor.resolve(location.hash).section;
+    a.interaction.view('system',{loadState:'ready',section});
+    const nodes=[];
+    if(section==='drivers') {
+      const definitions=a.card('Installed drivers and capabilities');
+      definitions.append(a.element('p','Supported choices come from installed plugin metadata. They do not establish which hardware is connected.','note'));
+      for(const profile of model.definitions) definitions.append(a.element('h3',profile.label || profile.driver),
+        a.details([['Installed driver',profile.driver]]),a.table(['Parameter','Supported choices'],profile.rows));
+      for(const profile of a.configProfiles) {
+        const catalogue=profile.layout?.catalogue || [];
+        if(catalogue.length) definitions.append(a.element('h3',profile.label || profile.driver),
+          a.table(['Layout model','Category'],catalogue.map(row=>[row.label || row.id,row.category])));
+      }
+      nodes.push(definitions);
+    } else if(section==='runtime') {
+      const runtime=a.card('Declared runtime environment'),configuration=model.record?.configuration;
+      runtime.append(a.details([['Execution mode',configuration?.mode],['Execution strategy',configuration?.execution_strategy],
+        ['Simulation backend',configuration?.agent?.simulation_backend]]),
+        a.element('p','These values require a matching saved active configuration. Per-run evidence identifies the backend actually used.','note'));
+      const feedback=a.card('Execution feedback');feedback.append(a.element('p','Drivers may return an operation receipt or one receipt for an entire batch. Inspect each run’s evidence coverage; intermediate hardware progress is not inferred.','note'));
+      const versions=a.card('Version details');versions.append(a.badge('planned'),a.element('p','A unified OS and driver version report is not exposed by the current console interface.','note'));
+      nodes.push(runtime,feedback,versions);
+    } else if(section==='service') {
+      const service=a.card('Resident service');service.append(a.details([['Status',a.activation.view?.host.status],
+        ['Blocked run',a.activation.view?.host.blocked_run],['Blocking reason',a.activation.view?.host.blocked_reason]]));
+      const connection=a.card('Agent and hardware connection');connection.append(a.badge('planned'),
+        a.element('p','Agent connection diagnostics are not exposed by the console yet. Serial ports, hardware identifiers and firmware versions are not collected.','note'));
+      nodes.push(service,connection);
+    } else {
+      const equipment=a.card('Configured equipment');
+      equipment.append(a.element('p','Source: saved active configuration. These are declared settings, not detected hardware.','note'),
+        a.table(['Parameter','Configured value'],model.configured,'No matching saved configuration is available.'));
+      for(const module of model.modules) equipment.append(a.element('h3',module.label),a.table(['Name',...module.columns],module.rows,'None configured.'));
+      nodes.push(a.activation.render(),equipment);
+    }
+    a.content.replaceChildren(...nodes);
   }
 }

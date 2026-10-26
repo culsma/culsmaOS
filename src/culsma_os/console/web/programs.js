@@ -55,7 +55,7 @@ export class ConsolePrograms {
   render() {
     if (location.hash !== '#programs') return;
     const a = this.app;
-    document.querySelector('#title').textContent = 'Submit a program';
+    document.querySelector('#title').textContent = 'New Run';
     a.selectPage('programs');
     document.querySelector('#connection').replaceChildren(a.element('span','Local library','badge neutral'));
     document.querySelector('#observed').textContent = 'Program library · explicit submission to the selected resident service';

@@ -20,7 +20,7 @@ export class ConsoleInteraction {
 
   view(page, values = {}) {
     if (this.content.dataset.page !== page) {
-      for (const key of ['hostState','runId','runState','draftId','revision','dirty','validationState','programId','snapshotId']) delete this.content.dataset[key];
+      for (const key of ['hostState','runId','runState','draftId','revision','dirty','validationState','programId','snapshotId','section','stage']) delete this.content.dataset[key];
     }
     this.content.dataset.page = page;
     for (const [key,value] of Object.entries(values)) {

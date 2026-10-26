@@ -135,9 +135,20 @@ its coverage label. Missing receipts and unmatched registrations stay explicit.
 Evidence and registration share one read snapshot; the run summary is independent.
 The view does not claim hardware timing or include every semantic declaration.
 
+### Console navigation
+
+The sidebar groups existing controls into **Workstation**, **Experiment Runs** and
+**System Information**. Workstation separates current resource records from layout
+configuration. Experiment Runs separates new submissions, active runs and history;
+each run has **Preparation**, **Execution** and **Results** stages. Results collapse
+raw evidence by default. Stage links are bookmarkable; page navigation issues no
+execution commands. System Information is read-only. Unavailable module, Agent-log
+and version detail views are explicitly marked planned. Narrow screens use the
+**Navigation** toggle, and run stages support keyboard arrow keys.
+
 ### Configuration drafts
 
-Open **Configuration**, choose an installed profile and use **New from profile**
+Open **Workstation → Layout → Advanced**, choose an installed profile and use **New from profile**
 or import a device configuration JSON file. Edit fields, save a draft, validate
 its saved revision and export the validated JSON. Labware and binding forms are
 structured; modules, routes and policy remain available through Advanced JSON.
@@ -146,11 +157,12 @@ installed labware definitions. It is not program preflight or a hardware check.
 
 Drafts default to `run-artifacts/console/drafts.sqlite3`; select a different local
 store with `--drafts-db PATH`. Saving/exporting never activates configuration or
-changes recorded tips, positions or reservations. Use an exported file explicitly
-when starting `serve`; existing configuration and ownership guards still apply.
+changes recorded tips, positions or reservations. Apply a validated saved revision explicitly to an idle simulated station, or use
+an exported file when starting `serve`. Offline-only profiles cannot be activated;
+existing configuration and ownership guards still apply.
 
 Draft and program commands use an ephemeral same-origin, console-process credential.
-It expires when the console restarts; draft operations cannot activate configuration.
+It expires when the console restarts; saving a draft does not activate it.
 This is a single-user loopback console, not a multi-user login system. The external
 driver must provide `configuration_profile()`; older plugins remain usable for
 execution inspection but cannot validate/export configuration drafts.
@@ -252,7 +264,7 @@ fingerprint and require reloading when another client changes the plan.
 
 ## Import an existing instrument layout
 
-In **Configuration -> Advanced**, choose the installed profile and select a file
+In **Workstation → Layout → Advanced**, choose the installed profile and select a file
 under **Import instrument layout**. Parsing and conversion belong to the driver;
 the console only consumes the configuration import report. Import is a preview:
 it changes neither the station nor saved drafts. Review diagnostics and retained

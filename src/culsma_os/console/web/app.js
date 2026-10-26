@@ -1,3 +1,5 @@
+import {ConsoleNavigation} from './navigation.js';
+import {ConsoleWorkstation} from './workstation.js';
 import {ConsoleRunSetup} from './setup.js';
 import {ConsolePrograms} from './programs.js';
 import {ConsoleInteraction} from './interaction.js';
@@ -27,11 +29,13 @@ class StationConsoleApp {
     this.activation = new ConsoleActivation(this);
     this.configuration = new ConsoleConfiguration(this);
     this.systemInformation = new ConsoleSystemInformation(this);
+    this.navigation = new ConsoleNavigation(this);
+    this.workstation = new ConsoleWorkstation(this);
   }
 
   start() {
     this.button.addEventListener('click', () => this.refresh());
-    window.addEventListener('hashchange', () => { window.scrollTo({top: 0}); this.refresh(); });
+    window.addEventListener('hashchange', () => { this.renderKey=null; window.scrollTo({top: 0}); this.navigation.select(); this.refresh(); });
     document.addEventListener('visibilitychange', () => {
       clearTimeout(this.timer);
       if (!document.hidden) this.refresh();
@@ -119,59 +123,16 @@ class StationConsoleApp {
   }
 
   renderStation(data) {
-    const host = data.host;
-    this.interaction.view('station',{loadState:'ready',hostState:host.status});
-    const inspection = data.devices;
-    const devices = inspection.devices || [];
-    const runs = data.runs || [];
-    const resources = inspection.resources || {};
-    const summary = this.element('div', '', 'grid');
-    const service = this.card('Resident service');
-    service.append(this.badge(host.blocked_run ? 'blocked' : host.status));
-    service.append(this.element('p', host.blocked_run ? 'Queue retained' : 'Explicit host connection', 'note'));
-    const count = this.card('Programs');
-    count.append(this.element('div', runs.length, 'metric'), this.element('div', 'Recorded runs in this resident queue', 'label'));
-    const owned = this.card('Resource ownership');
-    owned.append(this.element('div', Array.isArray(resources.station_reservations) ? resources.station_reservations.length : '—', 'metric'));
-    owned.append(this.element('div', 'Recorded station reservations', 'label'));
-    summary.append(service, count, owned);
-    const deviceCards = this.element('div', '', 'device-grid');
-    for (const device of devices) {
-      const card = this.card(device.device_id);
-      card.append(this.details([
-        ['Mode', device.mode], ['Evidence accounting', this.badge(device.evidence_accounting)],
-        ['Position basis', this.badge(device.positions?.status)],
-        ['Unresolved operations', Array.isArray(device.unresolved_operations) ? device.unresolved_operations.length : '—']
-      ]));
-      const consumables = Object.entries(device.consumables || {});
-      if (consumables.length) {
-        card.append(this.element('h3', 'Consumables · recorded bounds'));
-        card.append(this.table(['Resource', 'Known used', 'Available from records'], consumables.map(([name, item]) => [
-          name, item.known_consumed, item.available_from_records === null ? 'Unknown' : item.available_from_records
-        ])));
-      }
-      card.append(this.element('h3', 'Plate positions'));
-      card.append(this.table(['Labware', 'Recorded position'], Object.entries(device.positions?.current || {}),
-        device.positions?.status === 'unknown' ? 'Current positions are unknown. Isolation is retained.' : 'No positions declared.'));
-      card.append(this.element('p', 'Device state comes from OS records; this is not a hardware connection test.', 'note'));
-      deviceCards.append(card);
-    }
-    const programCard = this.card('Resident programs');
-    programCard.append(this.runTable(runs));
-    this.content.replaceChildren(summary, deviceCards, programCard);
-    if (!devices.length) {
-      const note = this.element('p', 'No device records yet. An idle, newly started service may not have registered its first device.', 'empty');
-      deviceCards.append(note);
-    }
-    this.showAlert(host.blocked_run ? `Run ${host.blocked_run} retains the queue: ${this.display(host.blocked_reason)}. Inspect its evidence before taking any further action.` : host.worker_error);
+    this.workstation.render(data,ConsoleNavigation.resolve(location.hash).section);
   }
 
   renderRuns(data) {
-    this.interaction.view('runs',{loadState:'ready'});
-    const card = this.card('Programs in the resident queue');
-    card.append(this.runTable(data.runs || []));
-    this.content.replaceChildren(card);
-    this.showAlert(null);
+    const history=ConsoleNavigation.resolve(location.hash).section==='history';
+    this.interaction.view('runs',{loadState:'ready',section:history ? 'history':'active'});
+    const card=this.card(history ? 'Run History':'Active Runs and Queue');
+    if(!history) {const link=this.element('a','New Run','action-link');link.href='#programs';card.append(link);}
+    card.append(this.runTable(ConsoleNavigation.runs(data.runs || [],history)));
+    this.content.replaceChildren(card);this.showAlert(null);
   }
 
   recordDetails(label, value) {
@@ -272,7 +233,24 @@ class StationConsoleApp {
       material.append(this.element('p', 'No registered material snapshot is available for this run.', 'empty'));
     }
     const diagnostics = (result.alerts || []).map(item => typeof item === 'string' ? item : item.code || 'Diagnostic');
-    this.content.replaceChildren(back, state, this.programs.renderControls(data), this.setup.render(data), semantic, this.renderEvidence(data.execution_evidence), material);
+    const phase=ConsoleNavigation.phase(data,ConsoleNavigation.resolve(location.hash).section);
+    const panels={};
+    for(const name of ['preparation','execution','results']) {
+      const panel=this.element('section','','run-stage');panel.id='run-panel-'+name;
+      panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby','run-tab-'+name);
+      panel.hidden=name!==phase;panel.dataset.stage=name;panels[name]=panel;
+    }
+    panels.preparation.append(this.setup.render(data));
+    if(!panels.preparation.querySelector('[data-region="run-setup"]')) panels.preparation.append(this.card('Preparation'),this.element('p','No loading plan is recorded for this run.','note'));
+    const feedback=this.card('Execution feedback');
+    feedback.append(this.badge(data.status),this.element('p','Progress follows the feedback supplied by the driver. A batch receipt covers the completed batch; individual hardware progress is not inferred.','note'));
+    const logs=this.element('details');logs.append(this.element('summary','Agent task and logs · planned'),this.element('p','A console log interface is not available yet. Recorded execution receipts are available in Results.','note'));feedback.append(logs);
+    panels.execution.append(this.programs.renderControls(data),feedback);
+    const proof=this.element('details','','evidence-disclosure');proof.append(this.element('summary','Execution evidence and receipts'),this.renderEvidence(data.execution_evidence));
+    panels.results.append(semantic,material,proof);
+    this.content.dataset.stage=phase;
+    this.content.replaceChildren(back,state,this.navigation.runTabs(data,phase),...Object.values(panels));
+    this.navigation.restoreFocus();
     this.showAlert(data.error || data.body_error || (diagnostics.length ? diagnostics.join(' · ') : null));
   }
 
@@ -296,14 +274,10 @@ class StationConsoleApp {
     } finally { clearTimeout(timeout); }
   }
 
-  selectPage(page) {
-    for (const id of ['station','runs','configuration','programs','system']) {
-      document.querySelector(`#${id}-tab`).setAttribute('aria-current',id === page ? 'page':'false');
-    }
-  }
+  selectPage(page) { this.navigation.select(); }
 
   async refreshConfiguration() {
-    const route = location.hash;const page = route === '#system' ? 'system':'configuration';
+    const route = location.hash;const page = ConsoleNavigation.resolve(route).page;
     this.interaction.view(page,{loadState:'loading'});
     this.busy = true;this.syncBusy();
     this.button.disabled = true;
@@ -321,7 +295,7 @@ class StationConsoleApp {
       let configurationError = null;
       try { await this.configuration.readCurrent(page === 'configuration'); } catch (error) { configurationError = error.message; }
       if (location.hash !== route) { this.pending = true; return; }
-      document.querySelector('#title').textContent = page === 'system' ? 'System Information':'Configuration';
+      document.querySelector('#title').textContent = page === 'system' ? ConsoleNavigation.resolve(route).label:'Workstation Layout';
       this.selectPage(page);
       document.querySelector('#connection').replaceChildren(this.badge('Connected'));
       document.querySelector('#observed').textContent = page === 'system' ? 'Saved configuration and installed plugin definitions · no hardware discovery':'Layout settings · explicit changes to the current configuration';
@@ -467,7 +441,7 @@ class StationConsoleApp {
   }
 
   renderSystemInformation() {
-    if (location.hash !== '#system') return;
+    if (ConsoleNavigation.resolve(location.hash).page !== 'system') return;
     this.systemInformation.render();
   }
 
@@ -480,18 +454,19 @@ class StationConsoleApp {
     clearTimeout(this.timer);
     if (document.hidden) return;
     if (this.busy) { this.pending = true; return; }
-    if (['#configuration','#system'].includes(location.hash)) { await this.refreshConfiguration(); return; }
+    if (['configuration','system'].includes(ConsoleNavigation.resolve(location.hash).page)) { await this.refreshConfiguration(); return; }
     if (location.hash === '#programs') { await this.programs.refresh(); return; }
     this.busy = true;this.syncBusy();
     this.button.disabled = true;
     this.selectPage(location.hash === '#runs' ? 'runs':'station');
     const route = location.hash || '#station';
-    this.interaction.view(route.startsWith('#run/') ? 'run':route === '#runs' ? 'runs':'station',{loadState:'loading'});
-    const isRun = route.startsWith('#run/');
+    this.interaction.view(route.startsWith('#run/') ? 'run':ConsoleNavigation.resolve(route).page === 'runs' ? 'runs':'station',{loadState:'loading'});
+    const navigation=ConsoleNavigation.resolve(route);
+    const isRun = navigation.page==='run';
     const controller = new AbortController();
     const deadline = setTimeout(() => controller.abort(), 12000);
     try {
-      const resource = isRun ? `/runs/${encodeURIComponent(decodeURIComponent(route.slice(5)))}` : route === '#runs' ? '/runs' : '/station';
+      const resource = isRun ? `/runs/${encodeURIComponent(navigation.runId)}` : navigation.page === 'runs' ? '/runs' : '/station';
       const response = await fetch(`/api/v1${resource}`, { cache: 'no-store', signal: controller.signal });
       const snapshot = await response.json();
       if (route !== (location.hash || '#station')) { this.pending = true; return; }
@@ -500,11 +475,10 @@ class StationConsoleApp {
         failure.httpStatus = response.status;
         throw failure;
       }
-      this.interaction.view(isRun ? 'run':route === '#runs' ? 'runs':'station',{loadState:'ready'});
+      this.interaction.view(isRun ? 'run':ConsoleNavigation.resolve(route).page === 'runs' ? 'runs':'station',{loadState:'ready'});
       this.lastObserved = snapshot.observed_at;
-      document.querySelector('#title').textContent = isRun ? 'Run detail' : route === '#runs' ? 'Programs' : 'Station overview';
-      document.querySelector('#station-tab').setAttribute('aria-current', route === '#station' ? 'page' : 'false');
-      document.querySelector('#runs-tab').setAttribute('aria-current', route !== '#station' ? 'page' : 'false');
+      document.querySelector('#title').textContent = isRun ? 'Run Details' : navigation.label || 'Workstation';
+      this.navigation.select();
       document.querySelector('#connection').className = '';
       document.querySelector('#connection').replaceChildren(this.badge('Connected'));
       document.querySelector('#observed').textContent = `Read ${new Date(snapshot.observed_at).toLocaleTimeString()} · OS records · separate snapshots`;
@@ -516,12 +490,12 @@ class StationConsoleApp {
       const key = route + JSON.stringify(snapshot.data) + (this.programs.controlMessages.get(snapshot.data.run_id) || '') + JSON.stringify(this.setup.plans.get(snapshot.data.run_id));
       if (key !== this.renderKey) {
         if (isRun) this.renderRun(snapshot.data);
-        else if (route === '#runs') this.renderRuns(snapshot.data);
+        else if (navigation.page === 'runs') this.renderRuns(snapshot.data);
         else this.renderStation(snapshot.data);
         this.renderKey = key;
       }
     } catch (error) {
-      this.renderKey = null;this.interaction.view(isRun ? 'run':route === '#runs' ? 'runs':'station',{loadState:'unavailable'});
+      this.renderKey = null;this.interaction.view(isRun ? 'run':ConsoleNavigation.resolve(route).page === 'runs' ? 'runs':'station',{loadState:'unavailable'});
       document.querySelector('#connection').className = '';
       const disconnected = error.httpStatus === 503 || error instanceof TypeError || error.name === 'AbortError';
       document.querySelector('#connection').replaceChildren(this.badge(disconnected ? 'Disconnected' : 'Read unavailable'));
@@ -533,7 +507,7 @@ class StationConsoleApp {
       this.busy = false;this.syncBusy();
       this.button.disabled = false;
       if (this.pending) { this.pending = false; this.refresh(); }
-      else if (!document.hidden && !['#configuration','#programs','#system'].includes(location.hash)) this.timer = setTimeout(() => this.refresh(), 2500);
+      else if (!document.hidden && !['configuration','programs','system'].includes(ConsoleNavigation.resolve(location.hash).page)) this.timer = setTimeout(() => this.refresh(), 2500);
     }
   }
 }

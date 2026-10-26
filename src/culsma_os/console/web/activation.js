@@ -32,9 +32,9 @@ export class ConsoleActivation {
     this.timer = setTimeout(async () => {
       try {
         await this.refresh();
-        if (['#configuration','#system'].includes(location.hash)) {
+        if (location.hash === '#configuration' || location.hash.startsWith('#system')) {
           try { await this.app.configuration.readCurrent(location.hash === '#configuration'); } catch (error) { this.app.showAlert(error.message); }
-          if (location.hash === '#system') this.app.renderSystemInformation();else this.app.renderConfiguration();
+          if (location.hash.startsWith('#system')) this.app.renderSystemInformation();else this.app.renderConfiguration();
         }
       } catch (error) {
         this.app.interaction.result('configuration.apply','unavailable','Configuration status unavailable. The request ID is retained; no automatic apply retry.');
