@@ -9,9 +9,10 @@ export class ConsoleLabware {
     if(becameReady && this.open && !this.catalogue && !this.busy && this.desired)
       queueMicrotask(()=>{if(this.open && this.envelope.editing_ready!==false)this.edit(this.desired);});
   }
-  update() {
+  update(focus=null) {
     const active=document.activeElement;
-    if(active?.closest('[data-region="labware-editor"]')) this.focus={field:active.dataset.field,action:active.dataset.action};
+    if(focus) this.focus=focus;
+    else if(active?.closest('[data-region="labware-editor"]')) this.focus={field:active.dataset.field,action:active.dataset.action};
     this.redraw();
   }
   selectItem(id,model) {return this.edit({item:id,model});}
@@ -62,7 +63,7 @@ export class ConsoleLabware {
       const focus=this.focus;
       const control=[...dialog.querySelectorAll('[data-field],[data-action]')].find(node=>
         focus?.field ? node.dataset.field===focus.field:focus?.action && node.dataset.action===focus.action);
-      if(control && !control.disabled) control.focus({preventScroll:true});
+      if(control && !control.disabled) {control.focus({preventScroll:true});if(focus?.action==='workstation.apply-labware')control.scrollIntoView({block:'nearest'});}
     });
   }
   choice(label,value,choices,onChange,field) {
@@ -119,9 +120,9 @@ export class ConsoleLabware {
           preview.append(a.element('h3','Checked proposal · not applied'));
           const change=this.proposal.change;
           preview.append(a.details([['Position',target.label],['Change',change.action],['Contents',change.action==='remove' ? 'Empty':models.find(m=>m.id===change.model)?.label || change.model]]),
-            a.element('p','Apply to update this position in the layout. Physical loading is confirmed before an experiment runs.','note'));
+            a.element('p',change.action==='remove' ? 'This position has not changed yet. Confirm removal below to leave it empty.':'Apply to update this position in the layout. Physical loading is confirmed before an experiment runs.','note'));
           if(this.proposal.impact?.length) {const effects=a.element('section');effects.setAttribute('aria-label','Related configuration changes');effects.append(a.element('h4','Related configuration changes'));const list=a.element('ul');for(const item of this.proposal.impact)list.append(a.element('li',item));effects.append(list);preview.append(effects);}
-          const apply=a.configButton('Apply checked change',()=>this.apply(),'',{action:'workstation.apply-labware',entity:this.proposal.draft.draft_id});
+          const apply=a.configButton(change.action==='remove' ? 'Confirm removal':'Apply checked change',()=>this.apply(),'',{action:'workstation.apply-labware',entity:this.proposal.draft.draft_id});
           apply.disabled=this.busy || this.envelope.editing_ready===false;if(!this.pending && !a.activation.pending())preview.append(apply);box.append(preview);
         }
       }
@@ -147,7 +148,7 @@ export class ConsoleLabware {
       const proposal=await this.app.configurationFetch('/api/v1/configuration/labware',{action:'prepare',expected_fingerprint:identity,change});
       if(identity===this.envelope.configuration_fingerprint) this.proposal={...proposal,change};
     } catch(error) {this.error=error.message;}
-    finally {this.busy=false;this.update();}
+    finally {this.busy=false;this.update(this.proposal?.change.action==='remove' ? {action:'workstation.apply-labware'}:null);}
   }
   async apply() {
     if(this.busy || !this.proposal) return;

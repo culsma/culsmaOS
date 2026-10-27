@@ -64,7 +64,7 @@ try {
  await dialog.getByLabel('Contents',{exact:true}).selectOption('empty');
  await dialog.getByRole('button',{name:'Check removal',exact:true}).click();
  await dialog.getByRole('heading',{name:'Checked proposal · not applied',exact:true}).waitFor();
- await dialog.getByRole('button',{name:'Apply checked change',exact:true}).click();
+ await dialog.getByRole('button',{name:'Confirm removal',exact:true}).click();
  await empty.waitFor();await dialog.waitFor({state:'detached'});
  // Existing vendor models, not just newly placed items, can be changed in place.
  await page.getByRole('button',{name:'Inspect deck item HT_L_0003 · carrier CAR_5TIP_0001 · site 2',exact:true}).click();
@@ -90,7 +90,7 @@ try {
  await original.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
  await dialog.getByLabel('Contents',{exact:true}).selectOption('empty');
  await dialog.getByRole('button',{name:'Check removal',exact:true}).click();
- await dialog.getByRole('button',{name:'Apply checked change',exact:true}).click();
+ await dialog.getByRole('button',{name:'Confirm removal',exact:true}).click();
  const cleared=page.getByRole('button',{name:'Place labware · CAR_5TIP_0001 · site 2',exact:true});
  await cleared.waitFor();await dialog.waitFor({state:'detached'});
  await cleared.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
@@ -118,7 +118,21 @@ try {
  await dialog.getByRole('region',{name:'Related configuration changes',exact:true}).getByText(/Clear liquid capacity/).waitFor();
  await dialog.getByRole('button',{name:'Close',exact:true}).click();
  await dialog.waitFor({state:'detached'});
- if(actions.filter(a=>a==='apply').length!==5)throw new Error('Unexpected application count');
+ // Reproduce C1 site 1 exactly: reviewing alone changes nothing; confirmation persists.
+ const firstTip=page.getByRole('button',{name:'Inspect deck item TIP_50ul_L_0001 · carrier CAR_5TIP_0001 · site 1',exact:true});
+ await firstTip.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
+ await dialog.getByLabel('Contents',{exact:true}).selectOption('empty');
+ await dialog.getByRole('button',{name:'Check removal',exact:true}).click();
+ const confirm=dialog.getByRole('button',{name:'Confirm removal',exact:true});await confirm.waitFor();
+ if(actions.filter(a=>a==='apply').length!==5)throw new Error('Review alone applied removal');
+ await dialog.getByText('This position has not changed yet. Confirm removal below to leave it empty.',{exact:true}).waitFor();
+ if(!(await confirm.evaluate(node=>node===document.activeElement)))throw new Error('Removal confirmation was not focused');
+ await confirm.click();
+ const firstEmpty=page.getByRole('button',{name:'Place labware · CAR_5TIP_0001 · site 1',exact:true});
+ await firstEmpty.waitFor();await dialog.waitFor({state:'detached'});
+ await page.reload();await firstEmpty.waitFor();
+ await page.locator('[data-region=workstation-layout]').screenshot({path:output.replace('.png','-c1-empty.png'),animations:'disabled'});
+ if(actions.filter(a=>a==='apply').length!==6)throw new Error('Unexpected application count');
  if(actions.includes('submit'))throw new Error('Editing submitted a program');
  if(errors.length)throw new Error(errors.join('\n'));
  if(!durations.length || Math.max(...durations)>3000)throw new Error('Layout edit request exceeded 3 seconds: '+Math.max(...durations));
