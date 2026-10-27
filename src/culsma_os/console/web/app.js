@@ -122,19 +122,6 @@ class StationConsoleApp {
     this.alert.hidden = !message;
   }
 
-  renderStation(data) {
-    this.workstation.render(data,ConsoleNavigation.resolve(location.hash).section);
-  }
-
-  renderRuns(data) {
-    const history=ConsoleNavigation.resolve(location.hash).section==='history';
-    this.interaction.view('runs',{loadState:'ready',section:history ? 'history':'active'});
-    const card=this.card(history ? 'Run History':'Active Runs and Queue');
-    if(!history) {const link=this.element('a','New Run','action-link');link.href='#programs';card.append(link);}
-    card.append(this.runTable(ConsoleNavigation.runs(data.runs || [],history)));
-    this.content.replaceChildren(card);this.showAlert(null);
-  }
-
   recordDetails(label, value) {
     const disclosure = this.element('details', '', 'record-details');
     const key = [label, value?.run_id, value?.effect_id, value?.step_id].join(':');
@@ -200,10 +187,7 @@ class StationConsoleApp {
     return card;
   }
 
-  renderRun(data) {
-    const back = this.element('a', '← All runs', 'back');
-    back.href = '#runs';
-    this.interaction.identify(back,{action:'navigate.runs'});
+  renderRun(data, target = this.content) {
     this.interaction.view('run',{loadState:'ready',runId:data.run_id,runState:data.status});
     const result = data.result || {};
     const os = result.os || {};
@@ -237,10 +221,15 @@ class StationConsoleApp {
     const panels={};
     for(const name of ['preparation','execution','results']) {
       const panel=this.element('section','','run-stage');panel.id='run-panel-'+name;
-      panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby','run-tab-'+name);
-      panel.hidden=name!==phase;panel.dataset.stage=name;panels[name]=panel;
+      panel.setAttribute('aria-label',name[0].toUpperCase()+name.slice(1));
+      panel.dataset.stage=name;panels[name]=panel;
     }
-    panels.preparation.append(this.setup.render(data));
+    const preparation = this.setup.render(data);
+    if (data.status === 'awaiting_setup') panels.preparation.append(preparation);
+    else {
+      const saved = this.element('details');saved.append(this.element('summary','Loading plan'),preparation);
+      panels.preparation.append(saved);
+    }
     if(!panels.preparation.querySelector('[data-region="run-setup"]')) panels.preparation.append(this.card('Preparation'),this.element('p','No loading plan is recorded for this run.','note'));
     const feedback=this.card('Execution feedback');
     feedback.append(this.badge(data.status),this.element('p','Progress follows the feedback supplied by the driver. A batch receipt covers the completed batch; individual hardware progress is not inferred.','note'));
@@ -249,8 +238,7 @@ class StationConsoleApp {
     const proof=this.element('details','','evidence-disclosure');proof.append(this.element('summary','Execution evidence and receipts'),this.renderEvidence(data.execution_evidence));
     panels.results.append(semantic,material,proof);
     this.content.dataset.stage=phase;
-    this.content.replaceChildren(back,state,this.navigation.runTabs(data,phase),...Object.values(panels));
-    this.navigation.restoreFocus();
+    target.replaceChildren(state,...Object.values(panels));
     this.showAlert(data.error || data.body_error || (diagnostics.length ? diagnostics.join(' · ') : null));
   }
 
@@ -295,7 +283,7 @@ class StationConsoleApp {
       let configurationError = null;
       try { await this.configuration.readCurrent(page === 'configuration'); } catch (error) { configurationError = error.message; }
       if (location.hash !== route) { this.pending = true; return; }
-      document.querySelector('#title').textContent = page === 'system' ? ConsoleNavigation.resolve(route).label:'Workstation Layout';
+      document.querySelector('#title').textContent = page === 'system' ? 'System Info':'System Settings';
       this.selectPage(page);
       document.querySelector('#connection').replaceChildren(this.badge('Connected'));
       document.querySelector('#observed').textContent = page === 'system' ? 'Saved configuration and installed plugin definitions · no hardware discovery':'Layout settings · explicit changes to the current configuration';
@@ -454,61 +442,10 @@ class StationConsoleApp {
     clearTimeout(this.timer);
     if (document.hidden) return;
     if (this.busy) { this.pending = true; return; }
-    if (['configuration','system'].includes(ConsoleNavigation.resolve(location.hash).page)) { await this.refreshConfiguration(); return; }
-    if (location.hash === '#programs') { await this.programs.refresh(); return; }
-    this.busy = true;this.syncBusy();
-    this.button.disabled = true;
-    this.selectPage(location.hash === '#runs' ? 'runs':'station');
-    const route = location.hash || '#station';
-    this.interaction.view(route.startsWith('#run/') ? 'run':ConsoleNavigation.resolve(route).page === 'runs' ? 'runs':'station',{loadState:'loading'});
-    const navigation=ConsoleNavigation.resolve(route);
-    const isRun = navigation.page==='run';
-    const controller = new AbortController();
-    const deadline = setTimeout(() => controller.abort(), 12000);
-    try {
-      const resource = isRun ? `/runs/${encodeURIComponent(navigation.runId)}` : navigation.page === 'runs' ? '/runs' : '/station';
-      const response = await fetch(`/api/v1${resource}`, { cache: 'no-store', signal: controller.signal });
-      const snapshot = await response.json();
-      if (route !== (location.hash || '#station')) { this.pending = true; return; }
-      if (!response.ok || snapshot.schema !== 'culsma_console_v1') {
-        const failure = new Error(snapshot.error?.code || 'CONSOLE_RESPONSE_INVALID');
-        failure.httpStatus = response.status;
-        throw failure;
-      }
-      this.interaction.view(isRun ? 'run':ConsoleNavigation.resolve(route).page === 'runs' ? 'runs':'station',{loadState:'ready'});
-      this.lastObserved = snapshot.observed_at;
-      document.querySelector('#title').textContent = isRun ? 'Run Details' : navigation.label || 'Workstation';
-      this.navigation.select();
-      document.querySelector('#connection').className = '';
-      document.querySelector('#connection').replaceChildren(this.badge('Connected'));
-      document.querySelector('#observed').textContent = `Read ${new Date(snapshot.observed_at).toLocaleTimeString()} · OS records · separate snapshots`;
-      if (isRun) {
-        await this.programs.observeControl(snapshot.data.run_id);
-        await this.setup.observe(snapshot.data);
-      }
-      if (route !== (location.hash || '#station')) { this.pending = true; return; }
-      const key = route + JSON.stringify(snapshot.data) + (this.programs.controlMessages.get(snapshot.data.run_id) || '') + JSON.stringify(this.setup.plans.get(snapshot.data.run_id));
-      if (key !== this.renderKey) {
-        if (isRun) this.renderRun(snapshot.data);
-        else if (navigation.page === 'runs') this.renderRuns(snapshot.data);
-        else this.renderStation(snapshot.data);
-        this.renderKey = key;
-      }
-    } catch (error) {
-      this.renderKey = null;this.interaction.view(isRun ? 'run':ConsoleNavigation.resolve(route).page === 'runs' ? 'runs':'station',{loadState:'unavailable'});
-      document.querySelector('#connection').className = '';
-      const disconnected = error.httpStatus === 503 || error instanceof TypeError || error.name === 'AbortError';
-      document.querySelector('#connection').replaceChildren(this.badge(disconnected ? 'Disconnected' : 'Read unavailable'));
-      document.querySelector('#observed').textContent = this.lastObserved ? `Last successful read: ${new Date(this.lastObserved).toLocaleTimeString()}` : 'No snapshot received';
-      this.showAlert(error.message === 'CONSOLE_HOST_UNAVAILABLE' ? 'The selected resident service is unavailable. Start it explicitly with culsma-os serve. The console does not start or resume device execution.' : `Read unavailable: ${error.message}`);
-      this.content.replaceChildren(this.element('p', 'No current snapshot. Existing station records are unchanged.', 'empty'));
-    } finally {
-      clearTimeout(deadline);
-      this.busy = false;this.syncBusy();
-      this.button.disabled = false;
-      if (this.pending) { this.pending = false; this.refresh(); }
-      else if (!document.hidden && !['configuration','programs','system'].includes(ConsoleNavigation.resolve(location.hash).page)) this.timer = setTimeout(() => this.refresh(), 2500);
+    if (['configuration','system'].includes(ConsoleNavigation.resolve(location.hash).page)) {
+      await this.refreshConfiguration();return;
     }
+    await this.workstation.refresh();
   }
 }
 

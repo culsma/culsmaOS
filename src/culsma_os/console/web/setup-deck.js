@@ -68,11 +68,17 @@ export class RunSetupDeck {
         if (options.stacked) {
           const stack=carrier.placements.filter(p=>p.site===site),slot=app.element('div','','setup-deck-stack');slot.dataset.site=site;
           slot.append(app.element('span',`Site ${site}`,'setup-deck-stack-label'));
-          if(!stack.length) slot.append(app.element('span','—','note'));
+          if(!stack.length) {
+            if(options.onSelectSite) {
+              const empty=app.configButton('＋',()=>options.onSelectSite(carrier.id,site),'',
+                {action:'workstation.select-labware-site',entity:carrier.id+'/'+site});
+              empty.setAttribute('aria-label',`Place labware · ${carrier.id} · site ${site}`);slot.append(empty);
+            } else slot.append(app.element('span','—','note'));
+          }
           for(const placed of stack) {
             const required=items.some(item=>item.id===placed.id);
             const cell=app.element(required ? 'button':'div',carrier.span<3 ? site:placed.id,'setup-deck-site');
-            cell.dataset.labwareId=placed.id;cell.dataset.required=String(required);cell.dataset.association=placed.association;
+            cell.dataset.labwareId=placed.id;cell.dataset.required=String(required || options.highlighted?.includes(placed.id));cell.dataset.association=placed.association;
             cell.title=placed.id;cell.setAttribute('aria-label',`Inspect deck item ${placed.id} · carrier ${carrier.id} · site ${site}`);
             if(required) {
               cell.type='button';cell.setAttribute('aria-pressed',String(placed.id===selected));
@@ -94,7 +100,11 @@ export class RunSetupDeck {
           app.interaction.identify(cell,{action:options.action || 'setup.inspect-deck-item',entity:item.id});
           cell.addEventListener('click',() => onInspect(item.id));
         } else {cell.dataset.required = 'false';cell.setAttribute('aria-label',`Site ${site} · ${label}; ${options.inactiveScope || 'outside this loading checklist'}`);}
-        sites.append(cell);
+        if(!placed && options.onSelectSite) {
+          const empty=app.configButton(`${site} · Place labware`,()=>options.onSelectSite(carrier.id,site),'',
+            {action:'workstation.select-labware-site',entity:carrier.id+'/'+site});
+          empty.setAttribute('aria-label',`Place labware · ${carrier.id} · site ${site}`);sites.append(empty);
+        } else sites.append(cell);
       });
       frame.append(sites);board.append(frame);
       legend.append(app.element('li',`${tag} · ${carrier.id} · tracks ${range} · ${carrier.model}`));

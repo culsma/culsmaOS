@@ -6,14 +6,21 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
         self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
         self.setup_requests = setup_requests
         self.layout = layout
+        self.labware = labware
+        self.setup_preview = setup_preview
 
     def execute(self, request):
+        if request.action in {'labware-catalogue', 'labware-prepare'}:
+            if self.labware is None:
+                raise ValueError('LABWARE_EDITOR_UNAVAILABLE')
+            self.require_idle_configuration()
+            return self.labware.execute(request)
         if request.action.startswith('setup-'):
             self.require_run(request.run_id)
             return self.setup_requests.execute(request)
@@ -54,6 +61,10 @@ class ResidentCommandInteractor:
                 raise ValueError('HOST_CONTROL_NOT_FOUND')
             return command
         self.status.require_admission()
+        if request.action == 'preview':
+            if self.setup_preview is None:
+                raise ValueError('SETUP_PREVIEW_UNAVAILABLE')
+            return self.setup_preview.preview(self.compile(request))
         if request.action == 'submit':
             return self.submit(request)
         if request.action in {'pause', 'resume', 'cancel'}:
@@ -82,7 +93,7 @@ class ResidentCommandInteractor:
         record = self.tasks.get(run_id)
         return {key: getattr(record, key) for key in ('run_id', 'status', 'revision', 'error', 'body_outcome', 'body_error')}
 
-    def submit(self, request):
+    def compile(self, request):
         if request.source is None:
             raise ValueError('HOST_SOURCE_REQUIRED')
         compiled = self.compilation.compile([request.source], request.material_state, request.library_roots)
@@ -93,6 +104,10 @@ class ResidentCommandInteractor:
         errors = [d for d in self.semantics.validate_plan(compiled.plan) if d.severity == 'error']
         if errors:
             raise ResidentAdmissionError('HOST_PLAN_UNSUPPORTED', (d.to_dict() for d in errors))
+        return compiled
+
+    def submit(self, request):
+        compiled = self.compile(request)
         identity = ((compiled.plan,compiled.state,request.configuration_fingerprint) if request.configuration_fingerprint is not None
                     else (compiled.plan,compiled.state))
         submission = QueueSubmission(request.request_id or str(uuid4()),

@@ -91,3 +91,15 @@ def test_driver_layout_is_frozen_with_the_same_plan_without_vendor_interpretatio
     catalogue['layout']['configuration']['device_specific']='changed'
     assert result['layout']['configuration']['device_specific']=='preserved'
     assert 'layout' not in WorkspacePlanningInteractor().plan([f.demand('a')],f.catalogue(f.location('rack')))
+
+
+def test_configured_preferences_can_be_overridden_and_incompatible_defaults_are_reported():
+    f=PlanningFixture
+    catalogue=f.catalogue(f.location('rack','1'),f.location('rack','2'))
+    catalogue['preferred_bindings']={'a':{'labware':'rack','well':'2'},'another-program':{'labware':'missing','well':'1'}}
+    planner=WorkspacePlanningInteractor()
+    assert planner.plan([f.demand('a')],catalogue)['bindings']['a']['well']=='2'
+    assert planner.plan([f.demand('a')],catalogue,{'preferred':{'a':{'labware':'rack','well':'1'}}})['bindings']['a']['well']=='1'
+    catalogue['preferred_bindings']['a']={'labware':'missing','well':'1'}
+    fallback=planner.plan([f.demand('a')],catalogue)
+    assert fallback['bindings']['a']['well']=='1' and not fallback['items'][0]['preferred_satisfied']

@@ -376,6 +376,15 @@ class ResidentCommandFactory:
         factory = self.applications.device_factory(context)
         layout_reader = getattr(factory, 'build_layout_reader', lambda: None)()
         layout = ConfiguredLayoutInteractor(layout_reader, configuration, context)
+        from .workspace_manager.interactors import ResidentLabwareInteractor
+        labware_editor = getattr(factory, 'build_labware_editor', lambda: None)()
+        labware = ResidentLabwareInteractor(labware_editor, configuration, context) if labware_editor else None
+        from .program_manager.interactors.setup import RunSetupPreviewInteractor
+        from .program_manager.interactors.setup_requirements import SetupRequirementsInteractor
+        from .workspace_manager.interactors import WorkspacePlanningInteractor
+        preview = RunSetupPreviewInteractor(getattr(factory, 'build_workspace_reader', lambda: None)(),
+            configuration, context, SetupRequirementsInteractor(RuntimeCheckpointCodecInteractor()),
+            WorkspacePlanningInteractor(), HostedRuntimeInteractor())
         return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
             HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
-            self.applications.build_device_inspector(context),configuration,setup_requests,layout)
+            self.applications.build_device_inspector(context),configuration,setup_requests,layout,labware,preview)

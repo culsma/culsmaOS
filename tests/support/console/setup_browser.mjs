@@ -12,7 +12,7 @@ try {
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`${url}#run/${runId}`);
   const card=page.locator('[data-region="run-setup"]');
-  await card.getByRole('heading',{name:'Prepare and load'}).waitFor();
+  await card.getByRole('heading',{name:'Load the experiment'}).waitFor();
   const before=await card.getAttribute('data-setup-fingerprint');
   await card.getByText('Placement preferences',{exact:true}).click();
   await card.locator('[data-field="/setup/entry.s0::alloc/mode"]').selectOption('fixed');
@@ -23,14 +23,15 @@ try {
   const after=JSON.parse(mcp.stdout).after;
   if(before===after) throw new Error('MCP did not revise the plan');
   await page.waitForFunction(fingerprint=>document.querySelector('[data-region="run-setup"]')?.dataset.setupFingerprint===fingerprint,after);
+  await card.getByText('Preparation history',{exact:true}).click();
   await card.getByText('local-mcp-process',{exact:true}).first().waitFor();
   await card.getByText('The shared plan changed. Reload current preferences before editing.',{exact:true}).waitFor();
   await card.getByRole('button',{name:'Reload current preferences',exact:true}).click();
   await card.locator('[data-field="/setup/entry.s0::alloc/mode"]').waitFor();
   await card.getByText('Placement preferences',{exact:true}).click();
   // Human starts loading and explicitly attests the exact current plan.
-  await card.getByRole('button',{name:'Begin loading · reserve station',exact:true}).click();
-  const confirm=card.getByRole('button',{name:'Confirm loaded · allow execution',exact:true});
+  await card.getByRole('button',{name:'Start loading',exact:true}).click();
+  const confirm=card.getByRole('button',{name:'Confirm loading and run',exact:true});
   await confirm.waitFor();
   if(await confirm.isEnabled()) throw new Error('Physical acknowledgement bypass');
   await card.getByText('Station reserved. Load every item above before confirming.',{exact:true}).waitFor();

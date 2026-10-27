@@ -216,7 +216,7 @@ export class ConsoleConfiguration {
     const a = this.app;const context = a.element('div','','configuration-context');
     const origin = a.activation.view?.active?.origin;
     context.append(a.element('span',origin ? `Current configuration: ${origin.title} · r${origin.revision}`:'Current configuration: service startup settings'));
-    const link = a.element('a','System Information');link.href = '#system';context.append(link);
+    const link = a.element('a','System Info');link.href = '#system';context.append(link);
     const nodes = [context];
     if (a.configWorking) nodes.push(this.renderEditor(),this.renderChanges());
     else nodes.push(a.element('p','No saved origin is available for this station. Import its configuration or start from an installed profile in Advanced.','notice'));
@@ -245,7 +245,13 @@ export class ConsoleSystemInformation {
   render() {
     const a=this.app,model=this.model(),section=a.navigation.constructor.resolve(location.hash).section;
     a.interaction.view('system',{loadState:'ready',section});
-    const nodes=[];
+    const tabs=a.element('nav','','section-tabs');tabs.setAttribute('aria-label','System information sections');
+    for(const [label,hash] of [['Platform and Equipment','#system'],['Drivers and Capabilities','#system/drivers'],['Runtime Environment','#system/runtime'],['Service and Connection','#system/service']]) {
+      const link=a.element('a',label);link.href=hash;
+      if((location.hash || '#system')===hash) link.setAttribute('aria-current','page');
+      tabs.append(link);
+    }
+    const nodes=[tabs];
     if(section==='drivers') {
       const definitions=a.card('Installed drivers and capabilities');
       definitions.append(a.element('p','Supported choices come from installed plugin metadata. They do not establish which hardware is connected.','note'));

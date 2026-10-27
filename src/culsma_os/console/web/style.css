@@ -14,7 +14,7 @@
 
 .operation-status small{display:block;font:11px ui-monospace,monospace;margin-top:5px;overflow-wrap:anywhere}
 
-.operation-status{position:sticky;top:12px;z-index:2;box-shadow:0 3px 10px #1930470c}
+.operation-status{position:relative;box-shadow:0 3px 10px #1930470c}
 
 /* Concrete configuration sections, shared by keyboard and browser-agent use. */
 .configuration-summary{font-size:13px;line-height:1.7;margin:10px 0;color:#344f68}
@@ -144,3 +144,14 @@ nav{flex-wrap:wrap;gap:12px 24px}
 .workstation-slot button[aria-pressed=true]{background:#dceafa;border-color:#7d9fc2}
 @media(max-width:540px){.workstation-slot-grid{gap:5px}.workstation-slot{padding:6px}.workstation-slot button{font-size:10px;padding:5px}}
 @media(min-width:1100px){[data-region=workstation-layout] .setup-deck-board{min-width:100%!important}}
+
+/* Three destinations; experiment stages share one workstation instead of tabs. */
+.workstation-disclosure {margin: 20px 0; border: 1px solid #d4dfeb; border-radius: 10px; background: #fff; padding: 18px;}
+.workstation-disclosure > summary {cursor: pointer; color: #214b70; font-weight: 650;}
+.workstation-disclosure[open] > summary {margin-bottom: 18px;}
+.section-tabs a {display: inline-block; padding: 10px 14px; border-radius: 7px; text-decoration: none;}
+.section-tabs a[aria-current=page] {background: #e1edf9; font-weight: 650;}
+[data-region=workstation-program][hidden], [data-region=workstation-layout-host][hidden] {display:none;}
+
+.labware-editor .config-field { max-width: 48rem; margin-bottom: 1rem; }
+.labware-proposal { border-top: 1px solid var(--border, #cbd5e1); margin-top: 1rem; padding-top: 1rem; }

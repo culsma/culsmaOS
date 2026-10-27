@@ -29,75 +29,81 @@ export class ConsolePrograms {
     return this.app.configurationFetch('/api/v1/programs',payload);
   }
 
-  async refresh() {
-    this.app.interaction.view('programs',{loadState:'loading'});
-    this.app.busy = true;this.app.syncBusy();
-    this.app.button.disabled = true;
-    try {
-      this.library = await this.request();
-      try { await this.app.activation.refresh(); } catch { this.app.activation.view = null; }
-      const drafts = await this.app.configurationFetch('/api/v1/configuration/drafts');
-      this.drafts = drafts.drafts || [];
-      if (this.bindingReview && !this.drafts.some(draft => draft.draft_id === this.bindingReview.draft_id && draft.revision === this.bindingReview.revision)) this.bindingReview = null;
-      if (location.hash !== '#programs') return;
-      this.app.showAlert(null);
-      this.render();
-    } catch (error) {
-      if (location.hash === '#programs') this.app.interaction.view('programs',{loadState:'unavailable'});
-      this.app.showAlert(error.message);
-    } finally {
-      this.app.busy = false;this.app.syncBusy();
-      this.app.button.disabled = false;
-      if (this.app.pending) { this.app.pending = false; this.app.refresh(); }
-    }
+  async load() {
+    this.library = await this.request();
+    try { await this.app.activation.refresh(); } catch { this.app.activation.view = null; }
+    const drafts = await this.app.configurationFetch('/api/v1/configuration/drafts');
+    this.drafts = drafts.drafts || [];
+    if (this.bindingReview && !this.drafts.some(draft => draft.draft_id === this.bindingReview.draft_id && draft.revision === this.bindingReview.revision)) this.bindingReview = null;
   }
 
   render() {
-    if (location.hash !== '#programs') return;
-    const a = this.app;
-    document.querySelector('#title').textContent = 'New Run';
-    a.selectPage('programs');
-    document.querySelector('#connection').replaceChildren(a.element('span','Local library','badge neutral'));
-    document.querySelector('#observed').textContent = 'Program library · explicit submission to the selected resident service';
-    const card = a.card('Choose and check');
-    card.append(a.element('p','Programs use the running service configuration. Configuration drafts are not activated here. A successful source check does not prove that the station has the required layout or consumables.','note'));
-    if (!this.library?.enabled) card.append(a.element('p','Program selection is disabled. Start this console with --program-root pointing to a trusted source directory.','notice'));
-    const selected = this.selection || this.library?.programs?.[0]?.program_id;
-    this.selection = selected;
-    a.interaction.view('programs',{loadState:'ready',programId:selected,snapshotId:this.inspection?.snapshot_id,
-      validationState:this.inspection ? (this.inspection.valid ? 'valid':'invalid'):'not_checked'});
-    card.append(a.configField('Program',selected,value => {
-      this.selection = value;this.inspection = null;this.bindingReview = null;
-      this.app.interaction.result('program.check','not_checked','Program selection changed. Check the source before continuing.',{entity:value});this.render();
-    },(this.library?.programs || []).map(item => item.program_id),{field:'/program-id'}));
-    const check = a.configButton('Check program',() => this.inspect(selected),'',{action:'program.check',entity:selected});
-    check.disabled = this.working || !selected;card.append(check);
-    const children = [this.app.activation.render(),card];
-    if (this.inspection) {
-      const view = a.card('Reviewed source snapshot');
-      view.append(a.badge(this.inspection.valid ? 'valid':'invalid'),a.details([
-        ['Program',this.inspection.program_id],['Snapshot',a.element('span',this.inspection.snapshot_id,'mono')],
-        ['Configuration',this.reviewedConfiguration ? `${this.reviewedConfiguration.origin?.title || 'Service startup configuration'} · ${this.reviewedConfiguration.fingerprint.slice(0,12)}`:'Configuration status unavailable']
-      ]),a.element('p',this.inspection.scope,'note'));
-      view.append(a.table(['Diagnostic','Severity'],(this.inspection.diagnostics || []).map(item => [item.code,item.severity]),'No source diagnostics.'));
-      view.append(a.table(['Allocation','Name'],(this.inspection.allocations || []).map(item => [item.allocation_id,item.name]),'No container allocations.'));
-      view.append(a.element('p',`Operations: ${(this.inspection.operations || []).join(', ')}`,'note'));
-      const source = a.element('details');source.append(a.element('summary','Program source'),a.element('pre',this.inspection.source || 'Source unavailable','record-json'));view.append(source);
-      children.push(view);
-      if (this.inspection.valid) children.push(this.renderBindings());
+    const a=this.app,target=a.content.querySelector('[data-region=workstation-program]');
+    if(!target || target.hidden) return;
+    const card=a.card('Run an experiment');card.dataset.region='experiment-picker';
+    card.append(a.element('p','Choose a protocol to see what it needs and where to load it. Opening a protocol does not start a run.','note'));
+    if(!this.library?.enabled) card.append(a.element('p','No experiment library is available for this station.','notice'));
+    const placeholder='Choose a protocol…',selected=this.selection || '';
+    card.append(a.configField('Experiment',selected || placeholder,value=>{
+      this.selection=value===placeholder ? null:value;
+      this.inspection=null;this.bindingReview=null;this.previewError=null;
+      if(this.selection) this.inspect(this.selection);else this.render();
+    },[placeholder,...(this.library?.programs || []).map(item=>item.program_id)],{field:'/program-id'}));
+    a.interaction.view('programs',{loadState:this.working ? 'loading':'ready',programId:selected,
+      snapshotId:this.inspection?.snapshot_id,validationState:this.inspection ? (this.inspection.valid ? 'valid':'invalid'):'not_checked'});
+    if(this.working) card.append(a.element('p','Preparing experiment requirements…','notice'));
+    if(this.previewError) card.append(a.element('p',this.previewError,'notice'));
+    if(selected && !this.working) card.append(a.configButton('Refresh requirements',()=>this.inspect(selected),'',
+      {action:'program.check',entity:selected}));
+    const children=[card],inspection=this.inspection,preparation=inspection?.preparation;
+    const current=this.app.activation.view?.active?.fingerprint;
+    const stale=!!inspection && this.reviewedConfiguration?.fingerprint!==current;
+    if(inspection) {
+      const view=a.card('Experiment requirements');view.dataset.region='experiment-requirements';
+      view.append(a.element('h3',inspection.program_id));
+      if(stale) view.append(a.element('p','The station layout changed. Refresh requirements before preparing this experiment.','notice'));
+      if(!inspection.valid) view.append(a.element('p','This protocol needs correction before it can run.','notice'),
+        a.table(['Problem','Severity'],(inspection.diagnostics || []).map(d=>[d.code,d.severity])));
+      else if(preparation?.status==='available') {
+        const plan=preparation.plan;
+        const relocated=plan.items.filter(item=>item.preferred_satisfied===false);
+        if(relocated.length) view.append(a.element('p',`Some preferred positions are unavailable: ${relocated.map(item=>item.name || item.allocation_id).join(', ')}. Review the proposed replacements below.`,'notice'));
+        view.append(a.element('p',`${plan.loadout.length} labware items · ${plan.items.length} containers or wells · ${(plan.supplies || []).length} supply location${(plan.supplies || []).length===1 ? '':'s'}`,'experiment-summary'),
+          a.element('p','Proposed loading on the current station. Select a checklist item or its position on the deck to inspect the same item.','note'),
+          a.setup.layout.render(plan,{run_id:'preview:'+inspection.snapshot_id}),
+          a.element('p','Volumes are initial quantities requested by the protocol. Tip availability is declared; the driver checks the exact requirement before execution. Nothing has been reserved or physically detected.','note'));
+      } else if(preparation?.status==='blocked') {
+        view.append(a.element('p','The current layout cannot accommodate this protocol. Update the labware or its configured capacity, then refresh requirements.','notice'),
+          a.table(['Required container','Kind','Capacity (µL)','Initial volume (µL)'],(preparation.requirements || []).map(r=>[r.name,r.kind,r.capacity_uL,r.initial_volume_uL])),
+          a.element('p',preparation.diagnostic,'mono'));
+      } else if(inspection.valid) view.append(a.element('p','This driver does not provide a loading preview. Running still uses the station configuration and execution checks.','notice'));
+      if(preparation && preparation.status!=='unsupported') view.append(a.configButton('Change station labware',()=>{
+        this.inspection=null;this.selection=null;this.render();
+        a.content.querySelector('[data-region=workstation-layout-host]')?.scrollIntoView({block:'start'});
+      },'',{action:'program.edit-labware'}));
+      const technical=a.element('details');technical.append(a.element('summary','Protocol source and validation details'),
+        a.element('p',inspection.scope,'note'),a.element('p',`Operations: ${(inspection.operations || []).join(', ')}`),
+        a.element('pre',inspection.source || 'Source unavailable','record-json'));
+      if(inspection.valid) technical.append(this.renderBindings());view.append(technical);children.push(view);
     }
-    const pending = this.pending('submission');
-    if (pending || this.inspection?.valid) {
-      const submit = a.card('Submit to the resident queue');
-      if (pending) submit.append(a.element('p',`A submission receipt is still pending for ${pending.program_id}. Retry uses the same saved request ID; it does not create a new submission identity.`,'notice'));
-      else submit.append(a.element('p','Submit the reviewed snapshot. The existing worker performs device preflight and records execution evidence. Admission is not completed execution.','note'));
-      if (!pending && this.reviewedConfiguration?.fingerprint !== this.app.activation.view?.active?.fingerprint) submit.append(a.element('p','The station configuration changed after review. Check the program again before submission.','notice'));
-      const button = a.configButton(pending ? 'Retry same submission':'Submit reviewed snapshot',() => this.submit(),'',
-        {action:'program.submit',entity:pending?.program_id || this.inspection.program_id});
-      button.disabled = this.working || (!pending && (!this.reviewedConfiguration || this.app.activation.view?.host.status !== 'ready' || this.reviewedConfiguration.fingerprint !== this.app.activation.view?.active?.fingerprint));submit.append(button);children.push(submit);
+    const pending=this.pending('submission');
+    if(pending || inspection?.valid) {
+      const action=a.card('Prepare to run'),blocked=preparation?.status==='blocked';
+      if(pending) action.append(a.element('p',`Waiting for the previous request for ${pending.program_id}. Check that request before starting another experiment.`,'notice'));
+      else action.append(a.element('p',preparation?.status==='available'
+        ? 'Next: prepare this experiment, review its final loading plan, and confirm loading before it runs.'
+        : 'This station may start execution immediately after you choose Run protocol.','note'));
+      const button=a.configButton(pending ? 'Check previous run request':preparation?.status==='available' ? 'Prepare experiment':'Run protocol',
+        ()=>this.submit(),'',{action:'program.submit',entity:pending?.program_id || inspection.program_id});
+      button.disabled=this.working || (!pending && (blocked || stale || !this.reviewedConfiguration || this.app.activation.view?.host.status!=='ready'));
+      action.append(button);
+      if(!pending && this.app.activation.view?.host.status!=='ready') action.append(a.element('p','The station is not ready. Wait for it to become ready, then refresh requirements.','notice'));
+      children.push(action);
     }
-    a.content.replaceChildren(...children);
-    for (const field of a.content.querySelectorAll('input,select')) field.disabled = this.working;
+    target.replaceChildren(...children);
+    for(const field of target.querySelectorAll('input,select')) field.disabled=this.working || !!pending;
+    const layout=a.content.querySelector('[data-region=workstation-layout-host]');
+    if(layout) layout.hidden=!!preparation?.plan;
   }
 
   bindingIsActive(report) {
@@ -164,35 +170,39 @@ export class ConsolePrograms {
       this.app.showAlert(error.message);
     } finally {
       this.working = false;this.app.syncBusy();this.render();
-      if (location.hash === '#programs') this.app.interaction.focus('program.check-bindings');
+      if (this.app.content.querySelector('[data-region=workstation-program]:not([hidden])')) this.app.interaction.focus('program.check-bindings');
     }
   }
 
   async inspect(programId) {
     if (this.working) return;
-    this.selection = programId;this.inspection = null;this.bindingReview = null;
+    this.selection = programId;this.inspection = null;this.bindingReview = null;this.previewError=null;
     this.working = true;this.app.syncBusy();this.render();
-    this.app.interaction.result('program.check','pending','Checking program source.',{entity:programId});
+    this.app.interaction.result('program.check','pending','Reading the protocol and matching its requirements to this station.',{entity:programId});
     try {
       await this.app.activation.refresh();
       this.reviewedConfiguration = structuredClone(this.app.activation.view.active);
       this.bindingDraft = this.reviewedConfiguration.origin?.draft_id || this.bindingDraft;
-      this.inspection = await this.request({action:'inspect',program_id:programId});
+      this.inspection = await this.request({action:'preview',program_id:programId});
+      if(this.inspection.preparation) this.reviewedConfiguration.fingerprint=this.inspection.preparation.configuration_fingerprint;
       this.app.interaction.result('program.check',this.inspection.valid ? 'succeeded':'invalid',
-        this.inspection.valid ? 'Source snapshot checked. Device and resource preflight still runs in the worker.':'Source checks rejected this program.',{entity:programId});
+        this.inspection.valid ? 'Experiment requirements prepared. No run has been started.':'Source checks rejected this program.',{entity:programId});
       this.app.showAlert(null);
     } catch (error) {
       this.app.interaction.result('program.check',this.app.interaction.responseOutcome(error,true),error.message,{entity:programId});
+      this.previewError='Unable to prepare requirements: '+error.message;
       this.app.showAlert(error.message);
     }
     finally {
       this.working = false;this.app.syncBusy();this.render();
-      if (location.hash === '#programs') this.app.interaction.focus(this.inspection?.valid ? 'program.submit':'program.check');
+      if (this.app.content.querySelector('[data-region=workstation-program]:not([hidden])')) this.app.interaction.focus(this.inspection?.valid ? 'program.submit':'program.check');
     }
   }
 
   async submit() {
     if (this.working) return;
+    if(!this.pending('submission') && (!this.inspection?.valid || this.inspection.preparation?.status==='blocked'
+      || this.reviewedConfiguration?.fingerprint!==this.app.activation.view?.active?.fingerprint)) return;
     this.working = true;this.app.syncBusy();this.render();
     let payload;
     try {
@@ -203,7 +213,7 @@ export class ConsolePrograms {
       const result = await this.request(payload);
       this.remember('submission',null);
       this.app.showAlert(null);
-      this.app.interaction.result('program.submit','acknowledged','Program admitted to the queue. Follow the run state for execution outcome.',{entity:result.run.run_id,requestId:payload.request_id});
+      this.app.interaction.result('program.submit','acknowledged',this.inspection?.preparation?.status==='available' ? 'Experiment prepared. Follow the loading instructions below before running.':'Run requested. Follow the execution status below.',{entity:result.run.run_id,requestId:payload.request_id});
       location.hash = `#run/${encodeURIComponent(result.run.run_id)}`;
     } catch (error) {
       const message = `${error.message}. Request identity retained; no automatic retry.`;

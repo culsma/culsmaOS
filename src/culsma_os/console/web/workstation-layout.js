@@ -1,8 +1,9 @@
 import {RunSetupDeck} from './setup-deck.js';
+import {ConsoleLabware} from './labware.js';
 
 /** Read-only configured geometry; never a draft, run loadout or sensor observation. */
 export class WorkstationLayoutView {
-  constructor(app) {this.app=app;this.selected=null;this.fingerprint=null;}
+  constructor(app) {this.app=app;this.selected=null;this.fingerprint=null;this.editor=new ConsoleLabware(app);}
 
   static entries(layout) {
     const {definition,configuration}=layout;
@@ -35,17 +36,21 @@ export class WorkstationLayoutView {
     if(envelope?.status!=='available' || !envelope.layout) {
       card.append(a.element('p','The current driver has not supplied a configured layout. No imported file or past run is substituted.','empty'));return card;
     }
-    if(this.fingerprint!==envelope.configuration_fingerprint) {this.selected=null;this.fingerprint=envelope.configuration_fingerprint;}
+    if(this.fingerprint!==envelope.configuration_fingerprint) {this.selected=null;this.fingerprint=envelope.configuration_fingerprint;this.editor.reset();}
     const layout=envelope.layout,rows=WorkstationLayoutView.entries(layout),scene=RunSetupDeck.scene({layout});
     card.dataset.configurationFingerprint=envelope.configuration_fingerprint;card.dataset.source=envelope.source;
     card.append(a.element('p','Current host configuration · declared geometry, not detected hardware or contents.','note'));
     const select=id=>{
       const scroll=card.querySelector('.setup-deck-scroll')?.scrollLeft || 0;
-      this.selected=id;const next=this.render(envelope);card.replaceWith(next);
+      this.selected=id;this.editor.selectItem(id);const next=this.render(envelope);card.replaceWith(next);
       const viewport=next.querySelector('.setup-deck-scroll');if(viewport) viewport.scrollLeft=scroll;
     };
+    const redraw=()=>{const scroll=card.querySelector('.setup-deck-scroll')?.scrollLeft || 0;const next=this.render(envelope);card.replaceWith(next);const viewport=next.querySelector('.setup-deck-scroll');if(viewport) viewport.scrollLeft=scroll;};
+    this.editor.bind(envelope,redraw);
+    card.append(this.editor.toolbar());
     if(scene) {
       card.append(RunSetupDeck.render(a,scene,rows,this.selected,select,{stacked:scene.stacked,
+        onSelectSite:this.editor.catalogue ? (parent,site)=>{this.editor.selectSite(parent,site);redraw();}:null,
         action:'workstation.inspect-layout-item',label:'Configured workstation deck',
         description:'Declared track and carrier positions. Select installed labware to inspect its configured placement.',
         footer:'Schematic site spacing. Experiment-specific loading and confirmation are recorded separately.'}));
@@ -79,7 +84,8 @@ export class WorkstationLayoutView {
       inspector.append(a.element('h3',selected.id),a.details([['Model',selected.model],['Parent / carrier',selected.parent],['Site / slot',selected.site]]));
       card.append(inspector);
     }
-    const link=a.element('a','Adjust layout settings','action-link');link.href='#configuration';card.append(link);
+    if(this.editor.open) card.append(this.editor.render());
+    const link=a.element('a','System Settings: rack layout','action-link');link.href='#configuration';card.append(link);
     return card;
   }
 }

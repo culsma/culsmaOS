@@ -6,7 +6,7 @@ import logging
 from urllib.parse import unquote, urlsplit
 
 from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadRequest, ConsoleProgramRequest, ConsoleProgramError, SetupInteractionRequest
-from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError, ProgramBindingRequest
+from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError, ProgramBindingRequest, LabwareRequest
 from culsma_os.auth.models import ConsoleAccessError
 from culsma_os.lifecycle_manager.models import ConsoleActivationRequest
 
@@ -14,7 +14,8 @@ from culsma_os.lifecycle_manager.models import ConsoleActivationRequest
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None):
+        self.labware = labware
         self.commands, self.configuration, self.sessions = commands, configuration, sessions
         self.programs, self.bindings, self.activation = programs, bindings, activation
         self.setup_commands, self.setup_confirmation = setup, setup_confirmation
@@ -32,6 +33,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         "/": ("index.html", "text/html; charset=utf-8"),
         "/navigation.js": ("navigation.js", "text/javascript; charset=utf-8"),
         "/workstation-layout.js": ("workstation-layout.js", "text/javascript; charset=utf-8"),
+        "/labware.js": ("labware.js", "text/javascript; charset=utf-8"),
         "/workstation.js": ("workstation.js", "text/javascript; charset=utf-8"),
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
         "/interaction.js": ("interaction.js", "text/javascript; charset=utf-8"),
@@ -165,11 +167,18 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             raise ConsoleReadError('SETUP_REQUEST_INVALID','invalid_request')
         return SetupInteractionRequest(**payload)
 
+    def labware_request(self, payload):
+        if (not isinstance(payload, dict) or set(payload) - {'action','expected_fingerprint','change'}
+                or not isinstance(payload.get('action'), str) or not isinstance(payload.get('expected_fingerprint'), str)
+                or payload.get('change') is not None and not isinstance(payload['change'], dict)):
+            raise ConsoleReadError('LABWARE_REQUEST_INVALID', 'invalid_request')
+        return LabwareRequest(**payload)
+
     def do_POST(self):
         try:
             url = urlsplit(self.path)
             self.validate_context(True)
-            endpoints = {'/api/v1/setup':(self.server.setup_commands,self.setup_request,'culsma_setup_console_v1'),
+            endpoints = {'/api/v1/configuration/labware':(self.server.labware,self.labware_request,'culsma_configuration_v1'),'/api/v1/setup':(self.server.setup_commands,self.setup_request,'culsma_setup_console_v1'),
                          '/api/v1/setup/confirmation':(self.server.setup_confirmation,self.setup_request,'culsma_setup_console_v1'),
                          '/api/v1/configuration/activation':(self.server.activation,self.activation_request,'culsma_configuration_v1'),
                          '/api/v1/configuration/program-bindings':(self.server.bindings,self.binding_request,'culsma_configuration_v1'),

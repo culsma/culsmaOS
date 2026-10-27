@@ -1,5 +1,6 @@
 """Own preparation, operator attestation and a dispatch gate over the original runner."""
 from copy import deepcopy
+from culsma_os.driver_framework.models import WorkspaceCatalogueReadPort
 from datetime import datetime, timezone
 from .workspace import WorkspaceCheckpointInteractor
 
@@ -175,3 +176,31 @@ class RunSetupInspectionInteractor:
 
     def get(self, run_id):
         return self.repository.get(run_id)
+
+
+class RunSetupPreviewInteractor:
+    """Use the same requirements and allocator as loading, without a run or reservation."""
+    def __init__(self, reader: WorkspaceCatalogueReadPort | None, configuration, context, requirements, planner, host):
+        self.reader, self.configuration, self.context = reader, configuration, context
+        self.requirements, self.planner, self.host = requirements, planner, host
+
+    def preview(self, compiled):
+        self.configuration.verify(self.context)
+        identity = self.configuration.fingerprint
+        base = {'configuration_fingerprint': identity, 'physical_observation': False,
+                'scope': 'Proposed initial loading; execution preflight and stock checks still run before dispatch.'}
+        if self.reader is None:
+            return {**base, 'status': 'unsupported', 'plan': None}
+        catalogue = self.reader.execute(self.context.config_path)
+        checkpoint = self.host.create(compiled.plan, compiled.state, 'preview')
+        demands = self.requirements.inspect(checkpoint)
+        try:
+            plan = self.planner.plan(demands, catalogue)
+            result = {**base, 'status': 'available', 'plan': plan, 'requirements': demands}
+        except ValueError as error:
+            result = {**base, 'status': 'blocked', 'plan': None, 'requirements': demands,
+                      'diagnostic': str(error)}
+        self.configuration.verify(self.context)
+        if self.configuration.fingerprint != identity:
+            raise ValueError('HOST_CONFIGURATION_STALE')
+        return result

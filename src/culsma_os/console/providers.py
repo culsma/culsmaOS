@@ -33,13 +33,15 @@ class ConsoleApplicationFactory:
         profiles = DeviceProfileInteractor(DriverProfileInteractor())
         source = ProgramSourceInteractor(FileProgramSourceRepository(settings.program_root,
             settings.program_store or Path('run-artifacts/console/programs')),CompilationInteractor(),HostedRuntimeInteractor())
+        from culsma_os.workspace_manager.interactors import LabwareConfigurationInteractor
         return ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
             StationConfigurationInteractor(tokens,repository,profiles),ConsoleSessionInteractor(tokens),
             ConsoleProgramInteractor(tokens,source,ResidentClientAdapter(settings.socket_path,timeout=10)),
             ProgramBindingInteractor(tokens,repository,profiles,source),
             ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),ResidentClientAdapter(settings.socket_path,timeout=10)),
             SetupInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
-            SetupConfirmationInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)))
+            SetupConfirmationInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
+            LabwareConfigurationInteractor(tokens,repository,ResidentClientAdapter(settings.socket_path,timeout=10)))
 
     def build_mcp(self, settings):
         from .adapters.mcp import MCPServerAdapter

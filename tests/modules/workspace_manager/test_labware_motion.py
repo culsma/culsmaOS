@@ -156,7 +156,10 @@ def test_motion_architecture():
         imports = [n.module or "" for n in ast.walk(ast.parse((root/filename).read_text())) if isinstance(n, ast.ImportFrom)]
         assert not any(n.startswith(("culsma_opentrons", "opentrons")) for n in imports)
     assert "class CarrierRef" in (root/"workspace_manager/models.py").read_text()
-    assert "material.reconcile" not in (root/"scheduler/interactors.py").read_text().split("class MotionSchedulerInteractor:")[1]
+    source = (root/"scheduler/interactors.py").read_text()
+    motion = next(node for node in ast.parse(source).body
+                  if isinstance(node, ast.ClassDef) and node.name == "MotionSchedulerInteractor")
+    assert "material.reconcile" not in ast.get_source_segment(source, motion)
 
 
 @pytest.mark.parametrize("problem", ["missing-receipt", "malformed-completion"])

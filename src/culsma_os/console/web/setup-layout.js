@@ -87,6 +87,7 @@ export class RunSetupLayout {
       let selected = items.find(item => item.id === this.selected.get(run.run_id));
       if (!selected) selected = items.find(item => RunSetupLayout.wells(plan,item)) || items[0];
       this.selected.set(run.run_id,selected.id);
+      const scrolls=[...region.querySelectorAll('.setup-deck-scroll,.loading-well-scroll')].map(n=>n.scrollLeft);
       region.replaceChildren();
       const heading = a.element('div','','loading-layout-heading');
       heading.append(a.element('h3','Loading layout'),a.element('span','Required initial placement','label'));
@@ -128,6 +129,7 @@ export class RunSetupLayout {
         board.append(carrier);
       }
       region.append(board,this.inspector(plan,selected));
+      [...region.querySelectorAll('.setup-deck-scroll,.loading-well-scroll')].forEach((n,i)=>{if(scrolls[i]!==undefined)n.scrollLeft=scrolls[i];});
     };
     render();
     return region;

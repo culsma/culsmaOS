@@ -72,3 +72,32 @@ def test_activation_owner_and_adapter_boundaries():
     source=(ROOT/'src/culsma_os/console/web/activation.js').read_text()
     assert "action:'configuration.apply'" in source and "field:'/activation-confirmation'" in source
     assert 'setInterval' not in source
+
+
+def test_labware_interface_is_owned_by_os_and_transport_delegates():
+    from culsma_os.auth.interactors import AuthorizedInteractor
+    from culsma_os.workspace_manager.interactors import LabwareConfigurationInteractor
+    from culsma_os.driver_framework.models import LabwareEditorPort
+    assert LabwareConfigurationInteractor.execute is AuthorizedInteractor.execute
+    assert LabwareConfigurationInteractor.required_capability == 'configuration:drafts'
+    assert set(('catalogue','prepare')) <= set(LabwareEditorPort.__dict__)
+    source=(ROOT/'src/culsma_os/workspace_manager/interactors.py').read_text()
+    assert 'culsma_driver_hamilton' not in source and 'culsma_opentrons' not in source
+    source=(ROOT/'src/culsma_os/console/web/labware.js').read_text()
+    assert 'Hamilton' not in source and '.lay' not in source.replace('.layout','')
+    assert "action:'workstation.apply-labware'" in source
+
+
+def test_experiment_preview_keeps_driver_and_run_mutations_outside_adapters():
+    from culsma_os.auth.interactors import AuthorizedInteractor
+    from culsma_os.program_manager.interactors.console_program import ConsoleProgramInteractor
+    from culsma_os.driver_framework.models import WorkspaceCatalogueReadPort
+    assert ConsoleProgramInteractor.execute is AuthorizedInteractor.execute
+    assert ConsoleProgramInteractor.required_capability == 'programs:execute'
+    assert 'execute' in WorkspaceCatalogueReadPort.__dict__
+    tree = ast.parse((ROOT/'src/culsma_os/program_manager/interactors/setup.py').read_text())
+    preview = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name=='RunSetupPreviewInteractor')
+    calls = {node.func.attr for node in ast.walk(preview) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
+    assert not calls & {'save','submit','acquire','confirm','connect','start','prepare_batch'}
+    imports = [node.module or '' for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
+    assert not any(name.startswith(('culsma_driver_hamilton','culsma_opentrons')) for name in imports)

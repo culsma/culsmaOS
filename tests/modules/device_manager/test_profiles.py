@@ -49,3 +49,13 @@ def test_profile_identity_collision_across_groups_is_not_arbitrarily_selected():
     entry = OfflineEntry(); entry.name = Entry.name
     profiles, unavailable = DriverProfileInteractor([Entry()], [entry]).discover()
     assert not profiles and unavailable == ('external',)
+
+
+def test_os_device_optional_profile_is_offline_and_collisions_fail(monkeypatch):
+    import culsma_os.driver_framework.interactors as module
+    monkeypatch.setattr(module,'entry_points',lambda group: [Entry()] if group=='culsma.os_devices' else [])
+    profiles,unavailable=DriverProfileInteractor().discover()
+    assert list(profiles)==['external'] and not unavailable
+    monkeypatch.setattr(module,'entry_points',lambda group: [Entry()] if group in {'culsma.os_devices','culsma.drivers'} else [])
+    profiles,unavailable=DriverProfileInteractor().discover()
+    assert not profiles and unavailable==('external',)

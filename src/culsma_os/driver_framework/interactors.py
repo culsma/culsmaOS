@@ -426,6 +426,18 @@ class DriverProfileInteractor:
                 profiles[candidate.name] = candidate.load()()
             except Exception:
                 unavailable.append(candidate.name)
+        # Device factories may also publish their full offline configuration profile.
+        if self.candidates is None:
+            for candidate in entry_points(group='culsma.os_devices'):
+                try:
+                    factory = candidate.load()()
+                    capability = getattr(factory, 'configuration_profile', None)
+                    if callable(capability):
+                        if candidate.name in profiles:
+                            raise ValueError('PROFILE_NAME_CONFLICT')
+                        profiles[candidate.name] = capability()
+                except Exception:
+                    unavailable.append(candidate.name)
         for name in unavailable:
             profiles.pop(name,None)
         return profiles, tuple(unavailable)

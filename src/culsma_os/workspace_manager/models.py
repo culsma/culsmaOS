@@ -139,3 +139,10 @@ class ProgramBindingRequest:
 class WorkspaceCataloguePort(Protocol):
     """Driver-declared loading candidates, independent of vendor coordinates."""
     def describe_workspace(self) -> dict: ...
+
+
+@dataclass(frozen=True)
+class LabwareRequest:
+    action: str
+    expected_fingerprint: str
+    change: dict | None = None

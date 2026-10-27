@@ -137,23 +137,25 @@ The view does not claim hardware timing or include every semantic declaration.
 
 ### Console navigation
 
-The sidebar groups existing controls into **Workstation**, **Experiment Runs** and
-**System Information**. Workstation separates current resource records from layout
-configuration. Overview automatically reads a driver-projected layout from the
-verified current host configuration, including service startup settings without a
-saved draft. It never substitutes an unsaved draft or historical run layout. The
-read path is cached by configuration identity and creates no instrument session;
-track/carrier and slot-grid renderers share the generic descriptor. Unsupported
-readers remain explicitly unavailable. Experiment Runs separates new submissions, active runs and history;
-each run has **Preparation**, **Execution** and **Results** stages. Results collapse
-raw evidence by default. Stage links are bookmarkable; page navigation issues no
-execution commands. System Information is read-only. Unavailable module, Agent-log
-and version detail views are explicitly marked planned. Narrow screens use the
-**Navigation** toggle, and run stages support keyboard arrow keys.
+The sidebar has three destinations: **Workstation**, **System Settings** and
+**System Info**. Workstation combines the existing program selector, source check,
+loading plan and confirmation, execution controls, and results in one page. Runs,
+history and station resource records are expandable sections. Run URLs select an
+experiment inside the same workstation; legacy stage URLs remain accepted. Raw
+evidence and completed loading plans are collapsed by default.
+
+The current deck comes from the verified host configuration, including startup
+settings without a saved draft. It never substitutes a draft or historical run;
+a selected run's preparation shows its own loading plan separately. Layout reads
+create no instrument session. Stable view regions preserve deck scroll during
+polling. System Settings contains the existing persistent layout editor and
+advanced configuration tools; System Info keeps the four read-only information
+sections. Navigation does not issue execution commands. File drag-and-drop and
+new material or labware editing capabilities are outside this change.
 
 ### Configuration drafts
 
-Open **Workstation → Layout → Advanced**, choose an installed profile and use **New from profile**
+Open **System Settings → Advanced**, choose an installed profile and use **New from profile**
 or import a device configuration JSON file. Edit fields, save a draft, validate
 its saved revision and export the validated JSON. Labware and binding forms are
 structured; modules, routes and policy remain available through Advanced JSON.
@@ -269,7 +271,7 @@ fingerprint and require reloading when another client changes the plan.
 
 ## Import an existing instrument layout
 
-In **Workstation → Layout → Advanced**, choose the installed profile and select a file
+In **System Settings → Advanced**, choose the installed profile and select a file
 under **Import instrument layout**. Parsing and conversion belong to the driver;
 the console only consumes the configuration import report. Import is a preview:
 it changes neither the station nor saved drafts. Review diagnostics and retained
@@ -307,9 +309,20 @@ normal OS/console installation and simulator operation do not load it.
 | Tools | Responsibility |
 | --- | --- |
 | `station_status`, `list_runs`, `run_status` | Read existing OS observations |
-| `list_programs`, `inspect_program`, `submit_program`, `control_run` | Review source snapshots and request queue/control actions |
+| `list_programs`, `inspect_program`, `preview_program`, `submit_program`, `control_run` | Review source, preview loading without admission, and request queue/control actions |
 | `loading_plan`, `revise_loading_plan` | Read or revise the fingerprinted loading plan |
 | `begin_loading`, `loading_request_status` | Reserve for loading and inspect durable command outcomes |
+
+Selecting an experiment in Workstation calls `preview_program`'s shared use case:
+it freezes the source and maps its requirements through the optional offline
+`WorkspaceCatalogueReadPort`. Compatible configured bindings are preferred;
+otherwise the existing allocator proposes positions. A preview creates no run,
+reservation or device connection. `Prepare experiment` admits the reviewed source
+and configuration fingerprint; the final loading plan is then reviewed and
+explicitly confirmed. Drivers without this port retain explicit `Run protocol`.
+Tip quantities in the preview are declared, not measured; final preparation and
+resource checks still apply. MCP callers can pass the preview's
+`configuration_fingerprint` to `submit_program` to reject stale station settings.
 
 There is deliberately no MCP loading-confirmation tool or capability. The operator
 loads the listed items, ticks the console acknowledgement and confirms the exact
@@ -332,3 +345,18 @@ The browser test uses Playwright Core, PNGJS and Pixelmatch. Reviewed visual
 references live under `tests/modules/console/goldens`; generated screenshots and
 diffs remain in ignored `run-artifacts/ui-tests`. Reference refresh is explicit
 (`CULSMA_OS_CAPTURE_GOLDEN=1`) and requires visual review before replacing a golden.
+
+### Workstation labware editing
+
+`LabwareEditorPort` (`driver_framework/models.py`) is an optional offline device-factory
+capability: `catalogue(path)` supplies compatible site/model choices and
+`prepare(path, change)` returns a detached configuration and generic layout.
+`ResidentLabwareInteractor` checks the current identity; `LabwareConfigurationInteractor`
+saves a checked draft. Application uses the existing idle/resource/activation guards.
+HTTP and DOM controls carry requests only. Hamilton implements native and generated
+layouts; other drivers without the capability report editing unavailable. No vendor
+files are read by the frontend. Editing neither loads labware nor confirms contents.
+Referenced objects and unsupported stacks/frames remain protected. E2E and desktop/mobile
+golden coverage: `tests/integration/test_console_labware.py`.
+New placements do not infer liquid capacity, reagent inventory, well mappings or program
+bindings. Those remain explicit driver/experiment preparation inputs.

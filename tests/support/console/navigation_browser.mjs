@@ -12,42 +12,48 @@ try {
   const body=request.postDataJSON();if(['submit','confirm','begin','revise','apply','save','create'].includes(body?.action)) writes.push(body.action);
  }});
  await page.goto(`${url}#run/${runId}`);
- const tabs=page.getByRole('tablist',{name:'Run stages'}),nav=page.getByRole('navigation',{name:'Console pages'});
- await tabs.getByRole('tab',{name:'Preparation',exact:true}).waitFor();
- if(await tabs.getByRole('tab',{name:'Preparation'}).getAttribute('aria-selected')!=='true') throw new Error('Wrong initial run stage');
- const fingerprint=await page.locator('[data-region="run-setup"]').getAttribute('data-setup-fingerprint');
- await tabs.getByRole('tab',{name:'Preparation',exact:true}).focus();
- await tabs.getByRole('tab',{name:'Preparation',exact:true}).press('ArrowRight');
- await page.locator('#run-panel-execution').getByRole('heading',{name:'Run controls',exact:true}).waitFor();
- if(await page.locator('#run-panel-preparation').isVisible()) throw new Error('Preparation remained on execution page');
- await tabs.getByRole('tab',{name:'Results',exact:true}).click();
+ const nav=page.getByRole('navigation',{name:'Console pages'});
+ await page.getByRole('heading',{name:'Load the experiment',exact:true}).waitFor();
+ if(JSON.stringify(await nav.getByRole('link').allTextContents())!==JSON.stringify(['Workstation','System Settings','System Info'])) throw new Error('Expected exactly three main destinations');
+ if(await page.getByRole('tablist',{name:'Run stages'}).count()) throw new Error('Run stages still split into pages');
+ await page.getByRole('heading',{name:'Run controls',exact:true}).waitFor();
  await page.getByRole('heading',{name:'OS-registered material',exact:true}).waitFor();
+ const fingerprint=await page.locator('[data-region="run-setup"]').getAttribute('data-setup-fingerprint');
  if(await page.getByRole('heading',{name:'Execution evidence',exact:true}).isVisible()) throw new Error('Raw evidence is not collapsed');
  await page.getByText('Execution evidence and receipts',{exact:true}).click();
  await page.getByRole('heading',{name:'Execution evidence',exact:true}).waitFor();
- await nav.getByRole('link',{name:'Current State',exact:true}).click();
+ await page.getByText('Station state and resources',{exact:true}).click();
  await page.getByRole('heading',{name:'Station reservations',exact:true}).waitFor();
- await nav.getByRole('link',{name:'Overview',exact:true}).click();
- await page.getByRole('link',{name:'Adjust layout settings',exact:true}).waitFor();
- await nav.getByRole('link',{name:'Layout',exact:true}).click();
+ await nav.getByRole('link',{name:'Workstation',exact:true}).click();
+ await page.getByRole('combobox',{name:'Experiment',exact:true}).waitFor();
+ await page.getByRole('link',{name:'System Settings: rack layout',exact:true}).waitFor();
+ // Force several station snapshots while the actual deck is horizontally scrolled.
+ await page.setViewportSize({width:900,height:960});
+ const scroll=page.locator('[data-region="workstation-layout"] .setup-deck-scroll');
+ const position=await scroll.evaluate(node=>{node.scrollLeft=140;return node.scrollLeft;});
+ if(position<10) throw new Error('Test deck did not scroll');
+ for(let i=0;i<2;i++) {
+  await page.getByRole('button',{name:'Refresh',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('#content')?.getAttribute('aria-busy')==='false');
+  if(Math.abs(await scroll.evaluate(node=>node.scrollLeft)-position)>1) throw new Error('Refresh reset deck scroll');
+ }
+ await page.setViewportSize({width:1280,height:960});
+ await nav.getByRole('link',{name:'System Settings',exact:true}).click();
  await page.getByText('Advanced · configuration presets and JSON',{exact:true}).waitFor();
- for(const [label,heading] of [['Platform and Equipment','Configured equipment'],['Drivers and Capabilities','Installed drivers and capabilities'],
-  ['Runtime Environment','Declared runtime environment'],['Service and Connection','Agent and hardware connection']]) {
-  await nav.getByRole('link',{name:label,exact:true}).click();
+ await nav.getByRole('link',{name:'System Info',exact:true}).click();
+ await page.getByRole('heading',{name:'Configured equipment',exact:true}).waitFor();
+ const sections=page.getByRole('navigation',{name:'System information sections'});
+ for(const [label,heading] of [['Drivers and Capabilities','Installed drivers and capabilities'],
+  ['Runtime Environment','Declared runtime environment'],['Service and Connection','Agent and hardware connection'],['Platform and Equipment','Configured equipment']]) {
+  await sections.getByRole('link',{name:label,exact:true}).click();
   await page.getByRole('heading',{name:heading,exact:true}).waitFor();
   if(await page.locator('#content input,#content select,#content textarea').count()) throw new Error('System information has editable fields');
  }
- await nav.getByRole('link',{name:'Run History',exact:true}).click();
- await page.locator('#content').getByRole('heading',{name:'Run History',exact:true}).waitFor();
- if(await page.locator('#content').getByRole('link',{name:runId,exact:true}).count()) throw new Error('Pending run appeared in history');
- await nav.getByRole('link',{name:'Active Runs and Queue',exact:true}).click();
- await page.locator('#content').getByRole('link',{name:runId,exact:true}).click();
- await page.locator('#run-panel-preparation').getByRole('heading',{name:'Prepare and load',exact:true}).waitFor();
+ await nav.getByRole('link',{name:'Workstation',exact:true}).click();
+ await page.getByText('Runs and history',{exact:true}).click();
+ await page.locator('[data-region="workstation-runs-host"]').getByRole('link',{name:runId,exact:true}).click();
+ await page.getByRole('heading',{name:'Load the experiment',exact:true}).waitFor();
  if(await page.locator('[data-region="run-setup"]').getAttribute('data-setup-fingerprint')!==fingerprint) throw new Error('Navigation changed loading plan');
- await nav.getByRole('link',{name:'New Run',exact:true}).click();
- await page.getByRole('button',{name:'Check program',exact:true}).waitFor();
- await nav.getByRole('link',{name:'Active Runs and Queue',exact:true}).click();
- await page.locator('#content').getByRole('link',{name:runId,exact:true}).click();
  for(const width of [1280,390]) {
   await page.setViewportSize({width,height:960});
   if(width===390) await page.getByRole('button',{name:'Navigation',exact:true}).click();
@@ -62,5 +68,5 @@ try {
  }
  if(writes.length) throw new Error('Navigation issued commands: '+writes.join(', '));
  if(errors.length) throw new Error(errors.join('\n'));
- console.log(JSON.stringify({stages:true,system_read_only:true,navigation_writes:writes.length,loading_plan_unchanged:true}));
+ console.log(JSON.stringify({single_workstation:true,system_read_only:true,navigation_writes:writes.length,loading_plan_unchanged:true}));
 } finally {await browser.close();}

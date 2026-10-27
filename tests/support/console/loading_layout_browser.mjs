@@ -28,10 +28,10 @@ try {
   if(JSON.stringify(await used())!==JSON.stringify(['A1','A2','A3'])) throw new Error('Wrong required wells');
   await graph.getByRole('button',{name:/^Inspect source_vessel /}).click();
   await graph.locator('[data-region="loading-inspector"]').getByRole('heading',{name:'source',exact:true}).waitFor();
-  await card.getByRole('button',{name:'Begin loading · reserve station',exact:true}).click();
+  await card.getByRole('button',{name:'Start loading',exact:true}).click();
   const check=card.getByRole('checkbox',{name:'I loaded every item according to this plan',exact:true});
   await check.check();
-  const confirm=card.getByRole('button',{name:'Confirm loaded · allow execution',exact:true});
+  const confirm=card.getByRole('button',{name:'Confirm loading and run',exact:true});
   if(!await confirm.isEnabled()) throw new Error('Current plan was not acknowledged');
   const revised=spawnSync(process.env.CULSMA_OS_TEST_PYTHON,['-m','tests.support.console.loading_layout_mcp',socket,runId],
     {env:{...process.env,PYTHONPATH:`${process.env.CULSMA_OS_MCP_SDK_PATH}:${process.cwd()}/src`},encoding:'utf8',timeout:30000});

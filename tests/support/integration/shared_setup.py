@@ -12,7 +12,7 @@ from tests.support.console.http import ConsoleHTTPHarness
 
 
 class SharedSetupHarness(ResidentHarness):
-    def __init__(self,directory,submit=True):
+    def __init__(self,directory,submit=True,programs=False):
         super().__init__(directory)
         import culsma_driver_hamilton
         driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
@@ -28,6 +28,10 @@ class SharedSetupHarness(ResidentHarness):
         self.http=None
         self.directory=directory
         self.submit_on_start=submit
+        self.program_root=directory/'programs' if programs else None
+        if self.program_root is not None:
+            self.program_root.mkdir()
+            (self.program_root/self.source.name).write_text(self.source.read_text())
 
     def serve(self):
         try:
@@ -41,7 +45,7 @@ class SharedSetupHarness(ResidentHarness):
         self.start()
         try:
             server=ConsoleApplicationFactory().build(ConsoleSettings(self.endpoint,0,self.directory/'drafts.sqlite3',
-                None,self.directory/'program-store'))
+                self.program_root,self.directory/'program-store'))
         except BaseException:
             self.stop()
             raise

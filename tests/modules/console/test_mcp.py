@@ -20,6 +20,7 @@ class RecordingUseCase:
     ('begin_loading',{'run_id':'run','fingerprint':'a'*64,'request_id':'begin'},'setup','begin'),
     ('loading_request_status',{'run_id':'run','request_id':'begin'},'setup','status'),
     ('list_programs',{},'programs','list'),
+    ('preview_program',{'program_id':'transfer.culs'},'programs','preview'),
     ('inspect_program',{'program_id':'transfer.culs'},'programs','inspect'),
     ('submit_program',{'program_id':'transfer.culs','snapshot_id':'snapshot','request_id':'submit'},'programs','submit'),
     ('control_run',{'run_id':'run','action':'cancel','request_id':'cancel'},'programs','cancel'),

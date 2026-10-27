@@ -56,15 +56,15 @@ export class ConsoleRunSetup {
     const a = this.app;
     const plan = this.plans.get(run.run_id) || run.result?.os?.setup;
     if (!plan) return a.element('span');
-    const card = a.card('Prepare and load');
+    const card = a.card('Load the experiment');
     card.dataset.region = 'run-setup';card.dataset.setupFingerprint = plan.fingerprint || '';
     card.append(a.badge(plan.phase || 'unavailable'),a.element('p',
-      'One shared plan for console and MCP. Place the listed labware and contents, then confirm this exact plan. No physical detection is implied.','note'));
+      'Place the labware and contents at the highlighted positions. Check the final plan below before confirming; the system cannot detect physical loading.','note'));
     if (!plan.fingerprint) {card.append(a.element('p',plan.error || 'Waiting for a valid loading plan.','notice'));return card;}
     const editable = run.status === 'awaiting_setup';
     const steps = a.element('ol','','loading-steps');
     const active = plan.phase === 'planned' ? 0 : plan.phase === 'loading' ? 1 : 2;
-    ['Review positions','Reserve station and load','Confirm this loading plan'].forEach((text,index) => {
+    ['Review loading plan','Load the station','Confirm and run'].forEach((text,index) => {
       const step = a.element('li',text);if (index === active) step.setAttribute('aria-current','step');steps.append(step);
     });
     card.append(steps,this.layout.render(plan,run));
@@ -94,7 +94,7 @@ export class ConsoleRunSetup {
         {action:`setup.${pending.action}`,entity:run.run_id});
       retry.disabled = this.working;card.append(retry,a.element('p','Request identity retained until its outcome is known.','note'));
     } else if (editable && plan.phase === 'planned') {
-      const begin = a.configButton('Begin loading · reserve station',() => this.command(run,plan,'begin'),'',
+      const begin = a.configButton('Start loading',() => this.command(run,plan,'begin'),'',
         {action:'setup.begin',entity:run.run_id});
       begin.disabled = this.working;card.append(begin);
     } else if (editable && plan.phase === 'loading') {
@@ -108,13 +108,13 @@ export class ConsoleRunSetup {
         confirm.disabled = !check.checked || this.working;
       });
       label.append(check,a.element('span','I loaded every item according to this plan'));card.append(label);
-      const confirm = a.configButton('Confirm loaded · allow execution',() => this.command(run,plan,'confirm'),'',
+      const confirm = a.configButton('Confirm loading and run',() => this.command(run,plan,'confirm'),'',
         {action:'setup.confirm',entity:run.run_id});
       confirm.disabled = !check.checked || this.working;card.append(confirm);
     }
     if (plan.confirmation) card.append(a.element('p',`Confirmation: ${plan.confirmation.source} · physical detection: no`,'note'));
     const activity=a.table(['Action','Origin','Status','Request'],(plan.activity || []).map(e => [e.action,e.origin,e.status,e.request_id]),'No preparation commands recorded.');
-    activity.dataset.region='setup-activity';card.append(activity);
+    activity.dataset.region='setup-activity';const history=a.element('details');history.append(a.element('summary','Preparation history'),activity);card.append(history);
     return card;
   }
 

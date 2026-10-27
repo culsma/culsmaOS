@@ -241,3 +241,19 @@ class LayoutImportError(ValueError):
 class ConfiguredLayoutReadPort(Protocol):
     """Offline projection only; the returned descriptor contains no connection secrets."""
     def execute(self, path: Path) -> dict: ...
+
+
+class LabwareEditorPort(Protocol):
+    """Optional offline capability on an OS device factory.
+
+    Catalogue exposes only declarative choices. Prepare returns a detached full
+    configuration and generic diagram, never writes files or contacts hardware.
+    The resident retains configuration ownership; the UI receives no native data.
+    """
+    def catalogue(self, path: Path) -> dict: ...
+    def prepare(self, path: Path, change: dict) -> dict: ...
+
+
+class WorkspaceCatalogueReadPort(Protocol):
+    """Offline declared positions/supplies. Implementations must not connect to hardware."""
+    def execute(self, path: Path) -> dict: ...

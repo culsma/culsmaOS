@@ -25,6 +25,7 @@ class MCPServerAdapter:
             (self.begin_loading, False, 'Reserve the station for loading. This does not confirm that physical loading occurred.'),
             (self.loading_request_status, True, 'Read a durable loading command receipt; pending is not application.'),
             (self.list_programs, True, 'List programs inside the explicitly configured program root.'),
+            (self.preview_program, True, 'Preview experiment requirements against the current station without creating a run or reserving resources.'),
             (self.inspect_program, True, 'Inspect and freeze a program source snapshot before submission.'),
             (self.submit_program, False, 'Submit a reviewed program snapshot to the existing OS queue.'),
             (self.control_run, False, 'Request pause, resume or cancellation at an OS execution boundary.'),
@@ -67,8 +68,13 @@ class MCPServerAdapter:
     def inspect_program(self, program_id: str) -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest('inspect', program_id))
 
-    def submit_program(self, program_id: str, snapshot_id: str, request_id: str) -> dict[str, Any]:
-        return self.programs.execute(self.raw_credential, ConsoleProgramRequest('submit', program_id, snapshot_id, request_id))
+    def preview_program(self, program_id: str) -> dict[str, Any]:
+        return self.programs.execute(self.raw_credential, ConsoleProgramRequest('preview', program_id))
+
+    def submit_program(self, program_id: str, snapshot_id: str, request_id: str,
+                       configuration_fingerprint: str | None = None) -> dict[str, Any]:
+        return self.programs.execute(self.raw_credential, ConsoleProgramRequest('submit', program_id, snapshot_id,
+            request_id, configuration_fingerprint=configuration_fingerprint))
 
     def control_run(self, run_id: str, action: Literal['pause','resume','cancel'], request_id: str) -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest(action, request_id=request_id, run_id=run_id))

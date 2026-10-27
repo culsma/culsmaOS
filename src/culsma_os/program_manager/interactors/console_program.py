@@ -19,7 +19,7 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
         if request.configuration_fingerprint is not None:
             if not isinstance(request.configuration_fingerprint,str) or request.action != 'submit' or re.fullmatch(r'[a-f0-9]{64}',request.configuration_fingerprint) is None:
                 raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
-        required = {'list':set(),'inspect':{'program_id'},'submit':{'program_id','snapshot_id','request_id'},
+        required = {'list':set(),'inspect':{'program_id'},'preview':{'program_id'},'submit':{'program_id','snapshot_id','request_id'},
                     'control-status':{'run_id','request_id'},'pause':{'run_id','request_id'},'resume':{'run_id','request_id'},'cancel':{'run_id','request_id'}}
         if (request.action not in required or {key for key,value in values.items() if value is not None} != required[request.action]
                 or any(value is not None and (not isinstance(value,str) or not value) for value in values.values())):
@@ -32,10 +32,16 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
             self.validate_identity(request.run_id)
             return {'acknowledgement':self.command({'action':request.action,'run_id':request.run_id,'request_id':request.request_id}),
                     'effect':'control_status' if request.action=='control-status' else 'queued_control_request'}
-        snapshot = self.source.snapshot(None if request.action == 'inspect' else request.snapshot_id)
+        snapshot = self.source.snapshot(None if request.action in {'inspect','preview'} else request.snapshot_id)
         inspection = self.source.inspect_snapshot(snapshot,request.program_id)
         if request.action == 'inspect':
             return inspection
+        if request.action == 'preview':
+            if not inspection['valid']:
+                return inspection
+            preparation = self.command({'action':'preview','source':str(snapshot.directory/request.program_id),
+                                        'library_roots':[str(snapshot.directory)]})
+            return {**inspection, 'preparation': preparation}
         if not inspection['valid']:
             raise ConsoleProgramError('PROGRAM_DIAGNOSTICS_REJECTED',diagnostics=inspection['diagnostics'])
         payload = {'action':'submit','source':str(snapshot.directory/request.program_id),

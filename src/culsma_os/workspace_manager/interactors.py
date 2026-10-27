@@ -709,14 +709,19 @@ class WorkspacePlanningInteractor:
         ids = {d['allocation_id'] for d in demands}
         if len(ids) != len(demands):
             raise ValueError('SETUP_ALLOCATION_DUPLICATE')
-        for values in preferences.values():
+        declared = catalogue.get('preferred_bindings', {})
+        if not isinstance(declared, dict):
+            raise ValueError('SETUP_PREFERENCES_INVALID')
+        defaults = {key: deepcopy(value) for key, value in declared.items() if key in ids}
+        for values in [*preferences.values(), defaults]:
             if not isinstance(values, dict) or set(values) - ids:
                 raise ValueError('SETUP_PREFERENCES_INVALID')
             for address in values.values():
                 if (not isinstance(address, dict) or set(address) != {'labware', 'well'}
                         or any(type(v) is not str or not v for v in address.values())):
                     raise ValueError('SETUP_PREFERENCES_INVALID')
-        fixed, preferred = preferences.get('fixed', {}), preferences.get('preferred', {})
+        fixed = preferences.get('fixed', {})
+        preferred = {**defaults, **preferences.get('preferred', {})}
         units = {}
         for demand in demands:
             key = demand.get('carrier') or demand['allocation_id']
@@ -828,3 +833,100 @@ class ConfiguredLayoutInteractor:
             self.cached = deepcopy(layout)
             self.cached_identity = identity
         return {**base, 'status': 'available', 'layout': deepcopy(self.cached)}
+
+
+import hashlib
+import json
+import re
+from uuid import uuid4
+from culsma_os.auth.interactors import AuthorizedInteractor
+from culsma_os.driver_framework.models import LabwareEditorPort
+from .models import LabwareRequest, ConfigurationError
+
+
+class ResidentLabwareInteractor:
+    def __init__(self, editor: LabwareEditorPort, configuration, context):
+        self.editor, self.configuration, self.context = editor, configuration, context
+
+    def execute(self, request):
+        self.configuration.verify(self.context)
+        if request.configuration_fingerprint != self.configuration.fingerprint:
+            raise ValueError('HOST_CONFIGURATION_STALE')
+        if request.action == 'labware-catalogue':
+            result = {'catalogue': self.editor.catalogue(self.context.config_path)}
+            self.validate_catalogue(result['catalogue'])
+        elif request.action == 'labware-prepare':
+            result = self.editor.prepare(self.context.config_path, request.labware_change)
+            if (not isinstance(result, dict) or set(result) != {'configuration','layout'}
+                    or not isinstance(result['configuration'], dict)
+                    or not isinstance(result['layout'], dict)):
+                raise ValueError('LABWARE_PREPARATION_INVALID')
+        else:
+            raise ValueError('LABWARE_REQUEST_INVALID')
+        self.configuration.verify(self.context)
+        if len(json.dumps(result, allow_nan=False).encode()) > 2 * 1024 * 1024:
+            raise ValueError('LABWARE_RESPONSE_TOO_LARGE')
+        return {**result, 'driver': self.context.driver_name,
+                'configuration_fingerprint': self.configuration.fingerprint}
+
+    def validate_catalogue(self, value):
+        if (not isinstance(value, dict) or value.get('schema') != 'culsma_labware_catalogue_v1'
+                or not isinstance(value.get('models'), list) or len(value['models']) > 2048
+                or not isinstance(value.get('targets'), list) or len(value['targets']) > 4096):
+            raise ValueError('LABWARE_CATALOGUE_INVALID')
+        models, targets = set(), set()
+        for row in value['models']:
+            if (not isinstance(row, dict) or any(not isinstance(row.get(k), str) or not row[k] for k in ('id','label','category'))
+                    or row['id'] in models):
+                raise ValueError('LABWARE_CATALOGUE_INVALID')
+            models.add(row['id'])
+        for row in value['targets']:
+            if (not isinstance(row, dict) or any(not isinstance(row.get(k), str) or not row[k] for k in ('id','parent','site','label'))
+                    or row['id'] in targets or not isinstance(row.get('models'), list)
+                    or any(not isinstance(m, str) or m not in models for m in row['models'])
+                    or not isinstance(row.get('occupants'), list) or any(not isinstance(v, str) for v in row['occupants'])
+                    or row.get('reason') is not None and not isinstance(row['reason'], str)):
+                raise ValueError('LABWARE_CATALOGUE_INVALID')
+            targets.add(row['id'])
+
+
+class LabwareConfigurationInteractor(AuthorizedInteractor):
+    required_capability = 'configuration:drafts'
+
+    def __init__(self, tokens, repository, resident):
+        super().__init__(tokens)
+        self.repository, self.resident = repository, resident
+
+    def perform(self, request):
+        if (not isinstance(request, LabwareRequest) or request.action not in {'catalogue','prepare'}
+                or not isinstance(request.expected_fingerprint, str)
+                or re.fullmatch(r'[a-f0-9]{64}', request.expected_fingerprint) is None
+                or request.action == 'catalogue' and request.change is not None
+                or request.action == 'prepare' and (not isinstance(request.change, dict)
+                    or set(request.change) - {'action','target','model','name'}
+                    or not {'action','target'} <= set(request.change)
+                    or any(not isinstance(v, str) or not 1 <= len(v) <= 256 for v in request.change.values()))):
+            raise ConfigurationError('LABWARE_REQUEST_INVALID')
+        try:
+            result = self.resident.execute({'action': 'labware-' + request.action,
+                'configuration_fingerprint': request.expected_fingerprint, 'labware_change': request.change})
+        except OSError as error:
+            raise ConfigurationError('LABWARE_HOST_UNAVAILABLE', 'unavailable') from error
+        except ValueError as error:
+            code = str(error)
+            if re.fullmatch(r'[A-Z][A-Z0-9_]{0,79}', code) is None:
+                code = 'LABWARE_CHANGE_REJECTED'
+            raise ConfigurationError(code, 'conflict') from error
+        if result.get('configuration_fingerprint') != request.expected_fingerprint:
+            raise ConfigurationError('HOST_CONFIGURATION_STALE', 'conflict')
+        if request.action == 'catalogue':
+            return {'catalogue': result['catalogue'], 'configuration_fingerprint': request.expected_fingerprint}
+        encoded = json.dumps(result['configuration'], sort_keys=True, separators=(',', ':'), allow_nan=False)
+        if len(encoded.encode()) > 1024 * 1024:
+            raise ConfigurationError('LABWARE_CONFIGURATION_TOO_LARGE')
+        draft = self.repository.save(str(uuid4()), 0, {'title': 'Workstation labware change',
+            'driver': result['driver'], 'configuration': json.loads(encoded),
+            'fingerprint': hashlib.sha256(encoded.encode()).hexdigest()}).as_dict()
+        return {'draft': {key: draft[key] for key in ('draft_id','revision','fingerprint','title','driver')},
+                'layout': result['layout'], 'expected_fingerprint': request.expected_fingerprint,
+                'activation': 'not_applied', 'physical_observation': False}

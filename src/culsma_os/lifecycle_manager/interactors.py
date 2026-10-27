@@ -373,7 +373,7 @@ class ResidentConfigurationInteractor:
                 or any(not isinstance(origin[key],str) or not origin[key] for key in ['draft_id','fingerprint','title'])):
             raise ValueError('HOST_CONFIGURATION_INVALID')
         encoded = json.dumps(request.configuration,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
-        if len(encoded)>200000 or hashlib.sha256(encoded).hexdigest()!=origin['fingerprint']:
+        if len(encoded)>1024 * 1024 or hashlib.sha256(encoded).hexdigest()!=origin['fingerprint']:
             raise ValueError('HOST_CONFIGURATION_INVALID')
         previous = self.repository.receipt(request.request_id)
         if previous is not None and previous['request_fingerprint'] != fingerprint:
