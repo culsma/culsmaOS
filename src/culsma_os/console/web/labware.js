@@ -94,6 +94,7 @@ export class ConsoleLabware {
     if(target) {
       box.append(a.details([['Current contents',target.occupants.join(', ') || 'Empty'],
         ...(this.desired?.model ? [['Current model',this.catalogue.models.find(m=>m.id===this.desired.model)?.label || this.desired.model]]:[])]));
+      if(target.note) box.append(a.element('p',target.note,'note'));
       if(target.reason) box.append(a.element('p',target.reason,'notice'));
       else if(this.envelope.editing_ready!==false) {
         const models=this.catalogue.models.filter(m=>target.models.includes(m.id));
@@ -119,6 +120,7 @@ export class ConsoleLabware {
           const change=this.proposal.change;
           preview.append(a.details([['Position',target.label],['Change',change.action],['Contents',change.action==='remove' ? 'Empty':models.find(m=>m.id===change.model)?.label || change.model]]),
             a.element('p','Apply to update this position in the layout. Physical loading is confirmed before an experiment runs.','note'));
+          if(this.proposal.impact?.length) {const effects=a.element('section');effects.setAttribute('aria-label','Related configuration changes');effects.append(a.element('h4','Related configuration changes'));const list=a.element('ul');for(const item of this.proposal.impact)list.append(a.element('li',item));effects.append(list);preview.append(effects);}
           const apply=a.configButton('Apply checked change',()=>this.apply(),'',{action:'workstation.apply-labware',entity:this.proposal.draft.draft_id});
           apply.disabled=this.busy || this.envelope.editing_ready===false;if(!this.pending && !a.activation.pending())preview.append(apply);box.append(preview);
         }

@@ -857,9 +857,12 @@ class ResidentLabwareInteractor:
             self.validate_catalogue(result['catalogue'])
         elif request.action == 'labware-prepare':
             result = self.editor.prepare(self.context.config_path, request.labware_change)
-            if (not isinstance(result, dict) or set(result) != {'configuration','layout'}
+            if (not isinstance(result, dict) or (not {'configuration','layout'} <= set(result) or set(result)-{'configuration','layout','impact'})
                     or not isinstance(result['configuration'], dict)
                     or not isinstance(result['layout'], dict)):
+                raise ValueError('LABWARE_PREPARATION_INVALID')
+            if ('impact' in result and (not isinstance(result['impact'],list) or len(result['impact'])>128
+                    or any(not isinstance(v,str) or len(v)>1024 for v in result['impact']))):
                 raise ValueError('LABWARE_PREPARATION_INVALID')
         else:
             raise ValueError('LABWARE_REQUEST_INVALID')
@@ -944,4 +947,4 @@ class LabwareConfigurationInteractor(AuthorizedInteractor):
             'fingerprint': hashlib.sha256(encoded.encode()).hexdigest()}).as_dict()
         return {'draft': {key: draft[key] for key in ('draft_id','revision','fingerprint','title','driver')},
                 'layout': result['layout'], 'expected_fingerprint': request.expected_fingerprint,
-                'activation': 'not_applied', 'physical_observation': False}
+                'activation': 'not_applied', 'physical_observation': False, 'impact': result.get('impact',[])}

@@ -65,10 +65,30 @@ try {
  await dialog.getByRole('heading',{name:'Checked proposal · not applied',exact:true}).waitFor();
  await dialog.getByRole('button',{name:'Apply checked change',exact:true}).click();
  await empty.waitFor();await dialog.waitFor({state:'detached'});
- // Protected/stacked contents still open a visible explanation, rather than doing nothing.
- await page.getByRole('button',{name:'Inspect deck item WATER_T36_REAR_SITE1 · carrier PREVIEW_T36_5R60_SUBSTITUTE · site 1',exact:true}).click();
- await dialog.getByText('Referenced by execution, tips, program bindings or motion. Update those references first.',{exact:true}).waitFor();
- if(await dialog.getByLabel('Contents',{exact:true}).count())throw new Error('Protected position exposed editing');
+ // Existing vendor models, not just newly placed items, can be changed in place.
+ await page.getByRole('button',{name:'Inspect deck item HT_L_0003 · carrier CAR_5TIP_0001 · site 2',exact:true}).click();
+ await dialog.getByLabel('Contents',{exact:true}).waitFor();
+ await dialog.getByLabel('Labware model',{exact:true}).selectOption('ST_L.rck');
+ await dialog.getByRole('button',{name:'Check replacement',exact:true}).click();
+ await dialog.getByRole('heading',{name:'Checked proposal · not applied',exact:true}).waitFor();
+ for(const width of [1440,390]) {
+  await page.setViewportSize({width,height:1000});
+  const png=await dialog.screenshot({path:output.replace('.png',`-occupied-${width}.png`),animations:'disabled'});
+  const file=`${baselines}/occupied-labware-${width}.png`;
+  if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1')writeFileSync(file,png);
+  else {const ref=PNG.sync.read(readFileSync(file)),img=PNG.sync.read(png);
+   if(ref.width!==img.width || ref.height!==img.height || pixelmatch(ref.data,img.data,null,img.width,img.height,{threshold:.1})>img.width*img.height*.001)
+    throw new Error(`Occupied labware golden changed at ${width}`);
+  }
+ }
+ await page.setViewportSize({width:1440,height:1000});
+ await dialog.getByRole('button',{name:'Close',exact:true}).click();
+ await page.getByRole('button',{name:'Inspect deck item DWP96_E4 · carrier CAR_HHS_3DWP_0001 · site 4',exact:true}).click();
+ await dialog.getByLabel('Contents',{exact:true}).waitFor();
+ await dialog.getByLabel('Contents',{exact:true}).selectOption('reservoir');
+ await dialog.getByLabel('Labware model',{exact:true}).selectOption('Nun_100ml_96C_Rgt_L.rck');
+ await dialog.getByRole('button',{name:'Check replacement',exact:true}).click();
+ await dialog.getByRole('region',{name:'Related configuration changes',exact:true}).getByText(/Clear liquid capacity/).waitFor();
  await dialog.getByRole('button',{name:'Close',exact:true}).click();
  await dialog.waitFor({state:'detached'});
  if(actions.filter(a=>a==='apply').length!==2)throw new Error('Unexpected application count');

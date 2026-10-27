@@ -361,8 +361,13 @@ saves a checked draft. Application uses the existing idle/resource/activation gu
 HTTP and DOM controls carry requests only. Hamilton implements native and generated
 layouts; other drivers without the capability report editing unavailable. No vendor
 files are read by the frontend. Editing neither loads labware nor confirms contents.
-Referenced objects and unsupported stacks/frames remain protected. E2E and desktop/mobile
-golden coverage: `tests/integration/test_console_labware.py`.
+Existing native labware can be replaced or removed, including definitions outside
+the execution catalogue. Installed definitions and site footprints determine editor
+choices; this does not extend verified execution support. A checked proposal lists
+bindings, capacity, well-map or tip-source settings that must be cleared. Clearing a
+stack lists all affected objects. A missing tip source remains explicitly unconfigured
+and rejects transfers before dispatch. Module/transport-dependent positions retain
+their dedicated setup checks. E2E and desktop/mobile golden coverage: `tests/integration/test_console_labware.py`.
 New placements do not infer liquid capacity, reagent inventory, well mappings or program
 bindings. Those remain explicit driver/experiment preparation inputs.
 
