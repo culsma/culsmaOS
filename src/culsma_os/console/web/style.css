@@ -158,3 +158,15 @@ nav{flex-wrap:wrap;gap:12px 24px}
 
 .setup-deck-carrier[data-highlighted=true]{outline:3px solid #276598;outline-offset:1px;background:#bed9ef;z-index:1}
 .setup-deck-carrier[data-highlighted=true] .setup-deck-carrier-tag{background:#276598;color:white}
+
+.labware-dialog{width:min(600px,calc(100vw - 32px));max-height:calc(100dvh - 32px);box-sizing:border-box;overflow:auto;border:1px solid #c7d5e3;border-radius:12px;padding:24px;background:#fff;color:#193047;box-shadow:0 18px 70px #102d4b40}
+.labware-dialog::backdrop{background:#17324d66}
+.labware-dialog .content-heading{gap:16px;align-items:center}
+.labware-dialog h2{font-size:20px;margin:0}
+.labware-dialog .loading-location{overflow-wrap:anywhere}
+.labware-dialog .config-field{display:flex;max-width:none}
+.labware-dialog details{margin:12px 0}
+.labware-dialog .labware-proposal{margin-top:20px;padding-top:16px}
+.setup-deck-stack > button[data-action="workstation.select-labware-site"]{flex:1;width:100%;min-height:0;padding:2px;font-size:11px;background:#fff;border:1px dashed #8ba5bd;color:#315a7d}
+.setup-deck-sites > button[data-action="workstation.select-labware-site"]{flex:1;min-height:0;min-width:0;padding:2px;font-size:10px;background:#fff;border:1px dashed #8ba5bd;color:#315a7d;overflow:hidden}
+@media(max-width:600px){.labware-dialog{padding:16px}.labware-dialog .content-heading{align-items:flex-start}.labware-dialog h2{font-size:18px}}

@@ -6,14 +6,17 @@ const pixelmatch=(await import(`${process.env.CULSMA_OS_BROWSER_MODULES}/pixelma
 const [url,output,baselines]=process.argv.slice(2),browser=await chromium.launch({executablePath:process.env.CULSMA_OS_CHROME,headless:true});
 try {
  const page=await browser.newPage({viewport:{width:1280,height:960}}),errors=[],posts=[];
- page.on('pageerror',error=>errors.push(error.message));page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
+ page.on('pageerror',error=>errors.push(error.message));page.on('request',r=>{if(r.method()==='POST' && r.postDataJSON()?.action!=='catalogue')posts.push(r.url());});
  await page.goto(url+'#station');
  const layout=page.locator('[data-region="workstation-layout"]');
  await layout.locator('[data-carrier-id="CAR_HHS_3DWP_0001"]').waitFor();
  if(await layout.locator('[data-carrier-id]').count()!==12) throw new Error('Configured deck is incomplete');
  const identity=await layout.getAttribute('data-configuration-fingerprint');
  await layout.getByRole('button',{name:/^Inspect deck item DWP96_E4 /}).click();
- await layout.locator('[data-region="workstation-layout-selection"]').getByRole('heading',{name:'DWP96_E4',exact:true}).waitFor();
+ const dialog=page.getByRole('dialog',{name:'Edit rack position',exact:true});
+ await dialog.getByText('DWP96_E4',{exact:true}).waitFor();
+ await dialog.getByRole('button',{name:'Close',exact:true}).click();
+ await dialog.waitFor({state:'detached'});
  for(const width of [1280,390]) {
   await page.setViewportSize({width,height:960});
   const actual=await layout.screenshot({path:`${output}/overview-layout-${width}.png`,animations:'disabled'}),file=`${baselines}/overview-layout-${width}.png`;

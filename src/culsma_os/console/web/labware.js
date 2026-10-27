@@ -1,35 +1,69 @@
-import {RunSetupDeck} from './setup-deck.js';
-
 /** Shared semantic controls; all catalogue and placement decisions belong to the driver port. */
 export class ConsoleLabware {
   constructor(app) {this.app=app;this.reset();}
-  reset() {this.open=false;this.catalogue=null;this.target=null;this.model='';this.category='';this.proposal=null;this.error=null;this.busy=false;this.name='';this.pending=null;this.message=null;this.selectedItem=null;}
-  bind(envelope,redraw) {this.envelope=envelope;this.redraw=redraw;}
-  selectItem(id) {
-    this.selectedItem=id;
-    if(!this.open || !this.catalogue) return;
-    const target=this.catalogue.targets.find(t=>t.occupants.includes(id));
+  reset() {this.open=false;this.catalogue=null;this.target=null;this.model='';this.category='';this.proposal=null;this.error=null;this.busy=false;this.name='';this.pending=null;this.message=null;this.desired=null;this.focus=null;this.requestVersion=(this.requestVersion || 0)+1;}
+  bind(envelope,redraw) {
+    const becameReady=this.envelope?.editing_ready===false && envelope.editing_ready!==false;
+    this.envelope=envelope;this.redraw=redraw;
+    if(this.pending && !this.app.activation.pending() && this.app.activation.view?.receipt?.request_id===this.pending.request_id) this.pending=null;
+    if(becameReady && this.open && !this.catalogue && !this.busy && this.desired)
+      queueMicrotask(()=>{if(this.open && this.envelope.editing_ready!==false)this.edit(this.desired);});
+  }
+  update() {
+    const active=document.activeElement;
+    if(active?.closest('[data-region="labware-editor"]')) this.focus={field:active.dataset.field,action:active.dataset.action};
+    this.redraw();
+  }
+  selectItem(id,model) {return this.edit({item:id,model});}
+  selectSite(parent,site) {return this.edit({parent,site});}
+  select(id) {
+    const target=this.catalogue?.targets.find(t=>t.id===id);
+    const current=this.catalogue?.models.find(m=>m.id===this.desired?.model);
+    this.target=id;this.model=current?.id || '';this.category=target?.occupants.length ? current?.category || '':'empty';
+    this.name=target?.suggested_name || '';this.proposal=null;this.error=null;
+  }
+  resolveSelection() {
+    const desired=this.desired || {};
+    const target=this.catalogue?.targets.find(t=>desired.item ? t.occupants.includes(desired.item):t.parent===desired.parent && t.site===desired.site);
     if(target) this.select(target.id);
+    else {this.target=null;this.error='This position is read-only in the installed driver.';}
   }
-  selectSite(parent,site) {const target=this.catalogue?.targets.find(t=>t.parent===parent && t.site===site);if(target) this.select(target.id);}
-  select(id) {this.target=id;this.model='';this.category='';this.name=this.catalogue?.targets.find(t=>t.id===id)?.suggested_name || '';this.proposal=null;this.error=null;}
-  toolbar() {
-    const a=this.app,bar=a.element('div','','config-actions');
-    const button=a.configButton(this.open ? 'Close labware editor':'Edit labware',()=>this.toggle(),'',{action:'workstation.edit-labware'});
-    button.disabled=this.busy || (!this.open && this.envelope.editing_ready===false);bar.append(button);
-    if(this.envelope.editing_ready===false) bar.append(a.element('p','Labware editing is available when the station is ready and the run queue is empty.','note'));return bar;
-  }
-  async toggle() {
-    if(this.open) {this.open=false;this.redraw();return;}
-    this.open=true;this.busy=true;this.redraw();
-    const identity=this.envelope.configuration_fingerprint;
+  async edit(selection) {
+    if(this.pending || this.busy && this.catalogue) {
+      this.open=true;this.message='Finish checking the current change before editing another position.';this.update();return;
+    }
+    this.open=true;this.desired=selection;this.target=null;this.proposal=null;this.error=null;this.message=null;this.focus=null;
+    if(this.envelope.editing_ready===false) {this.error='The station must be ready with an empty run queue before changing labware.';this.update();return;}
+    if(this.catalogue) {this.resolveSelection();this.update();return;}
+    if(this.busy) {this.update();return;}
+    this.busy=true;this.update();
+    const identity=this.envelope.configuration_fingerprint,version=this.requestVersion;
     try {
       const result=await this.app.configurationFetch('/api/v1/configuration/labware',{action:'catalogue',expected_fingerprint:identity});
-      if(identity!==this.envelope.configuration_fingerprint) return;
-      this.catalogue={...result.catalogue,targets:result.catalogue.targets.filter(t=>t.kind!=='carrier')};this.error=null;
-      if(this.selectedItem) this.selectItem(this.selectedItem);
-    } catch(error) {this.error=error.message;}
-    finally {this.busy=false;this.redraw();}
+      if(version!==this.requestVersion || identity!==this.envelope.configuration_fingerprint) return;
+      this.catalogue={...result.catalogue,targets:result.catalogue.targets.filter(t=>t.kind!=='carrier')};
+      this.resolveSelection();
+    } catch(error) {if(version===this.requestVersion)this.error=error.message;}
+    finally {if(version===this.requestVersion){this.busy=false;this.update();}}
+  }
+  close() {
+    this.open=false;this.focus=null;this.update();
+    const desired=this.desired || {};
+    queueMicrotask(()=>{
+      const buttons=[...this.app.content.querySelectorAll('[data-action]')];
+      buttons.find(node=>desired.item ? node.dataset.entityId===desired.item:
+        node.dataset.entityId===desired.parent+'/'+desired.site)?.focus({preventScroll:true});
+    });
+  }
+  present(dialog) {
+    queueMicrotask(()=>{
+      if(!this.open || !dialog.isConnected) return;
+      if(!dialog.open) dialog.showModal();
+      const focus=this.focus;
+      const control=[...dialog.querySelectorAll('[data-field],[data-action]')].find(node=>
+        focus?.field ? node.dataset.field===focus.field:focus?.action && node.dataset.action===focus.action);
+      if(control && !control.disabled) control.focus({preventScroll:true});
+    });
   }
   choice(label,value,choices,onChange,field) {
     const a=this.app,wrap=a.element('label','','config-field'),select=a.element('select');
@@ -37,58 +71,85 @@ export class ConsoleLabware {
     const empty=a.element('option','Select…');empty.value='';select.append(empty);
     for(const [id,text] of choices) {const option=a.element('option',text);option.value=id;select.append(option);}
     select.value=value || '';select.disabled=this.busy || !!this.pending;
-    select.addEventListener('change',()=>{onChange(select.value);this.proposal=null;this.redraw();});wrap.append(select);return wrap;
+    select.addEventListener('change',()=>{onChange(select.value);this.proposal=null;this.update();});wrap.append(select);return wrap;
   }
   render() {
-    const a=this.app,box=a.element('section','','loading-inspector labware-editor');box.dataset.region='labware-editor';
-    box.setAttribute('aria-label','Labware placement editor');box.append(a.element('h3','Place or replace labware'));
-    box.append(a.element('p','Keep racks fixed. Choose a compatible plate, reservoir or tip rack. Check the proposed layout, then apply it. Reagents and physical loading are confirmed separately.','note'));
+    const a=this.app,dialog=a.element('dialog','','labware-dialog');dialog.dataset.region='labware-editor';
+    dialog.setAttribute('aria-labelledby','labware-editor-title');
+    dialog.addEventListener('cancel',event=>{event.preventDefault();this.close();});
+    const top=a.element('div','','content-heading'),heading=a.element('h2','Edit rack position');heading.id='labware-editor-title';
+    const close=a.configButton('Close',()=>this.close(),'',{action:'workstation.close-labware'});top.append(heading,close);dialog.append(top);
+    const box=a.element('div','','labware-dialog-body');dialog.append(box);
+    const target=this.catalogue?.targets.find(t=>t.id===this.target);
+    const location=target?.label || (this.desired?.parent ? this.desired.parent+' · site '+this.desired.site:this.desired?.item);
+    if(location) box.append(a.element('p',location,'loading-location'));
     if(this.error) {const alert=a.element('p',this.error,'notice');alert.setAttribute('role','alert');box.append(alert);}
+    if(this.pending || a.activation.pending()) {
+      box.append(a.element('p','A layout change is awaiting its outcome. Check its status before making another change.','notice'),
+        a.configButton('Check apply status',()=>this.checkApplyStatus(),'',{action:'workstation.check-labware-status'}));
+    }
     if(this.message) {const message=a.element('p',this.message,'notice');message.setAttribute('role','status');box.append(message);}
-    if(!this.catalogue) {box.append(a.element('p',this.busy ? 'Reading driver catalogue…':'Labware editing is unavailable for this station.','note'));return box;}
-    box.append(this.choice('Rack site',this.target,this.catalogue.targets.map(t=>[t.id,t.label+(t.occupants.length ? ' · '+t.occupants.join(', '):' · Empty')]),id=>this.select(id),'/labware/target'));
-    const target=this.catalogue.targets.find(t=>t.id===this.target);
-    if(!target) return box;
-    if(target.reason) {box.append(a.element('p',target.reason,'notice'));return box;}
-    const models=this.catalogue.models.filter(m=>target.models.includes(m.id));
-    box.append(this.choice('Labware category',this.category,[...new Set(models.map(m=>m.category))].map(c=>[c,c]),value=>{this.category=value;this.model='';},'/labware/category'));
-    box.append(this.choice('Labware model',this.model,models.filter(m=>m.category===this.category).map(m=>[m.id,m.label]),value=>this.model=value,'/labware/model'));
-    if(!target.occupants.length) {
-      const label=a.element('label','','config-field'),input=a.element('input');input.value=this.name;
-      label.append(a.element('span','Labware identifier'));input.setAttribute('aria-label','Labware identifier');
-      a.interaction.identify(input,{field:'/labware/name'});input.disabled=this.busy || !!this.pending;
-      input.addEventListener('input',()=>{this.name=input.value;this.proposal=null;box.querySelector('[data-region="labware-proposal"]')?.remove();});label.append(input);box.append(label);
+    if(this.busy) box.append(a.element('p',this.catalogue ? 'Checking the change…':'Loading choices for this position…','note'));
+    if(!this.catalogue && !this.busy && this.envelope.editing_ready!==false) box.append(a.configButton('Retry loading choices',()=>this.edit(this.desired),'',{action:'workstation.retry-labware'}));
+    if(target) {
+      box.append(a.details([['Current contents',target.occupants.join(', ') || 'Empty'],
+        ...(this.desired?.model ? [['Current model',this.catalogue.models.find(m=>m.id===this.desired.model)?.label || this.desired.model]]:[])]));
+      if(target.reason) box.append(a.element('p',target.reason,'notice'));
+      else if(this.envelope.editing_ready!==false) {
+        const models=this.catalogue.models.filter(m=>target.models.includes(m.id));
+        const labels={plate:'Plate',reservoir:'Reservoir',tips:'Tip rack'};
+        box.append(this.choice('Contents',this.category,[['empty','Empty position'],...[...new Set(models.map(m=>m.category))].map(c=>[c,labels[c] || c])],value=>{this.category=value;const choices=models.filter(m=>m.category===value);this.model=choices.length===1 ? choices[0].id:'';},'/labware/category'));
+        if(this.category && this.category!=='empty') {
+          box.append(this.choice('Labware model',this.model,models.filter(m=>m.category===this.category).map(m=>[m.id,m.label]),value=>this.model=value,'/labware/model'));
+          if(!target.occupants.length) {
+            const advanced=a.element('details');advanced.append(a.element('summary','Advanced identification'));
+            const label=a.element('label','','config-field'),input=a.element('input');input.value=this.name;
+            label.append(a.element('span','Labware identifier'));input.setAttribute('aria-label','Labware identifier');
+            a.interaction.identify(input,{field:'/labware/name'});input.disabled=this.busy || !!this.pending;
+            input.addEventListener('input',()=>{this.name=input.value;this.proposal=null;box.querySelector('[data-region="labware-proposal"]')?.remove();});label.append(input);advanced.append(label);box.append(advanced);
+          }
+        }
+        const empty=this.category==='empty',action=empty ? 'remove':target.occupants.length ? 'replace':'place';
+        const check=a.configButton(empty ? 'Check removal':target.occupants.length ? 'Check replacement':'Check placement',()=>this.prepare(action),'',{action:empty ? 'workstation.remove-labware':'workstation.check-labware',entity:target.id});
+        check.disabled=this.busy || !!this.pending || !this.category || (empty ? !target.occupants.length:!this.model || target.occupants.length && this.model===this.desired?.model);box.append(check);
+        if(empty && !target.occupants.length) box.append(a.element('p','This position is already empty.','note'));
+        if(this.proposal) {
+          const preview=a.element('section','','labware-proposal');preview.dataset.region='labware-proposal';
+          preview.append(a.element('h3','Checked proposal · not applied'));
+          const change=this.proposal.change;
+          preview.append(a.details([['Position',target.label],['Change',change.action],['Contents',change.action==='remove' ? 'Empty':models.find(m=>m.id===change.model)?.label || change.model]]),
+            a.element('p','Apply to update this position in the layout. Physical loading is confirmed before an experiment runs.','note'));
+          const apply=a.configButton('Apply checked change',()=>this.apply(),'',{action:'workstation.apply-labware',entity:this.proposal.draft.draft_id});
+          apply.disabled=this.busy || this.envelope.editing_ready===false;if(!this.pending && !a.activation.pending())preview.append(apply);box.append(preview);
+        }
+      }
     }
-    const actions=a.element('div','','config-actions');
-    const check=a.configButton(target.occupants.length ? 'Check replacement':'Check placement',()=>this.prepare(target.occupants.length ? 'replace':'place'),'',{action:'workstation.check-labware',entity:target.id});
-    check.disabled=this.busy || !!this.pending || !this.model;actions.append(check);
-    if(target.occupants.length) {const remove=a.configButton('Check removal',()=>this.prepare('remove'),'',{action:'workstation.remove-labware',entity:target.id});remove.disabled=this.busy || !!this.pending;actions.append(remove);}
-    box.append(actions);
-    if(this.proposal) {
-      const preview=a.element('section','','labware-proposal');preview.dataset.region='labware-proposal';
-      preview.append(a.element('h4','Checked proposal · not applied'),a.element('p','This changes the declared layout only. It does not load labware, replenish tips or confirm contents.','note'));
-      const change=this.proposal.change;
-      preview.append(a.details([['Change',change.action],['Rack site',target.label],['Labware',target.occupants[0] || change.name],['Model',change.model || 'Remove from declared layout']]));
-      const scene=RunSetupDeck.scene({layout:this.proposal.layout});
-      if(scene) preview.append(RunSetupDeck.render(a,scene,[],null,()=>{},{stacked:scene.stacked,highlighted:[target.occupants[0] || change.name],label:'Proposed labware layout',description:'Review the proposed placement before application.'}));
-      const apply=a.configButton(this.pending ? 'Check apply status':'Apply checked change',()=>this.apply(),'',{action:'workstation.apply-labware',entity:this.proposal.draft.draft_id});apply.disabled=this.busy || this.envelope.editing_ready===false;preview.append(apply);box.append(preview);
-    }
-    return box;
+    this.present(dialog);return dialog;
+  }
+  async checkApplyStatus() {
+    if(this.busy) return;
+    this.busy=true;this.update();
+    try {
+      await this.app.activation.refresh();
+      this.message='Apply status: '+(this.app.activation.view?.receipt?.status || 'unavailable');
+      if(!this.app.activation.pending()) this.pending=null;
+    } catch(error) {this.error=error.message;}
+    finally {this.busy=false;this.update();this.app.renderKey=null;this.app.refresh();}
   }
   async prepare(action) {
-    if(this.busy || this.pending) return;
-    this.busy=true;this.proposal=null;this.error=null;this.redraw();
+    if(this.busy || this.pending || this.app.activation.pending() || !this.target || this.envelope.editing_ready===false) return;
+    this.busy=true;this.proposal=null;this.error=null;this.update();
     const identity=this.envelope.configuration_fingerprint;
     try {
       const change={action,target:this.target};if(action!=='remove') change.model=this.model;if(action==='place') change.name=this.name;
       const proposal=await this.app.configurationFetch('/api/v1/configuration/labware',{action:'prepare',expected_fingerprint:identity,change});
       if(identity===this.envelope.configuration_fingerprint) this.proposal={...proposal,change};
     } catch(error) {this.error=error.message;}
-    finally {this.busy=false;this.redraw();}
+    finally {this.busy=false;this.update();}
   }
   async apply() {
     if(this.busy || !this.proposal) return;
-    this.busy=true;this.error=null;this.redraw();
+    this.busy=true;this.error=null;this.update();
     try {
       if(this.pending) {await this.app.activation.refresh();this.message='Apply status: '+(this.app.activation.view?.receipt?.status || 'unavailable');return;}
       const payload={action:'apply',draft_id:this.proposal.draft.draft_id,revision:this.proposal.draft.revision,
@@ -98,6 +159,6 @@ export class ConsoleLabware {
       this.message='Apply request '+receipt.status+'. Wait for the station to report ready; no experiment was started.';
       await this.app.activation.refresh();
     } catch(error) {this.error=error.message;if(Number.isInteger(error.httpStatus) && error.httpStatus<500) {this.pending=null;this.app.activation.remember(null);}}
-    finally {this.busy=false;this.redraw();}
+    finally {this.busy=false;this.update();}
   }
 }

@@ -1,7 +1,7 @@
 import {RunSetupDeck} from './setup-deck.js';
 import {ConsoleLabware} from './labware.js';
 
-/** Read-only configured geometry; never a draft, run loadout or sensor observation. */
+/** Configured geometry with direct position editing through the driver catalogue. */
 export class WorkstationLayoutView {
   constructor(app) {this.app=app;this.selected=null;this.fingerprint=null;this.editor=new ConsoleLabware(app);}
 
@@ -40,19 +40,14 @@ export class WorkstationLayoutView {
     const layout=envelope.layout,rows=WorkstationLayoutView.entries(layout),scene=RunSetupDeck.scene({layout});
     card.dataset.configurationFingerprint=envelope.configuration_fingerprint;card.dataset.source=envelope.source;
     card.append(a.element('p','Current host configuration · declared geometry, not detected hardware or contents.','note'));
-    const select=id=>{
-      const scroll=card.querySelector('.setup-deck-scroll')?.scrollLeft || 0;
-      this.selected=id;this.editor.selectItem(id);const next=this.render(envelope);card.replaceWith(next);
-      const viewport=next.querySelector('.setup-deck-scroll');if(viewport) viewport.scrollLeft=scroll;
-    };
+    const select=id=>{this.selected=id;this.editor.selectItem(id,rows.find(row=>row.id===id)?.model);};
     const redraw=()=>{const scroll=card.querySelector('.setup-deck-scroll')?.scrollLeft || 0;const next=this.render(envelope);card.replaceWith(next);const viewport=next.querySelector('.setup-deck-scroll');if(viewport) viewport.scrollLeft=scroll;};
     this.editor.bind(envelope,redraw);
-    card.append(this.editor.toolbar());
     if(scene) {
       card.append(RunSetupDeck.render(a,scene,rows,this.selected,select,{stacked:scene.stacked,
-        onSelectSite:this.editor.catalogue ? (parent,site)=>{this.editor.selectSite(parent,site);redraw();}:null,
+        onSelectSite:(parent,site)=>this.editor.selectSite(parent,site),
         action:'workstation.inspect-layout-item',label:'Configured workstation deck',
-        description:'Declared track and carrier positions. Select installed labware to inspect its configured placement.',
+        description:'Click a rack position to choose its plate, reservoir or tip rack, or leave it empty.',
         footer:'Schematic site spacing. Experiment-specific loading and confirmation are recorded separately.'}));
       const groups=layout.definition.diagram?.groups || [];
       if(groups.length) {
@@ -77,12 +72,6 @@ export class WorkstationLayoutView {
         board.append(slot);
       }
       card.append(board);
-    }
-    const selected=rows.find(row=>row.id===this.selected);
-    if(selected) {
-      const inspector=a.element('section','','loading-inspector');inspector.dataset.region='workstation-layout-selection';
-      inspector.append(a.element('h3',selected.id),a.details([['Model',selected.model],['Parent / carrier',selected.parent],['Site / slot',selected.site]]));
-      card.append(inspector);
     }
     if(this.editor.open) card.append(this.editor.render());
     const link=a.element('a','System Settings: rack layout','action-link');link.href='#configuration';card.append(link);

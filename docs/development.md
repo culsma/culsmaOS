@@ -348,6 +348,11 @@ diffs remain in ignored `run-artifacts/ui-tests`. Reference refresh is explicit
 
 ### Workstation labware editing
 
+Click an occupied or empty rack position directly to open its dialog. It shows the
+current contents and driver-compatible choices, including leaving a position empty.
+Check and explicitly apply a change; Escape closes the dialog and restores deck
+focus. No separate edit-mode button or off-screen editor is required.
+
 `LabwareEditorPort` (`driver_framework/models.py`) is an optional offline device-factory
 capability: `catalogue(path)` supplies compatible site/model choices and
 `prepare(path, change)` returns a detached configuration and generic layout.

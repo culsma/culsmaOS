@@ -109,3 +109,14 @@ def test_carrier_settings_use_existing_authorized_layout_and_activation_paths():
     assert "'/api/v1/configuration/labware'" in source and "'/api/v1/configuration/activation'" in source
     assert "action:'system.apply-carrier'" in source and 'activation.remember(payload)' in source
     assert 'fetch(' not in source
+
+
+def test_position_dialog_keeps_mutations_on_the_existing_checked_path():
+    web=ROOT/'src/culsma_os/console/web'
+    source=(web/'workstation-layout.js').read_text()
+    assert 'editor.toolbar()' not in source and 'onSelectSite:' in source
+    editor=(web/'labware.js').read_text()
+    assert "a.element('dialog'" in editor and 'dialog.showModal()' in editor
+    assert "dialog.addEventListener('cancel'" in editor and "this.pending" in editor
+    assert "'/api/v1/configuration/labware'" in editor and "'/api/v1/configuration/activation'" in editor
+    assert 'fetch(' not in editor and 'Hamilton' not in editor
