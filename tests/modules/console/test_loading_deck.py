@@ -21,7 +21,13 @@ for(const count of [30,54]) for(const span of [1,2,4,5,6,7]) {
  assert.equal(scene.positions.length,count);assert.equal(scene.carriers[0].start,2);
  assert.equal(scene.carriers[0].span,span);assert.equal(scene.carriers[0].sites.length,5);
  assert.equal(scene.carriers[0].placements[0].id,'plate');assert.equal(JSON.stringify(plan),before);
+ const geometry=Deck.presentation(scene,false);
+ assert.equal(geometry.offsets.length,count+1);assert.equal(geometry.widths.length,count);
+ assert.ok(geometry.offsets[scene.carriers[0].start+span]-geometry.offsets[scene.carriers[0].start]>=(span<3 ? 76:168));
+ assert.equal(JSON.stringify(plan),before);
 }
+const stacked=Deck.scene(make(54,6));stacked.carriers[0].placements=Array.from({length:4},(_,n)=>({id:'plate'+n,site:'2'}));
+assert.ok(Deck.presentation(stacked,true).height>=700);
 assert.equal(Deck.scene({}),null);
 const outside=make(4,6);assert.equal(Deck.scene(outside),null);
 const overlap=make(54,6);overlap.layout.configuration.carriers.other={model:'model',track:'3'};assert.equal(Deck.scene(overlap),null);

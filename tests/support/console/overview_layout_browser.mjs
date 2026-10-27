@@ -25,6 +25,17 @@ try {
    if(ref.width!==img.width || ref.height!==img.height || pixelmatch(ref.data,img.data,null,img.width,img.height,{threshold:.1})>img.width*img.height*.001)
     throw new Error(`Overview golden changed at ${width}`);
   }
+  const viewport=layout.locator('.setup-deck-scroll');
+  const narrow=layout.locator('[data-carrier-id="PREVIEW_T36_5R60_SUBSTITUTE"]');
+  if((await narrow.boundingBox()).width<70)throw new Error('Narrow carrier is unreadable');
+  if(await narrow.locator('.setup-deck-stack-label').count())throw new Error('Narrow carrier repeats site labels');
+  const stack=layout.locator('[data-carrier-id="CAR_5STACK_0003"] .setup-deck-stack');
+  for(const node of await stack.locator('.setup-deck-site').all())if((await node.boundingBox()).height<24)throw new Error('Stacked item is squeezed');
+  await viewport.evaluate(node=>node.scrollLeft=node.scrollWidth);
+  const right=await layout.screenshot({path:`${output}/overview-layout-${width}-right.png`,animations:'disabled'}),rightFile=`${baselines}/overview-layout-${width}-right.png`;
+  if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1')writeFileSync(rightFile,right);
+  else {const ref=PNG.sync.read(readFileSync(rightFile)),img=PNG.sync.read(right);if(ref.width!==img.width || ref.height!==img.height || pixelmatch(ref.data,img.data,null,img.width,img.height,{threshold:.1})>img.width*img.height*.001)throw new Error(`Right deck golden changed at ${width}`);}
+  await viewport.evaluate(node=>node.scrollLeft=0);
   if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)) throw new Error(`Overflow at ${width}`);
  }
  await page.reload();await layout.locator('[data-carrier-id="CAR_HHS_3DWP_0001"]').waitFor();

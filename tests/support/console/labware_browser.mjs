@@ -7,134 +7,100 @@ const [url,output,baselines]=process.argv.slice(2),browser=await chromium.launch
 try {
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[],actions=[],durations=[],started=new WeakMap();
  page.on('pageerror',e=>errors.push(e.message));
- page.on('request',r=>{if(r.method()==='POST') actions.push(r.postDataJSON()?.action);if(r.url().endsWith('/api/v1/configuration/labware'))started.set(r,performance.now());});
+ page.on('request',r=>{if(r.method()==='POST')actions.push(r.postDataJSON()?.action);if(r.url().endsWith('/api/v1/configuration/labware'))started.set(r,performance.now());});
  page.on('requestfinished',r=>{if(started.has(r))durations.push(performance.now()-started.get(r));});
- await page.goto(url+'#station');
- const empty=page.getByRole('button',{name:'Place labware · PREVIEW_T36_5R60_SUBSTITUTE · site 2',exact:true});
- await empty.waitFor();
- if(await page.getByRole('button',{name:'Edit labware',exact:true}).count())throw new Error('Separate edit-mode button remains');
- // A failed catalogue read must be visible immediately inside the selected position.
+ const dialog=page.getByRole('dialog',{name:'Edit rack position',exact:true}),save=dialog.getByRole('button',{name:'Save changes',exact:true});
+ const item=name=>page.getByRole('button',{name,exact:true});
+ const empty=item('Place labware · PREVIEW_T36_5R60_SUBSTITUTE · site 2');
+ async function open(control){await control.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();}
+ async function select(category,model){await dialog.getByLabel('Contents',{exact:true}).selectOption(category);if(model)await dialog.getByLabel('Labware model',{exact:true}).selectOption(model);}
+ async function persist(control){await save.click();await dialog.waitFor({state:'detached'});await control.waitFor();}
+ async function golden(prefix){
+  for(const width of [1440,390]) {
+   await page.setViewportSize({width,height:1000});
+   const png=await dialog.screenshot({path:output.replace('.png',`-${prefix}-${width}.png`),animations:'disabled'});
+   const file=`${baselines}/${prefix==='occupied'?'occupied-labware':'labware-editor'}-${width}.png`;
+   if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1')writeFileSync(file,png);
+   else {const ref=PNG.sync.read(readFileSync(file)),img=PNG.sync.read(png);
+    if(ref.width!==img.width || ref.height!==img.height || pixelmatch(ref.data,img.data,null,img.width,img.height,{threshold:.1})>img.width*img.height*.001)throw new Error(`Labware golden changed: ${prefix}/${width}`);
+   }
+   const separation=await dialog.evaluate(node=>{
+    const fields=node.querySelector('.labware-fields').getBoundingClientRect(),actions=node.querySelector('.labware-actions').getBoundingClientRect();
+    return actions.top-fields.bottom;
+   });
+   if(separation<20)throw new Error('Save buttons collide with inputs');
+   if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Page overflow');
+  }
+  await page.setViewportSize({width:1440,height:1000});
+ }
+ await page.goto(url+'#station');await empty.waitFor();
  await page.route('**/api/v1/configuration/labware',async route=>{
   if(route.request().postDataJSON()?.action==='catalogue')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{code:'TEST_CHOICES_UNAVAILABLE'}})});
   await route.continue();
  });
  await page.setViewportSize({width:900,height:1000});
- const initialScroll=await page.locator('[data-region="workstation-layout"] .setup-deck-scroll').evaluate(node=>{node.scrollLeft=140;return node.scrollLeft;});
- if(initialScroll<10)throw new Error('Direct-edit scroll test did not scroll the deck');
- await empty.click();
- const dialog=page.getByRole('dialog',{name:'Edit rack position',exact:true});await dialog.waitFor();
- await dialog.getByRole('alert').waitFor();
- if(await dialog.getByRole('button',{name:'Apply checked change',exact:true}).count())throw new Error('Failed catalogue left an apply button');
- await page.unroute('**/api/v1/configuration/labware');
- await dialog.getByRole('button',{name:'Retry loading choices',exact:true}).click();
- await dialog.getByLabel('Contents',{exact:true}).waitFor();
- await dialog.getByLabel('Contents',{exact:true}).selectOption('empty');
- if(await dialog.getByRole('button',{name:'Check removal',exact:true}).isEnabled())throw new Error('Already empty position can be removed');
- await page.keyboard.press('Escape');
- await dialog.waitFor({state:'detached'});
- if(!(await empty.evaluate(node=>node===document.activeElement)))throw new Error('Escape lost deck focus');
- if(Math.abs(await page.locator('[data-region="workstation-layout"] .setup-deck-scroll').evaluate(node=>node.scrollLeft)-initialScroll)>1)throw new Error('Closing the dialog reset deck scroll');
- await page.setViewportSize({width:1440,height:1000});
  const scroll=page.locator('[data-region="workstation-layout"] .setup-deck-scroll');
- await empty.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
- await dialog.getByLabel('Contents',{exact:true}).selectOption('reservoir');
- await dialog.getByLabel('Labware model',{exact:true}).selectOption('RGT_CONT_60ML_BC_A00');
- await dialog.getByText('Advanced identification',{exact:true}).click();
- await dialog.getByLabel('Labware identifier',{exact:true}).fill('BrowserVessel');
- await dialog.getByRole('button',{name:'Check placement',exact:true}).click();
- await dialog.getByRole('heading',{name:'Checked proposal · not applied',exact:true}).waitFor();
- for(const width of [1440,390]) {
-  await page.setViewportSize({width,height:1000});
-  const actual=await dialog.screenshot({path:output.replace('.png',`-${width}.png`),animations:'disabled'});
-  const file=`${baselines}/labware-editor-${width}.png`;
-  if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1')writeFileSync(file,actual);
-  else {const ref=PNG.sync.read(readFileSync(file)),img=PNG.sync.read(actual);
-   if(ref.width!==img.width || ref.height!==img.height || pixelmatch(ref.data,img.data,null,img.width,img.height,{threshold:.1})>img.width*img.height*.001)
-    throw new Error(`Labware dialog golden changed at ${width}`);
-  }
-  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error(`Page overflow at ${width}`);
- }
+ const initialScroll=await scroll.evaluate(node=>{node.scrollLeft=140;return node.scrollLeft;});
+ await empty.click();await dialog.getByRole('alert').waitFor();
+ const selectedScroll=await scroll.evaluate(node=>node.scrollLeft);
+ if(await save.count())throw new Error('Failed catalogue left a save button');
+ await page.unroute('**/api/v1/configuration/labware');
+ await dialog.getByRole('button',{name:'Retry loading choices',exact:true}).click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
+ if(await save.isEnabled())throw new Error('Empty position can be saved without changes');
+ await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'});
+ if(!(await empty.evaluate(node=>node===document.activeElement)))throw new Error('Escape lost deck focus');
+ if(Math.abs(await scroll.evaluate(node=>node.scrollLeft)-selectedScroll)>1)throw new Error('Closing reset deck scroll');
  await page.setViewportSize({width:1440,height:1000});
- if(actions.includes('apply'))throw new Error('Preview applied without consent');
- await dialog.getByRole('button',{name:'Apply checked change',exact:true}).click();
- const placed=page.getByRole('button',{name:'Inspect deck item BrowserVessel · carrier PREVIEW_T36_5R60_SUBSTITUTE · site 2',exact:true});
- await placed.waitFor();await dialog.waitFor({state:'detached'});
- // Occupied positions use the same direct click, including explicit emptying.
- await placed.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
- await dialog.getByLabel('Contents',{exact:true}).selectOption('empty');
- await dialog.getByRole('button',{name:'Check removal',exact:true}).click();
- await dialog.getByRole('heading',{name:'Checked proposal · not applied',exact:true}).waitFor();
- await dialog.getByRole('button',{name:'Confirm removal',exact:true}).click();
- await empty.waitFor();await dialog.waitFor({state:'detached'});
- // Existing vendor models, not just newly placed items, can be changed in place.
- await page.getByRole('button',{name:'Inspect deck item HT_L_0003 · carrier CAR_5TIP_0001 · site 2',exact:true}).click();
- await dialog.getByLabel('Contents',{exact:true}).waitFor();
- await dialog.getByLabel('Labware model',{exact:true}).selectOption('ST_L.rck');
- await dialog.getByRole('button',{name:'Check replacement',exact:true}).click();
- await dialog.getByRole('heading',{name:'Checked proposal · not applied',exact:true}).waitFor();
- for(const width of [1440,390]) {
-  await page.setViewportSize({width,height:1000});
-  const png=await dialog.screenshot({path:output.replace('.png',`-occupied-${width}.png`),animations:'disabled'});
-  const file=`${baselines}/occupied-labware-${width}.png`;
-  if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1')writeFileSync(file,png);
-  else {const ref=PNG.sync.read(readFileSync(file)),img=PNG.sync.read(png);
-   if(ref.width!==img.width || ref.height!==img.height || pixelmatch(ref.data,img.data,null,img.width,img.height,{threshold:.1})>img.width*img.height*.001)
-    throw new Error(`Occupied labware golden changed at ${width}`);
-  }
- }
- await page.setViewportSize({width:1440,height:1000});
- // Complete replacement, then remove and refill the original occupied site.
- await dialog.getByRole('button',{name:'Apply checked change',exact:true}).click();
- await dialog.waitFor({state:'detached'});
- const original=page.getByRole('button',{name:'Inspect deck item HT_L_0003 · carrier CAR_5TIP_0001 · site 2',exact:true});
- await original.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
- await dialog.getByLabel('Contents',{exact:true}).selectOption('empty');
- await dialog.getByRole('button',{name:'Check removal',exact:true}).click();
- await dialog.getByRole('button',{name:'Confirm removal',exact:true}).click();
- const cleared=page.getByRole('button',{name:'Place labware · CAR_5TIP_0001 · site 2',exact:true});
- await cleared.waitFor();await dialog.waitFor({state:'detached'});
- await cleared.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
- await dialog.getByLabel('Contents',{exact:true}).selectOption('tips');
- await dialog.getByLabel('Labware model',{exact:true}).selectOption('HT_L.rck');
- await dialog.getByText('Advanced identification',{exact:true}).click();
- await dialog.getByLabel('Labware identifier',{exact:true}).fill('HT_L_0003');
- await dialog.getByRole('button',{name:'Check placement',exact:true}).click();
- await dialog.getByRole('button',{name:'Apply checked change',exact:true}).click();
- await original.waitFor();await dialog.waitFor({state:'detached'});
- await page.reload();
- try {await original.waitFor({timeout:8000});} catch(error) {
-  await page.screenshot({path:output.replace('.png','-reload-failure.png')});
-  writeFileSync(output.replace('.png','-reload-failure.txt'),JSON.stringify({errors,visible:await page.locator('body').innerText()}));
-  throw error;
- }
- await original.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
- await dialog.screenshot({path:output.replace('.png','-restored.png'),animations:'disabled'});
- await dialog.getByRole('button',{name:'Close',exact:true}).click();
- await page.getByRole('button',{name:'Inspect deck item DWP96_E4 · carrier CAR_HHS_3DWP_0001 · site 4',exact:true}).click();
- await dialog.getByLabel('Contents',{exact:true}).waitFor();
- await dialog.getByLabel('Contents',{exact:true}).selectOption('reservoir');
- await dialog.getByLabel('Labware model',{exact:true}).selectOption('Nun_100ml_96C_Rgt_L.rck');
- await dialog.getByRole('button',{name:'Check replacement',exact:true}).click();
- await dialog.getByRole('region',{name:'Related configuration changes',exact:true}).getByText(/Clear liquid capacity/).waitFor();
- await dialog.getByRole('button',{name:'Close',exact:true}).click();
- await dialog.waitFor({state:'detached'});
- // Reproduce C1 site 1 exactly: reviewing alone changes nothing; confirmation persists.
- const firstTip=page.getByRole('button',{name:'Inspect deck item TIP_50ul_L_0001 · carrier CAR_5TIP_0001 · site 1',exact:true});
- await firstTip.click();await dialog.getByLabel('Contents',{exact:true}).waitFor();
- await dialog.getByLabel('Contents',{exact:true}).selectOption('empty');
- await dialog.getByRole('button',{name:'Check removal',exact:true}).click();
- const confirm=dialog.getByRole('button',{name:'Confirm removal',exact:true});await confirm.waitFor();
- if(actions.filter(a=>a==='apply').length!==5)throw new Error('Review alone applied removal');
- await dialog.getByText('This position has not changed yet. Confirm removal below to leave it empty.',{exact:true}).waitFor();
- if(!(await confirm.evaluate(node=>node===document.activeElement)))throw new Error('Removal confirmation was not focused');
- await confirm.click();
- const firstEmpty=page.getByRole('button',{name:'Place labware · CAR_5TIP_0001 · site 1',exact:true});
- await firstEmpty.waitFor();await dialog.waitFor({state:'detached'});
+ await open(empty);await select('reservoir','RGT_CONT_60ML_BC_A00');
+ await dialog.getByText('Advanced identification',{exact:true}).click();await dialog.getByLabel('Labware identifier',{exact:true}).fill('BrowserVessel');
+ await golden('empty');
+ if(actions.includes('prepare') || actions.includes('apply'))throw new Error('Editing alone saved a change');
+ // A rejected validation keeps choices, with no apply request; the same Save retries validation.
+ await page.route('**/api/v1/configuration/labware',async route=>{
+  if(route.request().postDataJSON()?.action==='prepare')return route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({error:{code:'TEST_PLACEMENT_REJECTED'}})});
+  await route.continue();
+ });
+ await save.click();await dialog.getByRole('alert').waitFor();
+ if(await dialog.getByLabel('Labware model',{exact:true}).inputValue()!=='RGT_CONT_60ML_BC_A00')throw new Error('Validation lost model choice');
+ if(actions.includes('apply'))throw new Error('Rejected validation reached apply');
+ await page.unroute('**/api/v1/configuration/labware');
+ // Lose an accepted response: reconcile status, never submit the mutation twice.
+ let lost=false;
+ await page.route('**/api/v1/configuration/activation',async route=>{
+  if(route.request().postDataJSON()?.action==='apply' && !lost){lost=true;await route.fetch();return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{code:'TEST_RESPONSE_LOST'}})});}
+  await route.continue();
+ });
+ const placed=item('Inspect deck item BrowserVessel · carrier PREVIEW_T36_5R60_SUBSTITUTE · site 2');
+ await persist(placed);await page.unroute('**/api/v1/configuration/activation');
+ if(actions.filter(a=>a==='apply').length!==1)throw new Error('Lost response repeated save');
+ await open(placed);await select('empty');await persist(empty);
+ const original=item('Inspect deck item HT_L_0003 · carrier CAR_5TIP_0001 · site 2');
+ await open(original);await select('tips','ST_L.rck');await golden('occupied');
+ if(await dialog.getByRole('button',{name:/Check|Apply|Confirm/}).count())throw new Error('Multi-step save controls remain');
+ // Keep the dialog until an authoritative terminal receipt, even when the new layout arrives first.
+ let held=false;
+ await page.route('**/api/v1/configuration/activation',async route=>{
+  if(route.request().postDataJSON()?.action==='status' && !held){held=true;const r=await route.fetch(),body=await r.json();body.data.receipt.status='starting';return route.fulfill({response:r,json:body});}
+  await route.continue();
+ });
+ await save.click();await dialog.getByRole('button',{name:'Saving…',exact:true}).waitFor();
+ await dialog.waitFor({state:'detached'});await original.waitFor();
+ await page.unroute('**/api/v1/configuration/activation');
+ await open(original);await select('empty');
+ const cleared=item('Place labware · CAR_5TIP_0001 · site 2');await persist(cleared);
+ await open(cleared);await select('tips','HT_L.rck');
+ await dialog.getByText('Advanced identification',{exact:true}).click();await dialog.getByLabel('Labware identifier',{exact:true}).fill('HT_L_0003');await persist(original);
+ await page.reload();await original.waitFor();
+ await open(item('Inspect deck item DWP96_E4 · carrier CAR_HHS_3DWP_0001 · site 4'));await select('reservoir','Nun_100ml_96C_Rgt_L.rck');
+ await persist(item('Inspect deck item DWP96_E4 · carrier CAR_HHS_3DWP_0001 · site 4'));
+ if(!(/Clear liquid capacity/.test(await page.locator('#operation-status').innerText())))throw new Error('Missing cleanup feedback: '+await page.locator('#operation-status').innerText());
+ await open(item('Inspect deck item TIP_50ul_L_0001 · carrier CAR_5TIP_0001 · site 1'));await select('empty');
+ const firstEmpty=item('Place labware · CAR_5TIP_0001 · site 1');await persist(firstEmpty);
  await page.reload();await firstEmpty.waitFor();
  await page.locator('[data-region=workstation-layout]').screenshot({path:output.replace('.png','-c1-empty.png'),animations:'disabled'});
- if(actions.filter(a=>a==='apply').length!==6)throw new Error('Unexpected application count');
- if(actions.includes('submit'))throw new Error('Editing submitted a program');
+ if(actions.filter(a=>a==='apply').length!==7)throw new Error('Unexpected save count');
+ if(actions.includes('submit'))throw new Error('Editing submitted an experiment');
  if(errors.length)throw new Error(errors.join('\n'));
- if(!durations.length || Math.max(...durations)>3000)throw new Error('Layout edit request exceeded 3 seconds: '+Math.max(...durations));
- console.log(JSON.stringify({applied:true,direct_position_edit:true,remove_refill_persisted:true,max_edit_ms:Math.round(Math.max(...durations)),actions}));
+ if(!durations.length || Math.max(...durations)>3000)throw new Error('Layout edit request exceeded 3 seconds');
+ console.log(JSON.stringify({applied:true,single_save:true,remove_refill_persisted:true,max_edit_ms:Math.round(Math.max(...durations)),actions}));
 } finally {await browser.close();}

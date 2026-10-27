@@ -41,17 +41,34 @@ export class RunSetupDeck {
     return {label:variant.label,positions,carriers:rows.sort((a,b) => a.start-b.start)};
   }
 
+  static presentation(scene, stacked) {
+    // Keep track addresses and ordering while giving narrow carriers usable controls.
+    const widths=scene.positions.map(()=>24);
+    for(const carrier of scene.carriers) {
+      const minimum=carrier.span<3 ? 76:168;
+      const perTrack=Math.max(24,Math.ceil(minimum/carrier.span));
+      for(let n=carrier.start;n<carrier.start+carrier.span;n++)widths[n]=Math.max(widths[n],perTrack);
+    }
+    const offsets=[0];for(const width of widths)offsets.push(offsets.at(-1)+width);
+    const maxSites=Math.max(1,...scene.carriers.map(c=>c.sites.length));
+    const maxStack=stacked ? Math.max(1,...scene.carriers.flatMap(c=>c.sites.map(site=>c.placements.filter(p=>p.site===site).length))):1;
+    const rowHeight=22+26*maxStack+Math.max(0,maxStack-1)*2;
+    return {widths,offsets,total:offsets.at(-1),height:Math.max(360,maxSites*rowHeight+(maxSites-1)*6+70)};
+  }
+
   static render(app,scene,items,selected,onInspect,options = {}) {
     const section = app.element('section','','setup-deck');section.dataset.region = 'loading-deck';
     section.setAttribute('aria-label',options.label || scene.label+' loading overview');
     section.append(app.element('h4',scene.label),app.element('p',
-      options.description || 'Track numbers run left to right. Carrier widths follow the declared layout; vertical site spacing is schematic. Blue items belong to this loading checklist.','note'));
+      options.description || 'Track numbers run left to right. Widths and site spacing are expanded for readability. Blue items belong to this loading checklist.','note'));
     const viewport = app.element('div','','setup-deck-scroll');viewport.tabIndex = 0;
     viewport.setAttribute('aria-label','Scroll the complete deck horizontally');
     const board = app.element('div','','setup-deck-board');
     if (options.stacked) board.dataset.stacked='true';
-    board.style.setProperty('--deck-tracks',scene.positions.length);board.style.minWidth = `${scene.positions.length*18}px`;
+    const presentation=this.presentation(scene,options.stacked);
+    board.style.setProperty('--deck-tracks',scene.positions.length);board.style.minWidth=`${presentation.total}px`;board.style.height=`${presentation.height}px`;
     const rails = app.element('div','','setup-deck-rails');rails.setAttribute('aria-hidden','true');
+    rails.style.gridTemplateColumns=presentation.widths.map(width=>`${width}fr`).join(' ');
     scene.positions.forEach(position => rails.append(app.element('span',position.label || position.id,'setup-deck-track')));
     board.append(rails);
     const legend = app.element('ul','','setup-deck-legend');
@@ -60,18 +77,19 @@ export class RunSetupDeck {
       const frame = app.element('section','','setup-deck-carrier');
       if(options.highlightedCarriers?.includes(carrier.id)) frame.dataset.highlighted='true';
       frame.dataset.carrierId = carrier.id;frame.dataset.trackStart = carrier.first;frame.dataset.trackSpan = carrier.span;
-      frame.style.left = `calc(${carrier.start/scene.positions.length*100}% + 2px)`;
-      frame.style.width = `calc(${carrier.span/scene.positions.length*100}% - 4px)`;
+      frame.style.left = `calc(${presentation.offsets[carrier.start]/presentation.total*100}% + 2px)`;
+      frame.style.width = `calc(${(presentation.offsets[carrier.start+carrier.span]-presentation.offsets[carrier.start])/presentation.total*100}% - 4px)`;
+      frame.dataset.compact=String(carrier.span<3);
       frame.setAttribute('aria-label',`${carrier.id}, tracks ${range}, ${carrier.model}`);
       const header = app.element('div',tag,'setup-deck-carrier-tag');header.title = `${carrier.id} · ${carrier.model} · tracks ${range}`;frame.append(header);
       const sites = app.element('div','','setup-deck-sites');
       carrier.sites.forEach(site => {
         if (options.stacked) {
           const stack=carrier.placements.filter(p=>p.site===site),slot=app.element('div','','setup-deck-stack');slot.dataset.site=site;
-          slot.append(app.element('span',`Site ${site}`,'setup-deck-stack-label'));
+          if(carrier.span>=3)slot.append(app.element('span',site,'setup-deck-stack-label'));
           if(!stack.length) {
             if(options.onSelectSite) {
-              const empty=app.configButton('＋',()=>options.onSelectSite(carrier.id,site),'',
+              const empty=app.configButton(carrier.span<3 ? site:'＋',()=>options.onSelectSite(carrier.id,site),'',
                 {action:'workstation.select-labware-site',entity:carrier.id+'/'+site});
               empty.setAttribute('aria-label',`Place labware · ${carrier.id} · site ${site}`);empty.title=`Empty position · ${carrier.id} · site ${site}`;slot.append(empty);
             } else slot.append(app.element('span','—','note'));
@@ -110,7 +128,8 @@ export class RunSetupDeck {
       frame.append(sites);board.append(frame);
       legend.append(app.element('li',`${tag} · ${carrier.id} · tracks ${range} · ${carrier.model}`));
     });
-    viewport.append(board);section.append(viewport,legend,app.element('p',
+    const key=app.element('details','','setup-deck-key');key.append(app.element('summary','Rack names and track ranges'),legend);
+    viewport.append(board);section.append(viewport,key,app.element('p',
       options.footer || 'Unhighlighted sites show declared layout only; their current physical contents have not been detected. Use the commissioned labware orientation.','note'));
     return section;
   }

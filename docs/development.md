@@ -350,8 +350,10 @@ diffs remain in ignored `run-artifacts/ui-tests`. Reference refresh is explicit
 
 Click an occupied or empty rack position directly to open its dialog. It shows the
 current contents and driver-compatible choices, including leaving a position empty.
-Check and explicitly apply a change; Escape closes the dialog and restores deck
-focus. No separate edit-mode button or off-screen editor is required.
+Save once to validate and apply through the existing guarded endpoints; the dialog
+waits for a confirmed receipt before closing. Unknown responses retain the request
+identity for status inspection and are never automatically resent. Escape closes the
+dialog and restores deck focus without cancelling an accepted save. No separate edit-mode button or off-screen editor is required.
 
 `LabwareEditorPort` (`driver_framework/models.py`) is an optional offline device-factory
 capability: `catalogue(path)` supplies compatible site/model choices and
@@ -363,9 +365,9 @@ layouts; other drivers without the capability report editing unavailable. No ven
 files are read by the frontend. Editing neither loads labware nor confirms contents.
 Existing native labware can be replaced or removed, including definitions outside
 the execution catalogue. Installed definitions and site footprints determine editor
-choices; this does not extend verified execution support. A checked proposal lists
-bindings, capacity, well-map or tip-source settings that must be cleared. Clearing a
-stack lists all affected objects. A missing tip source remains explicitly unconfigured
+choices; this does not extend verified execution support. The form explains linked
+setting cleanup before saving; the save feedback reports affected bindings, capacity,
+well-map or tip-source settings. Clearing a stack includes all its objects. A missing tip source remains explicitly unconfigured
 and rejects transfers before dispatch. Module/transport-dependent positions retain
 their dedicated setup checks. E2E and desktop/mobile golden coverage: `tests/integration/test_console_labware.py`.
 New placements do not infer liquid capacity, reagent inventory, well mappings or program

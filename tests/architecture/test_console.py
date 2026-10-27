@@ -85,7 +85,8 @@ def test_labware_interface_is_owned_by_os_and_transport_delegates():
     assert 'culsma_driver_hamilton' not in source and 'culsma_opentrons' not in source
     source=(ROOT/'src/culsma_os/console/web/labware.js').read_text()
     assert 'Hamilton' not in source and '.lay' not in source.replace('.layout','')
-    assert "action:'workstation.apply-labware'" in source
+    assert "action:'workstation.save-labware'" in source
+    assert "action:'prepare'" in source and "action:'apply'" in source
 
 
 def test_experiment_preview_keeps_driver_and_run_mutations_outside_adapters():

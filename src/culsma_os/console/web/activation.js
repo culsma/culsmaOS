@@ -1,6 +1,6 @@
 /** Visible, protected station configuration requests; no device/session implementation. */
 export class ConsoleActivation {
-  constructor(app) { this.app = app;this.view = null;this.confirmed = false;this.timer = null; }
+  constructor(app) { this.app = app;this.view = null;this.confirmed = false;this.timer = null;this.refreshVersion=0; }
 
   pending() {
     try { return JSON.parse(sessionStorage.getItem('culsma-console:activation') || 'null'); }
@@ -13,16 +13,19 @@ export class ConsoleActivation {
   }
 
   async refresh() {
-    const pending = this.pending();
-    this.view = await this.app.configurationFetch(pending ? '/api/v1/configuration/activation':'/api/v1/configuration/active',
+    const pending = this.pending(),version=++this.refreshVersion;
+    const view = await this.app.configurationFetch(pending ? '/api/v1/configuration/activation':'/api/v1/configuration/active',
       pending ? {action:'status',request_id:pending.request_id}:null);
-    if (pending && this.view.receipt?.request_id === pending.request_id && ['applied','failed','interrupted'].includes(this.view.receipt.status)) {
+    if(version!==this.refreshVersion)return this.view;
+    this.view=view;
+    if (pending && this.pending()?.request_id===pending.request_id && this.view.receipt?.request_id === pending.request_id && ['applied','failed','interrupted'].includes(this.view.receipt.status)) {
       this.remember(null);
       this.app.interaction.result('configuration.apply',this.view.receipt.status,
         this.view.receipt.status === 'applied' ? 'Saved configuration applied. The station is ready.':'Configuration application did not complete. Inspect the station state before continuing.',
         {entity:this.view.receipt.draft_id,revision:this.view.receipt.revision,requestId:pending.request_id});
     }
     this.schedule();
+    this.app.workstation?.layout.editor.observeActivation(this.view);
     return this.view;
   }
 

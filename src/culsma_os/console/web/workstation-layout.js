@@ -36,7 +36,7 @@ export class WorkstationLayoutView {
     if(envelope?.status!=='available' || !envelope.layout) {
       card.append(a.element('p','The current driver has not supplied a configured layout. No imported file or past run is substituted.','empty'));return card;
     }
-    if(this.fingerprint!==envelope.configuration_fingerprint) {this.selected=null;this.fingerprint=envelope.configuration_fingerprint;this.editor.reset();}
+    if(this.fingerprint!==envelope.configuration_fingerprint) {this.selected=null;this.fingerprint=envelope.configuration_fingerprint;if(!this.editor.saving && !this.editor.pending)this.editor.reset();}
     const layout=envelope.layout,rows=WorkstationLayoutView.entries(layout),scene=RunSetupDeck.scene({layout});
     card.dataset.configurationFingerprint=envelope.configuration_fingerprint;card.dataset.source=envelope.source;
     card.append(a.element('p','Current host configuration · declared geometry, not detected hardware or contents.','note'));
@@ -48,7 +48,7 @@ export class WorkstationLayoutView {
         onSelectSite:(parent,site)=>this.editor.selectSite(parent,site),
         action:'workstation.inspect-layout-item',label:'Configured workstation deck',
         description:'Click a rack position to choose its plate, reservoir or tip rack, or leave it empty.',
-        footer:'Schematic site spacing. Experiment-specific loading and confirmation are recorded separately.'}));
+        footer:'Track order is preserved; widths and site spacing are expanded for readability. Experiment loading is confirmed separately.'}));
       const groups=layout.definition.diagram?.groups || [];
       if(groups.length) {
         const other=a.element('details');other.append(a.element('summary','Fixed equipment and placements outside the track deck'));
