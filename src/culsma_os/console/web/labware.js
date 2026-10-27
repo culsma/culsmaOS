@@ -1,7 +1,7 @@
 /** Shared semantic controls; all catalogue and placement decisions belong to the driver port. */
 export class ConsoleLabware {
   constructor(app) {this.app=app;this.reset();}
-  reset() {this.open=false;this.catalogue=null;this.target=null;this.model='';this.category='';this.proposal=null;this.error=null;this.busy=false;this.name='';this.pending=null;this.message=null;this.desired=null;this.focus=null;this.requestVersion=(this.requestVersion || 0)+1;}
+  reset() {this.open=false;this.catalogue=null;this.target=null;this.model='';this.category='';this.proposal=null;this.error=null;this.busy=false;this.applying=false;this.name='';this.pending=null;this.message=null;this.desired=null;this.focus=null;this.requestVersion=(this.requestVersion || 0)+1;}
   bind(envelope,redraw) {
     const becameReady=this.envelope?.editing_ready===false && envelope.editing_ready!==false;
     this.envelope=envelope;this.redraw=redraw;
@@ -89,7 +89,7 @@ export class ConsoleLabware {
         a.configButton('Check apply status',()=>this.checkApplyStatus(),'',{action:'workstation.check-labware-status'}));
     }
     if(this.message) {const message=a.element('p',this.message,'notice');message.setAttribute('role','status');box.append(message);}
-    if(this.busy) box.append(a.element('p',this.catalogue ? 'Checking the change…':'Loading choices for this position…','note'));
+    if(this.busy) box.append(a.element('p',this.applying ? 'Applying the layout change…':this.catalogue ? 'Checking the change…':'Loading choices for this position…','note'));
     if(!this.catalogue && !this.busy && this.envelope.editing_ready!==false) box.append(a.configButton('Retry loading choices',()=>this.edit(this.desired),'',{action:'workstation.retry-labware'}));
     if(target) {
       box.append(a.details([['Current contents',target.occupants.join(', ') || 'Empty'],
@@ -151,7 +151,7 @@ export class ConsoleLabware {
   }
   async apply() {
     if(this.busy || !this.proposal) return;
-    this.busy=true;this.error=null;this.update();
+    this.busy=true;this.applying=true;this.error=null;this.update();
     try {
       if(this.pending) {await this.app.activation.refresh();this.message='Apply status: '+(this.app.activation.view?.receipt?.status || 'unavailable');return;}
       const payload={action:'apply',draft_id:this.proposal.draft.draft_id,revision:this.proposal.draft.revision,
@@ -161,6 +161,6 @@ export class ConsoleLabware {
       this.message='Apply request '+receipt.status+'. Wait for the station to report ready; no experiment was started.';
       await this.app.activation.refresh();
     } catch(error) {this.error=error.message;if(Number.isInteger(error.httpStatus) && error.httpStatus<500) {this.pending=null;this.app.activation.remember(null);}}
-    finally {this.busy=false;this.update();}
+    finally {this.busy=false;this.applying=false;this.update();}
   }
 }
