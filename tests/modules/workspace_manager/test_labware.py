@@ -70,3 +70,14 @@ def test_invalid_requests_never_reach_resident(tmp_path,invalid_request):
         def execute(self,payload): raise AssertionError('Invalid input reached resident')
     subject=LabwareConfigurationInteractor(tokens,SqliteStationConfigurationRepository(tmp_path/'drafts.sqlite3'),Resident())
     with pytest.raises(ConfigurationError): subject.execute('Bearer '+tokens.issue_console_session(),invalid_request)
+
+
+def test_driver_carrier_metadata_is_validated_before_presentation():
+    owner=ResidentLabwareInteractor(Editor(),Configuration(),SimpleNamespace())
+    catalogue={'schema':'culsma_labware_catalogue_v1','models':[{'id':'rack','label':'Rack','category':'carrier'}],
+        'targets':[{'id':'rack1','kind':'carrier','label':'Rack 1','parent':'deck','site':'1','occupants':['rack1'],
+                    'models':['rack'],'reason':None,'current_model':'rack','span':2,'contents':[],'blocked_models':[]}]}
+    owner.validate_catalogue(catalogue)
+    for field,value in [('kind',[]),('contents','bad'),('span',True),('blocked_models',[{'id':'unknown','reason':'bad'}])]:
+        bad=deepcopy(catalogue);bad['targets'][0][field]=value
+        with pytest.raises(ValueError,match='CATALOGUE_INVALID'):owner.validate_catalogue(bad)

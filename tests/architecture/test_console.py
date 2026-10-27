@@ -101,3 +101,11 @@ def test_experiment_preview_keeps_driver_and_run_mutations_outside_adapters():
     assert not calls & {'save','submit','acquire','confirm','connect','start','prepare_batch'}
     imports = [node.module or '' for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
     assert not any(name.startswith(('culsma_driver_hamilton','culsma_opentrons')) for name in imports)
+
+
+def test_carrier_settings_use_existing_authorized_layout_and_activation_paths():
+    source=(ROOT/'src/culsma_os/console/web/carriers.js').read_text()
+    assert 'Hamilton' not in source and 'STAR-54' not in source and '.lay' not in source.replace('.layout','')
+    assert "'/api/v1/configuration/labware'" in source and "'/api/v1/configuration/activation'" in source
+    assert "action:'system.apply-carrier'" in source and 'activation.remember(payload)' in source
+    assert 'fetch(' not in source

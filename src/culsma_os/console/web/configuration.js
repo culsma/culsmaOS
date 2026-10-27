@@ -1,4 +1,5 @@
 import {ConfigurationLayoutImport} from './layout-import.js';
+import {ConsoleCarriers} from './carriers.js';
 import {LayoutInstancesView} from './layout-instances.js';
 
 /** Current-station presentation. Choices and fields come from installed profiles. */
@@ -6,6 +7,7 @@ export class ConsoleConfiguration {
   constructor(app) {
     this.app = app;
     this.layoutImport = new ConfigurationLayoutImport(app);
+    this.carriers = new ConsoleCarriers(app);
     this.activeRecord = null;
     this.invalidFields = new Set();
     this.invalidValues = new Map();
@@ -38,7 +40,7 @@ export class ConsoleConfiguration {
     if (a.activation.view?.active?.fingerprint !== active.fingerprint) return;
     if (!this.matchesOrigin(result.draft,active)) throw new Error('CURRENT_CONFIGURATION_IDENTITY_MISMATCH');
     this.activeRecord = result.draft;
-    if (initializeProposal && !a.configWorking) a.startConfigDraft(result.draft.driver,result.draft.configuration,result.draft.title,result.draft);
+    if (initializeProposal && (!a.configWorking || !a.configDirty() && a.configDraft?.fingerprint !== result.draft.fingerprint)) a.startConfigDraft(result.draft.driver,result.draft.configuration,result.draft.title,result.draft);
   }
 
   changes(before, after, path = []) {
@@ -217,10 +219,11 @@ export class ConsoleConfiguration {
     const origin = a.activation.view?.active?.origin;
     context.append(a.element('span',origin ? `Current configuration: ${origin.title} · r${origin.revision}`:'Current configuration: service startup settings'));
     const link = a.element('a','System Info');link.href = '#system';context.append(link);
-    const nodes = [context];
-    if (a.configWorking) nodes.push(this.renderEditor(),this.renderChanges());
-    else nodes.push(a.element('p','No saved origin is available for this station. Import its configuration or start from an installed profile in Advanced.','notice'));
-    nodes.push(this.renderAdvanced());a.content.replaceChildren(...nodes);a.updateConfigActions();
+    const nodes = [context,this.carriers.render()];
+    if (a.configWorking) {
+      const advanced=a.element('details','','card section config-advanced');advanced.append(a.element('summary','Advanced layout configuration'),this.renderEditor(),this.renderChanges());nodes.push(advanced);
+    }
+    nodes.push(this.renderAdvanced());a.content.replaceChildren(...nodes);this.carriers.attachPreview();a.updateConfigActions();
   }
 }
 

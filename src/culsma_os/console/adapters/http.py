@@ -33,6 +33,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         "/": ("index.html", "text/html; charset=utf-8"),
         "/navigation.js": ("navigation.js", "text/javascript; charset=utf-8"),
         "/workstation-layout.js": ("workstation-layout.js", "text/javascript; charset=utf-8"),
+        "/carriers.js": ("carriers.js", "text/javascript; charset=utf-8"),
         "/labware.js": ("labware.js", "text/javascript; charset=utf-8"),
         "/workstation.js": ("workstation.js", "text/javascript; charset=utf-8"),
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),

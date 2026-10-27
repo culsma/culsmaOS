@@ -26,7 +26,7 @@ export class ConsoleLabware {
     try {
       const result=await this.app.configurationFetch('/api/v1/configuration/labware',{action:'catalogue',expected_fingerprint:identity});
       if(identity!==this.envelope.configuration_fingerprint) return;
-      this.catalogue=result.catalogue;this.error=null;
+      this.catalogue={...result.catalogue,targets:result.catalogue.targets.filter(t=>t.kind!=='carrier')};this.error=null;
       if(this.selectedItem) this.selectItem(this.selectedItem);
     } catch(error) {this.error=error.message;}
     finally {this.busy=false;this.redraw();}

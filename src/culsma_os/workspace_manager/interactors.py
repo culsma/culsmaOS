@@ -885,9 +885,24 @@ class ResidentLabwareInteractor:
                     or row['id'] in targets or not isinstance(row.get('models'), list)
                     or any(not isinstance(m, str) or m not in models for m in row['models'])
                     or not isinstance(row.get('occupants'), list) or any(not isinstance(v, str) for v in row['occupants'])
-                    or row.get('reason') is not None and not isinstance(row['reason'], str)):
+                    or row.get('reason') is not None and not isinstance(row['reason'], str)
+                    or not isinstance(row.get('kind', 'labware'), str)
+                    or row.get('kind', 'labware') not in {'carrier','labware'}):
                 raise ValueError('LABWARE_CATALOGUE_INVALID')
+            if row.get('kind') == 'carrier':
+                self.validate_carrier_target(row, models)
             targets.add(row['id'])
+
+    def validate_carrier_target(self, row, models):
+        if (len(row['occupants']) != 1 or not isinstance(row.get('current_model'), str)
+                or row.get('span') is not None and (type(row['span']) is not int or not 1 <= row['span'] <= 256)
+                or not isinstance(row.get('contents'), list) or any(not isinstance(v,str) for v in row['contents'])
+                or not isinstance(row.get('blocked_models'), list)):
+            raise ValueError('LABWARE_CATALOGUE_INVALID')
+        for choice in row['blocked_models']:
+            if (not isinstance(choice,dict) or not isinstance(choice.get('id'),str) or choice['id'] not in models
+                    or not isinstance(choice.get('reason'),str)):
+                raise ValueError('LABWARE_CATALOGUE_INVALID')
 
 
 class LabwareConfigurationInteractor(AuthorizedInteractor):
@@ -924,7 +939,7 @@ class LabwareConfigurationInteractor(AuthorizedInteractor):
         encoded = json.dumps(result['configuration'], sort_keys=True, separators=(',', ':'), allow_nan=False)
         if len(encoded.encode()) > 1024 * 1024:
             raise ConfigurationError('LABWARE_CONFIGURATION_TOO_LARGE')
-        draft = self.repository.save(str(uuid4()), 0, {'title': 'Workstation labware change',
+        draft = self.repository.save(str(uuid4()), 0, {'title': 'Workstation layout change',
             'driver': result['driver'], 'configuration': json.loads(encoded),
             'fingerprint': hashlib.sha256(encoded.encode()).hexdigest()}).as_dict()
         return {'draft': {key: draft[key] for key in ('draft_id','revision','fingerprint','title','driver')},

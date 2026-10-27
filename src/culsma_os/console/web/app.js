@@ -282,6 +282,7 @@ class StationConsoleApp {
       this.configDrafts = drafts.drafts || [];
       let configurationError = null;
       try { await this.configuration.readCurrent(page === 'configuration'); } catch (error) { configurationError = error.message; }
+      if(page === 'configuration') await this.configuration.carriers.load();
       if (location.hash !== route) { this.pending = true; return; }
       document.querySelector('#title').textContent = page === 'system' ? 'System Info':'System Settings';
       this.selectPage(page);

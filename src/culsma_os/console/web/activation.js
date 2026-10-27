@@ -34,6 +34,7 @@ export class ConsoleActivation {
         await this.refresh();
         if (location.hash === '#configuration' || location.hash.startsWith('#system')) {
           try { await this.app.configuration.readCurrent(location.hash === '#configuration'); } catch (error) { this.app.showAlert(error.message); }
+          if (location.hash === '#configuration') await this.app.configuration.carriers.load();
           if (location.hash.startsWith('#system')) this.app.renderSystemInformation();else this.app.renderConfiguration();
         }
       } catch (error) {

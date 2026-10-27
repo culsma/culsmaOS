@@ -155,3 +155,6 @@ nav{flex-wrap:wrap;gap:12px 24px}
 
 .labware-editor .config-field { max-width: 48rem; margin-bottom: 1rem; }
 .labware-proposal { border-top: 1px solid var(--border, #cbd5e1); margin-top: 1rem; padding-top: 1rem; }
+
+.setup-deck-carrier[data-highlighted=true]{outline:3px solid #276598;outline-offset:1px;background:#bed9ef;z-index:1}
+.setup-deck-carrier[data-highlighted=true] .setup-deck-carrier-tag{background:#276598;color:white}

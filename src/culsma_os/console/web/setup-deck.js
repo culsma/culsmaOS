@@ -58,6 +58,7 @@ export class RunSetupDeck {
     scene.carriers.forEach((carrier,index) => {
       const tag = 'C'+(index+1),range = carrier.first === carrier.last ? carrier.first : `${carrier.first}–${carrier.last}`;
       const frame = app.element('section','','setup-deck-carrier');
+      if(options.highlightedCarriers?.includes(carrier.id)) frame.dataset.highlighted='true';
       frame.dataset.carrierId = carrier.id;frame.dataset.trackStart = carrier.first;frame.dataset.trackSpan = carrier.span;
       frame.style.left = `calc(${carrier.start/scene.positions.length*100}% + 2px)`;
       frame.style.width = `calc(${carrier.span/scene.positions.length*100}% - 4px)`;

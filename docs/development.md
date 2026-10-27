@@ -360,3 +360,12 @@ Referenced objects and unsupported stacks/frames remain protected. E2E and deskt
 golden coverage: `tests/integration/test_console_labware.py`.
 New placements do not infer liquid capacity, reagent inventory, well mappings or program
 bindings. Those remain explicit driver/experiment preparation inputs.
+
+
+System Settings exposes **Racks and carriers** through the same offline layout
+editor port. Driver-declared carrier targets have `kind: carrier`; Workstation
+keeps labware targets. Check a replacement to save a detached proposal, then apply
+through the existing idle/fingerprint gate. Compatible leaf labware keeps its
+identity and site; canonical native transforms are regenerated. Colliding tracks,
+unsupported stacks, coordinate associations and adjusted native frames are blocked
+with reasons. Physical installation and experiment loading remain operator checks.
