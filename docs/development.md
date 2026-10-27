@@ -139,7 +139,12 @@ The view does not claim hardware timing or include every semantic declaration.
 
 The sidebar groups existing controls into **Workstation**, **Experiment Runs** and
 **System Information**. Workstation separates current resource records from layout
-configuration. Experiment Runs separates new submissions, active runs and history;
+configuration. Overview automatically reads a driver-projected layout from the
+verified current host configuration, including service startup settings without a
+saved draft. It never substitutes an unsaved draft or historical run layout. The
+read path is cached by configuration identity and creates no instrument session;
+track/carrier and slot-grid renderers share the generic descriptor. Unsupported
+readers remain explicitly unavailable. Experiment Runs separates new submissions, active runs and history;
 each run has **Preparation**, **Execution** and **Results** stages. Results collapse
 raw evidence by default. Stage links are bookmarkable; page navigation issues no
 execution commands. System Information is read-only. Unavailable module, Agent-log

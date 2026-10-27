@@ -42,6 +42,14 @@ from .lifecycle_manager.interactors import LifecycleInteractor, RunFinalizationI
 class OpentronsSessionFactory:
     """Compose OS DTOs from the plugin's public session description."""
 
+    def build_layout_reader(self):
+        try:
+            from culsma_opentrons.layout.interactors import ConfiguredLayoutInteractor
+            from culsma_opentrons.layout.repository import FileLayoutConfigurationRepository
+        except ImportError:
+            return None  # Older execution plugins remain usable without this optional reader.
+        return ConfiguredLayoutInteractor(FileLayoutConfigurationRepository())
+
     def build(self, context):
         from culsma_opentrons.plugin import SimulatorSessionFactory
         from .driver_framework.adapters.opentrons import OpentronsExecutionAdapter
@@ -89,11 +97,7 @@ class OSApplicationFactory:
             else session_factories
         )
 
-    def build(self, context):
-        from dataclasses import replace
-        from .resource_manager.interactors import StationPathInteractor
-        station_path = StationPathInteractor().database_path(context)
-        context = replace(context, device_state_dir=StationPathInteractor().device_state_directory(context))
+    def device_factory(self, context):
         factory = self.session_factories.get(context.driver_name)
         if factory is None:
             matches = list(
@@ -102,6 +106,14 @@ class OSApplicationFactory:
             if len(matches) != 1:
                 raise DriverLoadError(f"OS_DEVICE_NOT_SUPPORTED: {context.driver_name}")
             factory = matches[0].load()()
+        return factory
+
+    def build(self, context):
+        from dataclasses import replace
+        from .resource_manager.interactors import StationPathInteractor
+        station_path = StationPathInteractor().database_path(context)
+        context = replace(context, device_state_dir=StationPathInteractor().device_state_directory(context))
+        factory = self.device_factory(context)
         port, snapshot, positions, capacities, receipt_mapper = factory.build(context)
         database = DatabaseConnection(context.database_path)
         connections = [database.open() for _ in range(8)]
@@ -360,6 +372,10 @@ class ResidentCommandFactory:
         from .program_manager.repositories.setup import SqliteRunSetupRepository
         from .program_manager.interactors.setup import RunSetupRequestInteractor
         setup_requests = RunSetupRequestInteractor(SqliteRunSetupRepository(inspector.tasks.repository.connection), inspector.tasks)
+        from .workspace_manager.interactors import ConfiguredLayoutInteractor
+        factory = self.applications.device_factory(context)
+        layout_reader = getattr(factory, 'build_layout_reader', lambda: None)()
+        layout = ConfiguredLayoutInteractor(layout_reader, configuration, context)
         return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
             HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
-            self.applications.build_device_inspector(context),configuration,setup_requests)
+            self.applications.build_device_inspector(context),configuration,setup_requests,layout)

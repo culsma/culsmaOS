@@ -7,6 +7,7 @@ from culsma.runtime.material.args import arg_string
 from culsma.domains.labware import PlateGeometry
 from .models import ResolvedContainerRef, LayoutSnapshot, SpaceBinding, WorkspaceAddress, ProgramWorkspacePort
 from .repository import SpaceRepository, LabwarePositionRepository
+from culsma_os.driver_framework.models import ConfiguredLayoutReadPort
 
 
 class SpaceInteractor:
@@ -797,3 +798,33 @@ class WorkspacePlanningInteractor:
             if answer is not None:
                 return answer
         return None
+
+
+class ConfiguredLayoutInteractor:
+    """Inspect the current host configuration through an offline driver read port."""
+    def __init__(self, reader: ConfiguredLayoutReadPort | None, configuration, context):
+        self.reader, self.configuration, self.context = reader, configuration, context
+        self.cached = None
+        self.cached_identity = None
+
+    def execute(self):
+        from copy import deepcopy
+        import json
+        self.configuration.verify(self.context)
+        identity = self.configuration.fingerprint
+        base = {'schema': 'culsma_configured_layout_v1', 'configuration_fingerprint': identity,
+                'driver': self.context.driver_name, 'source': 'active_host_configuration',
+                'hardware_observed': False}
+        if self.reader is None:
+            return {**base, 'status': 'unsupported', 'layout': None}
+        if self.cached is None or self.cached_identity != identity:
+            layout = self.reader.execute(self.context.config_path)
+            if (not isinstance(layout, dict) or set(layout) != {'definition', 'configuration'}
+                    or not isinstance(layout['definition'], dict) or not isinstance(layout['configuration'], dict)
+                    or layout['definition'].get('schema') not in {'culsma_layout_v1', 'culsma_layout_instances_v1'}
+                    or len(json.dumps(layout, allow_nan=False).encode()) > 1500000):
+                raise ValueError('CONFIGURED_LAYOUT_RESPONSE_INVALID')
+            self.configuration.verify(self.context)
+            self.cached = deepcopy(layout)
+            self.cached_identity = identity
+        return {**base, 'status': 'available', 'layout': deepcopy(self.cached)}

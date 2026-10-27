@@ -9,6 +9,7 @@ class ResidentReadFixture:
         self.calls = []
         self.responses = {
             'host-status': {'status': 'ready', 'blocked_run': None},
+            'layout-status': {'status':'unsupported','layout':None},
             'device-status': {'source': 'os_records', 'hardware_observed': False,
                               'devices': [], 'resources': {}},
             'runs': {'runs': []},

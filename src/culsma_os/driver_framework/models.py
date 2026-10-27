@@ -236,3 +236,8 @@ class LayoutImportProfilePort(Protocol):
 
 class LayoutImportError(ValueError):
     code = 'PROFILE_LAYOUT_IMPORT_INVALID'
+
+
+class ConfiguredLayoutReadPort(Protocol):
+    """Offline projection only; the returned descriptor contains no connection secrets."""
+    def execute(self, path: Path) -> dict: ...

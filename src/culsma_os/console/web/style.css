@@ -134,3 +134,13 @@ nav{flex-wrap:wrap;gap:12px 24px}
  .console-shell main{padding-top:22px}
  .topbar{padding:12px 18px}.brand{width:210px}.top-label{font-size:12px;white-space:normal}
 }
+
+[data-region=workstation-layout]{margin-bottom:24px}
+[data-region=workstation-layout] .setup-deck-site[data-required=true]{background:#fff;border-color:#bccbda}
+[data-region=workstation-layout] .setup-deck-site[aria-pressed=true]{background:#dceafa;border-color:#7d9fc2}
+.workstation-slot-grid{display:grid;gap:10px;margin:16px 0}
+.workstation-slot{min-height:110px;padding:10px;border:1px solid #c5d1df;border-radius:7px;background:#f2f5f9;min-width:0}
+.workstation-slot h3{margin:0 0 8px}.workstation-slot button{display:block;width:100%;margin-bottom:7px;padding:8px;font-size:12px;overflow-wrap:anywhere}
+.workstation-slot button[aria-pressed=true]{background:#dceafa;border-color:#7d9fc2}
+@media(max-width:540px){.workstation-slot-grid{gap:5px}.workstation-slot{padding:6px}.workstation-slot button{font-size:10px;padding:5px}}
+@media(min-width:1100px){[data-region=workstation-layout] .setup-deck-board{min-width:100%!important}}

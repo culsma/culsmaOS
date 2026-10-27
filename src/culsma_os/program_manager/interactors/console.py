@@ -30,6 +30,10 @@ class ConsoleCommandInteractor:
                 data = {"host": self.read({"action": "host-status"}),
                         "devices": self.read({"action": "device-status"}),
                         "runs": self.read({"action": "runs"})["runs"]}
+                try:
+                    data["layout"] = self.read({"action": "layout-status"})
+                except ConsoleReadError as error:
+                    data["layout"] = {"status": "unavailable", "error": error.code, "layout": None}
             else:
                 data = self.read({"action": "runs"})
         return ConsoleReadResponse(request.resource, datetime.now(timezone.utc).isoformat(), data)
@@ -41,7 +45,7 @@ class ConsoleCommandInteractor:
     def read(self, payload):
         if (not isinstance(payload, dict) or set(payload) - {"action", "run_id"}
                 or not isinstance(payload.get("action"), str)
-                or payload.get("action") not in {"host-status", "device-status", "runs", "status", "run-evidence"}):
+                or payload.get("action") not in {"host-status", "device-status", "runs", "status", "run-evidence", "layout-status"}):
             raise ConsoleReadError("CONSOLE_READ_ONLY", "read_only")
         if payload["action"] in {"status", "run-evidence"}:
             self.validate_run_id(payload.get("run_id"))

@@ -31,6 +31,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
     static_resources = {
         "/": ("index.html", "text/html; charset=utf-8"),
         "/navigation.js": ("navigation.js", "text/javascript; charset=utf-8"),
+        "/workstation-layout.js": ("workstation-layout.js", "text/javascript; charset=utf-8"),
         "/workstation.js": ("workstation.js", "text/javascript; charset=utf-8"),
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
         "/interaction.js": ("interaction.js", "text/javascript; charset=utf-8"),

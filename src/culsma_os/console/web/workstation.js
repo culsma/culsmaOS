@@ -1,6 +1,8 @@
+import {WorkstationLayoutView} from './workstation-layout.js';
+
 /** Read-only presentation of existing OS resource observations. */
 export class ConsoleWorkstation {
-  constructor(app) {this.app=app;}
+  constructor(app) {this.app=app;this.layout=new WorkstationLayoutView(app);}
 
   resourceTable(title, rows, columns) {
     const a=this.app,card=a.card(title);
@@ -42,12 +44,11 @@ export class ConsoleWorkstation {
       queue.append(a.element('div',data.runs.filter(row=>!a.navigation.constructor.terminal.has(row.status)).length,'metric'));
       owned.append(a.element('div',(resources.station_reservations || []).length,'metric'),a.element('p','Recorded station reservations','label'));
       grid.append(service,queue,owned);
-      const layout=a.card('Workstation layout');layout.append(a.element('p','Inspect the declared deck, carriers and labware positions. Each experiment keeps its own loading plan.','note'));
-      const link=a.element('a','Open current layout','action-link');link.href='#configuration';layout.append(link);
+      const layout=this.layout.render(data.layout);
       const current=a.card('Active runs and queue');current.append(a.runTable(data.runs.filter(row=>!a.navigation.constructor.terminal.has(row.status))));
       const equipment=a.card('Device summary');equipment.append(a.table(['Device','Mode','Position state','Unresolved operations'],devices.map(device=>[
         device.device_id,device.mode,device.positions?.status,(device.unresolved_operations || []).length])));
-      a.content.replaceChildren(grid,layout,equipment,current);
+      a.content.replaceChildren(layout,grid,equipment,current);
     }
     a.showAlert(host.blocked_run ? `Run ${host.blocked_run} retains the queue: ${a.display(host.blocked_reason)}. Inspect its evidence before further action.`:host.worker_error);
   }

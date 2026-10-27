@@ -28,7 +28,7 @@ try {
  await nav.getByRole('link',{name:'Current State',exact:true}).click();
  await page.getByRole('heading',{name:'Station reservations',exact:true}).waitFor();
  await nav.getByRole('link',{name:'Overview',exact:true}).click();
- await page.getByRole('link',{name:'Open current layout',exact:true}).waitFor();
+ await page.getByRole('link',{name:'Adjust layout settings',exact:true}).waitFor();
  await nav.getByRole('link',{name:'Layout',exact:true}).click();
  await page.getByText('Advanced · configuration presets and JSON',{exact:true}).waitFor();
  for(const [label,heading] of [['Platform and Equipment','Configured equipment'],['Drivers and Capabilities','Installed drivers and capabilities'],

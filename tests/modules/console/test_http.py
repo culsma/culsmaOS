@@ -26,7 +26,7 @@ class TestConsoleHTTP:
         assert headers['Cache-Control'] == 'no-store'
         assert 'frame-ancestors' in headers['Content-Security-Policy']
         assert 'Access-Control-Allow-Origin' not in headers
-        assert len(resident.calls) == 3
+        assert len(resident.calls) == 4
 
     @pytest.mark.parametrize('method', ['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'])
     def test_http_methods_cannot_reach_resident(self, console, method):
@@ -60,7 +60,7 @@ class TestConsoleHTTP:
     def test_static_resources_are_packaged_and_allowlisted(self, console):
         harness, resident = console
         for path, mime in [('/', 'text/html'), ('/app.js', 'text/javascript'),
-                           ('/interaction.js', 'text/javascript'), ('/navigation.js', 'text/javascript'), ('/workstation.js', 'text/javascript'), ('/layout-import.js', 'text/javascript'), ('/setup-deck.js', 'text/javascript'), ('/setup-layout.js', 'text/javascript'), ('/configuration.js', 'text/javascript'), ('/style.css', 'text/css'), ('/assets/culsma-os-wordmark.png', 'image/png')]:
+                           ('/interaction.js', 'text/javascript'), ('/navigation.js', 'text/javascript'), ('/workstation.js', 'text/javascript'), ('/workstation-layout.js', 'text/javascript'), ('/layout-import.js', 'text/javascript'), ('/setup-deck.js', 'text/javascript'), ('/setup-layout.js', 'text/javascript'), ('/configuration.js', 'text/javascript'), ('/style.css', 'text/css'), ('/assets/culsma-os-wordmark.png', 'image/png')]:
             status, headers, payload = harness.request('GET', path)
             assert status == 200 and headers['Content-Type'].startswith(mime) and payload
         for name in ['culsma-logo.png', 'culsma-os-wordmark.png']:

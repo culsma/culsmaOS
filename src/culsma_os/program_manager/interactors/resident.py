@@ -6,11 +6,12 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
         self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
         self.setup_requests = setup_requests
+        self.layout = layout
 
     def execute(self, request):
         if request.action.startswith('setup-'):
@@ -26,6 +27,8 @@ class ResidentCommandInteractor:
             return self.configuration.request(request,self.context,self.status)
         if request.action == 'host-status':
             return self.status.snapshot()
+        if request.action == 'layout-status' and self.layout is not None:
+            return self.layout.execute()
         if request.action == 'device-status':
             return self.devices.execute()
         if request.action == 'shutdown':

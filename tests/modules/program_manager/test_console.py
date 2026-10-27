@@ -12,7 +12,7 @@ class TestConsoleCommand:
         resident.responses['device-status']['devices'] = [{'device_id': 'sim',
             'consumables': {'tips': {'available_from_records': None}}}]
         response = ConsoleCommandInteractor(resident).execute(ConsoleReadRequest('station')).as_dict()
-        assert resident.calls == [{'action': 'host-status'}, {'action': 'device-status'}, {'action': 'runs'}]
+        assert resident.calls == [{'action': 'host-status'}, {'action': 'device-status'}, {'action': 'runs'}, {'action': 'layout-status'}]
         assert response['schema'] == 'culsma_console_v1'
         assert response['consistency'] == 'independent_resident_reads'
         assert response['observed_at'] and response['source'] == 'resident_service'
@@ -71,3 +71,13 @@ class TestConsoleCommand:
                 return super().execute(payload)
         result = ConsoleCommandInteractor(ExistingResident()).execute(ConsoleReadRequest('run','run-1'))
         assert result.data['status'] == 'completed' and result.data['execution_evidence'] is None
+
+
+def test_missing_layout_capability_keeps_station_feedback_available():
+    class ExistingResident(ResidentReadFixture):
+        def execute(self, payload):
+            if payload['action']=='layout-status': raise ValueError('HOST_COMMAND_UNSUPPORTED')
+            return super().execute(payload)
+    result=ConsoleCommandInteractor(ExistingResident()).execute(ConsoleReadRequest('station'))
+    assert result.data['host']['status']=='ready'
+    assert result.data['layout']['status']=='unavailable' and result.data['layout']['layout'] is None

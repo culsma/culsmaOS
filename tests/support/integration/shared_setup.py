@@ -12,7 +12,7 @@ from tests.support.console.http import ConsoleHTTPHarness
 
 
 class SharedSetupHarness(ResidentHarness):
-    def __init__(self,directory):
+    def __init__(self,directory,submit=True):
         super().__init__(directory)
         import culsma_driver_hamilton
         driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
@@ -27,6 +27,7 @@ class SharedSetupHarness(ResidentHarness):
         self.backend=HamiltonOperationTestBackend()
         self.http=None
         self.directory=directory
+        self.submit_on_start=submit
 
     def serve(self):
         try:
@@ -47,6 +48,8 @@ class SharedSetupHarness(ResidentHarness):
         self.http=ConsoleHTTPHarness(server).__enter__()
         self.url=server.url
         self.headers={'Origin':self.url,'Authorization':'Bearer '+server.sessions.execute()['access_token'],'Content-Type':'application/json'}
+        if not self.submit_on_start:
+            return self
         receipt=self.client.execute({'action':'submit','source':str(self.source)})
         self.run_id=receipt['run_id']
         self.wait(lambda:self.status(self.run_id)['status']=='awaiting_setup')
