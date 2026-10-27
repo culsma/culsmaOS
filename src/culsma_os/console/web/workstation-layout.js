@@ -48,7 +48,7 @@ export class WorkstationLayoutView {
         onSelectSite:(parent,site)=>this.editor.selectSite(parent,site),
         action:'workstation.inspect-layout-item',label:'Configured workstation deck',
         description:'Click a rack position to choose its plate, reservoir or tip rack, or leave it empty.',
-        footer:'Track order is preserved; widths and site spacing are expanded for readability. Experiment loading is confirmed separately.'}));
+        footer:'All tracks use the same width; vertical site spacing is schematic. Experiment loading is confirmed separately.'}));
       const groups=layout.definition.diagram?.groups || [];
       if(groups.length) {
         const other=a.element('details');other.append(a.element('summary','Fixed equipment and placements outside the track deck'));

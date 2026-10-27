@@ -19,6 +19,7 @@ try {
  await dialog.waitFor({state:'detached'});
  for(const width of [1280,390]) {
   await page.setViewportSize({width,height:960});
+  await layout.locator('.setup-deck-scroll').evaluate(node=>node.scrollLeft=0);
   const actual=await layout.screenshot({path:`${output}/overview-layout-${width}.png`,animations:'disabled'}),file=`${baselines}/overview-layout-${width}.png`;
   if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1') writeFileSync(file,actual);
   else {const ref=PNG.sync.read(readFileSync(file)),img=PNG.sync.read(actual);
@@ -27,8 +28,16 @@ try {
   }
   const viewport=layout.locator('.setup-deck-scroll');
   const narrow=layout.locator('[data-carrier-id="PREVIEW_T36_5R60_SUBSTITUTE"]');
-  if((await narrow.boundingBox()).width<70)throw new Error('Narrow carrier is unreadable');
+  const trackWidths=await layout.locator('.setup-deck-track').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().width));
+  if(Math.max(...trackWidths)-Math.min(...trackWidths)>.1)throw new Error('Track scale varies across the deck');
+  const single=(await narrow.boundingBox()).width+4;
+  const double=(await layout.locator('[data-carrier-id="PREVIEW_T37_38_4R200"]').boundingBox()).width+4;
+  if(Math.abs(double-2*single)>.2)throw new Error('Two-track carrier footprint is not twice a single track');
   if(await narrow.locator('.setup-deck-stack-label').count())throw new Error('Narrow carrier repeats site labels');
+  if(!(await narrow.locator('.setup-deck-site').evaluateAll(nodes=>nodes.every(node=>{
+   const range=document.createRange();range.selectNodeContents(node);const style=getComputedStyle(node);
+   return range.getBoundingClientRect().width+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight)<=node.clientWidth+.1;
+  }))))throw new Error('Numeric site label is clipped');
   const stack=layout.locator('[data-carrier-id="CAR_5STACK_0003"] .setup-deck-stack');
   for(const node of await stack.locator('.setup-deck-site').all())if((await node.boundingBox()).height<24)throw new Error('Stacked item is squeezed');
   await viewport.evaluate(node=>node.scrollLeft=node.scrollWidth);

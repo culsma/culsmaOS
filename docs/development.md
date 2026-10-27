@@ -370,6 +370,9 @@ setting cleanup before saving; the save feedback reports affected bindings, capa
 well-map or tip-source settings. Clearing a stack includes all its objects. A missing tip source remains explicitly unconfigured
 and rejects transfers before dispatch. Module/transport-dependent positions retain
 their dedicated setup checks. E2E and desktop/mobile golden coverage: `tests/integration/test_console_labware.py`.
+Deck tracks always share one horizontal scale, including mixed one-, two- and
+multi-track carriers. The whole board can scroll; numeric labels on narrow carriers
+and schematic vertical spacing do not change track widths.
 New placements do not infer liquid capacity, reagent inventory, well mappings or program
 bindings. Those remain explicit driver/experiment preparation inputs.
 

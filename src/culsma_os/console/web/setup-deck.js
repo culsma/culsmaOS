@@ -42,13 +42,8 @@ export class RunSetupDeck {
   }
 
   static presentation(scene, stacked) {
-    // Keep track addresses and ordering while giving narrow carriers usable controls.
-    const widths=scene.positions.map(()=>24);
-    for(const carrier of scene.carriers) {
-      const minimum=carrier.span<3 ? 76:168;
-      const perTrack=Math.max(24,Math.ceil(minimum/carrier.span));
-      for(let n=carrier.start;n<carrier.start+carrier.span;n++)widths[n]=Math.max(widths[n],perTrack);
-    }
+    // Every track has the same scale; readability comes from uniform enlargement.
+    const widths=scene.positions.map(()=>32);
     const offsets=[0];for(const width of widths)offsets.push(offsets.at(-1)+width);
     const maxSites=Math.max(1,...scene.carriers.map(c=>c.sites.length));
     const maxStack=stacked ? Math.max(1,...scene.carriers.flatMap(c=>c.sites.map(site=>c.placements.filter(p=>p.site===site).length))):1;
@@ -60,7 +55,7 @@ export class RunSetupDeck {
     const section = app.element('section','','setup-deck');section.dataset.region = 'loading-deck';
     section.setAttribute('aria-label',options.label || scene.label+' loading overview');
     section.append(app.element('h4',scene.label),app.element('p',
-      options.description || 'Track numbers run left to right. Widths and site spacing are expanded for readability. Blue items belong to this loading checklist.','note'));
+      options.description || 'Track numbers run left to right at a uniform scale; vertical site spacing is schematic. Blue items belong to this loading checklist.','note'));
     const viewport = app.element('div','','setup-deck-scroll');viewport.tabIndex = 0;
     viewport.setAttribute('aria-label','Scroll the complete deck horizontally');
     const board = app.element('div','','setup-deck-board');

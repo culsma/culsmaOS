@@ -23,9 +23,15 @@ for(const count of [30,54]) for(const span of [1,2,4,5,6,7]) {
  assert.equal(scene.carriers[0].placements[0].id,'plate');assert.equal(JSON.stringify(plan),before);
  const geometry=Deck.presentation(scene,false);
  assert.equal(geometry.offsets.length,count+1);assert.equal(geometry.widths.length,count);
- assert.ok(geometry.offsets[scene.carriers[0].start+span]-geometry.offsets[scene.carriers[0].start]>=(span<3 ? 76:168));
+ assert.equal(new Set(geometry.widths).size,1);
+ assert.equal(geometry.offsets[scene.carriers[0].start+span]-geometry.offsets[scene.carriers[0].start],span*geometry.widths[0]);
  assert.equal(JSON.stringify(plan),before);
 }
+const mixed=Deck.scene(make(54,6));
+mixed.carriers=[{...mixed.carriers[0],start:35,span:1},{...mixed.carriers[0],start:36,span:2},{...mixed.carriers[0],start:41,span:6}];
+const projected=Deck.presentation(mixed,true),width=(start,span)=>projected.offsets[start+span]-projected.offsets[start];
+assert.equal(new Set(projected.widths).size,1);
+assert.equal(width(36,2),2*width(35,1));assert.equal(width(41,6),6*width(35,1));
 const stacked=Deck.scene(make(54,6));stacked.carriers[0].placements=Array.from({length:4},(_,n)=>({id:'plate'+n,site:'2'}));
 assert.ok(Deck.presentation(stacked,true).height>=700);
 assert.equal(Deck.scene({}),null);

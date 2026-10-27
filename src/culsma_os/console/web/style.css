@@ -175,7 +175,7 @@ nav{flex-wrap:wrap;gap:12px 24px}
 .setup-deck-stack-label{font-size:11px;font-weight:650;line-height:16px}
 .setup-deck-stack .setup-deck-site{font-size:11px;line-height:1.4;min-height:26px;padding:4px}
 .setup-deck-carrier[data-compact=true] .setup-deck-stack .setup-deck-site,
-.setup-deck-carrier[data-compact=true] .setup-deck-stack>button{font-size:13px;font-weight:650}
+.setup-deck-carrier[data-compact=true] .setup-deck-stack>button{font-size:13px;font-weight:650;padding:2px 0;text-align:center;text-overflow:clip}
 .setup-deck-key{margin-top:14px;font-size:12px;color:#526b82}.setup-deck-key>summary{cursor:pointer}
 .labware-dialog .content-heading{padding-bottom:16px;border-bottom:1px solid #e2e9f0}
 .labware-close{font-size:24px;line-height:1;width:40px;height:40px;padding:4px;flex-shrink:0}
