@@ -21,3 +21,17 @@ def test_console_program_architecture():
     source=(base/'console/web/programs.js').read_text()
     assert 'sessionStorage' in source and 'request_id' in source
     assert 'innerHTML' not in source and 'setInterval' not in source
+
+
+def test_home_and_source_files_stay_in_program_repository():
+    base = ROOT / 'src/culsma_os'
+    source = (base / 'console/web/programs.js').read_text()
+    assert 'FileSystem' not in source and 'file://' not in source
+    assert "action:'program.select'" in source and "addEventListener('dblclick'" in source
+    assert "action:prepare ? 'preview':'inspect'" in source
+    assert 'version!==this.readVersion' in source
+    for path in (base / 'console/adapters/http.py', base / 'console/adapters/mcp.py'):
+        tree = ast.parse(path.read_text())
+        calls = {node.func.attr for node in ast.walk(tree)
+                 if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
+        assert not calls & {'mkdir', 'rglob', 'walk', 'read_text', 'capture'}

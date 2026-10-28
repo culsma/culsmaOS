@@ -65,7 +65,7 @@ class ResidentCommandInteractor:
             if self.setup_preview is None:
                 raise ValueError('SETUP_PREVIEW_UNAVAILABLE')
             return self.setup_preview.preview(self.compile(request))
-        if request.action == 'submit':
+        if request.action in {'submit','start'}:
             return self.submit(request)
         if request.action in {'pause', 'resume', 'cancel'}:
             self.require_run(request.run_id)
@@ -110,8 +110,11 @@ class ResidentCommandInteractor:
         compiled = self.compile(request)
         identity = ((compiled.plan,compiled.state,request.configuration_fingerprint) if request.configuration_fingerprint is not None
                     else (compiled.plan,compiled.state))
+        startup = 'automatic' if request.action == 'start' else 'manual'
+        if startup == 'automatic':
+            identity = (identity, startup)
         submission = QueueSubmission(request.request_id or str(uuid4()),
-            self.codec.fingerprint(identity), str(request.source.resolve()))
+            self.codec.fingerprint(identity), str(request.source.resolve()), startup)
         previous = self.queue.submission(submission.request_id)
         if previous is not None:
             if previous.fingerprint != submission.fingerprint or previous.source != submission.source:
@@ -185,16 +188,25 @@ class ResidentWorkerInteractor:
             self.status.note_blocked(None, None)
             return
         record = self.application.client.get_run(head.run_id)
-        if setup is not None and setup.enabled():
+        if setup is not None and setup.enabled() and record.body_outcome is None:
             try:
                 setup.get(head.run_id)
             except KeyError:
                 try:
                     setup.plan(head.run_id)
                 except ValueError as error:
-                    self.status.note_blocked(head.run_id, str(error))
-                    return
+                    if head.startup == 'automatic':
+                        setup.state.mark_failed(head.run_id, str(error))
+                    else:
+                        self.status.note_blocked(head.run_id, str(error))
+                        return
             record = self.application.client.get_run(head.run_id)
+            if head.startup == 'automatic' and record.status == 'awaiting_setup':
+                try:
+                    setup.start_automatic(head.run_id)
+                except ValueError as error:
+                    setup.state.mark_failed(head.run_id, str(error))
+                record = self.application.client.get_run(head.run_id)
             if record.status == 'awaiting_setup':
                 self.status.note_blocked(head.run_id, record.error or 'awaiting_setup')
                 return

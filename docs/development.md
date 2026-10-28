@@ -309,26 +309,27 @@ normal OS/console installation and simulator operation do not load it.
 | Tools | Responsibility |
 | --- | --- |
 | `station_status`, `list_runs`, `run_status` | Read existing OS observations |
-| `list_programs`, `inspect_program`, `preview_program`, `submit_program`, `control_run` | Review source, preview loading without admission, and request queue/control actions |
+| `list_programs`, `inspect_program`, `preview_program`, `start_program`, `submit_program`, `control_run` | Review source, preview loading without admission, and request queue/control actions |
 | `loading_plan`, `revise_loading_plan` | Read or revise the fingerprinted loading plan |
 | `begin_loading`, `loading_request_status` | Reserve for loading and inspect durable command outcomes |
 
-Selecting an experiment in Workstation calls `preview_program`'s shared use case:
-it freezes the source and maps its requirements through the optional offline
-`WorkspaceCatalogueReadPort`. Compatible configured bindings are preferred;
-otherwise the existing allocator proposes positions. A preview creates no run,
-reservation or device connection. `Prepare experiment` admits the reviewed source
-and configuration fingerprint; the final loading plan is then reviewed and
-explicitly confirmed. Drivers without this port retain explicit `Run protocol`.
-Tip quantities in the preview are declared, not measured; final preparation and
-resource checks still apply. MCP callers can pass the preview's
-`configuration_fingerprint` to `submit_program` to reject stale station settings.
+Single-clicking a protocol inspects its captured source. Double-clicking or choosing
+`Run protocol` performs the offline requirement check and sends one durable `start`
+request. The resident records automatic startup in the queue and owns final planning,
+reservation and simulation loading. Failures settle through existing run finalization
+and are displayed as errors; unknown execution retains isolation. Retrying the same
+request returns the same run. `submit_program` remains available for explicit staged
+loading. Both paths retain source and configuration fingerprint checks.
 
-There is deliberately no MCP loading-confirmation tool or capability. The operator
-loads the listed items, ticks the console acknowledgement and confirms the exact
-plan. This is operator attestation, not sensor evidence. Operations are attributed
-to the local console or MCP process; these are not multi-user login identities.
-Neither transport starts a second runtime or bypasses dispatch/resource gates.
+Automatic loading is limited to simulation and records `simulation_fixture`, never
+operator attestation or sensor evidence. Physical loading still requires the existing
+operator console confirmation; MCP has no physical-confirmation capability. Neither
+transport starts a second runtime or bypasses dispatch/resource gates.
+
+Progress and terminal outcomes appear at the top of the run pane, before the layout.
+Completion scrolls to the result once; subsequent polling preserves the user's scroll.
+Registered material is displayed immediately below the outcome. Loading plans,
+execution receipts and technical state remain available below it.
 
 Optional local E2E uses an isolated Chrome profile and a labelled Hamilton backend
 double, without contacting an Agent, VENUS or an instrument:
@@ -384,3 +385,22 @@ through the existing idle/fingerprint gate. Compatible leaf labware keeps its
 identity and site; canonical native transforms are regenerated. Colliding tracks,
 unsupported stacks, coordinate associations and adjusted native frames are blocked
 with reasons. Physical installation and experiment loading remain operator checks.
+
+
+### Home and protocol files
+
+`console`, `desktop` and `mcp` accept `--home` (default `~/Culsma`). The first
+authorized file listing creates `projects/` and `results/` without replacing existing
+files. Put `.culs` programs and their imported `.culs` libraries in `projects/`;
+project subdirectories appear under Files. Non-program files stay on disk and are
+not shown in this first browser. `results/` is available for user exports; resident
+evidence continues to use its configured artifacts directory. `--program-root`
+selects an existing source directory instead. The console shows the actual source
+path and Refresh files rescans it.
+
+Single-click inspects a captured program. Double-click or Run protocol automatically
+checks preparation, submits the reviewed snapshot and starts simulation; errors stop
+progress and are shown in the same Workstation. HTTP and MCP share the Program Manager
+use cases. Overlapping reads cannot replace a newer selection; duplicate launch gestures
+are collapsed and unknown submission responses retain their request identity. Drag/drop
+and editing non-program files remain outside this initial slice.

@@ -267,3 +267,26 @@ def test_resident_submission_waits_for_the_same_operator_setup_and_durable_comma
         assert len(backend.calls)==2
     finally:
         harness.stop()
+
+
+def test_automatic_setup_is_simulation_only_and_idempotent(fixture):
+    compiled,context=fixture
+    backend=HamiltonOperationTestBackend()
+    app=SetupFixture.app(context,backend)
+    try:
+        run_id,plan=SetupFixture.submit(app,compiled)
+        setup=app.client.tasks.setup
+        original=setup.snapshot
+        setup.snapshot=replace(original,mode='physical')
+        assert setup.start_automatic(run_id) is False
+        assert app.client.get_run(run_id).status == 'awaiting_setup'
+        assert setup.reservations.get(run_id) is None and not backend.calls
+        setup.snapshot=original
+        assert setup.start_automatic(run_id) is True
+        confirmed=setup.get(run_id)
+        assert setup.start_automatic(run_id) is True and setup.get(run_id) == confirmed
+        assert confirmed['confirmation']['source'] == 'simulation_fixture'
+        app.client.run_until_settled(run_id)
+        assert app.client.get_run(run_id).status == 'completed' and len(backend.calls)==2
+    finally:
+        app.close()

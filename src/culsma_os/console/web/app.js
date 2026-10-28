@@ -192,6 +192,16 @@ class StationConsoleApp {
     const result = data.result || {};
     const os = result.os || {};
     const record = os.registered_material;
+    const settled=['completed','failed','cancelled','needs_reconciliation'].includes(data.status);
+    const outcome=this.card(settled ? 'Experiment result':'Experiment progress');outcome.dataset.region='run-outcome';
+    outcome.append(this.badge(data.status));
+    const messages={completed:'Experiment completed.',failed:'Experiment failed.',cancelled:'Experiment cancelled.',
+      needs_reconciliation:'Execution outcome is uncertain. Review the recorded evidence.',
+      awaiting_setup:'Preparing the experiment. Physical loading may require operator input.',
+      ready:'Queued for execution.',waiting:'Experiment running.',finalizing:'Finishing the experiment.'};
+    outcome.append(this.element('p',messages[data.status] || 'Experiment in progress.','experiment-summary'));
+    if(data.error || data.body_error) outcome.append(this.element('p',data.error || data.body_error,'notice'));
+    if(result.execution) outcome.append(this.element('p',`${result.execution.completed_steps ?? 0} / ${result.execution.total_steps ?? '—'} program steps completed`,'note'));
     const state = this.card('Run state');
     state.append(this.details([
       ['Run', this.element('span', data.run_id, 'mono')], ['State', this.badge(data.status)],
@@ -236,9 +246,9 @@ class StationConsoleApp {
     const logs=this.element('details');logs.append(this.element('summary','Agent task and logs · planned'),this.element('p','A console log interface is not available yet. Recorded execution receipts are available in Results.','note'));feedback.append(logs);
     panels.execution.append(this.programs.renderControls(data),feedback);
     const proof=this.element('details','','evidence-disclosure');proof.append(this.element('summary','Execution evidence and receipts'),this.renderEvidence(data.execution_evidence));
-    panels.results.append(semantic,material,proof);
+    panels.results.append(material,semantic,proof);
     this.content.dataset.stage=phase;
-    target.replaceChildren(state,...Object.values(panels));
+    target.replaceChildren(outcome,...(settled ? [panels.results,panels.execution,panels.preparation]:[panels.execution,panels.preparation,panels.results]),state);
     this.showAlert(data.error || data.body_error || (diagnostics.length ? diagnostics.join(' · ') : null));
   }
 

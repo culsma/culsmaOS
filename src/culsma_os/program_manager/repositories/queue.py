@@ -22,6 +22,9 @@ class SqliteRunQueueRepository:
                 sequence INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT UNIQUE NOT NULL,
                 source TEXT NOT NULL, request_id TEXT UNIQUE NOT NULL, fingerprint TEXT NOT NULL,
                 FOREIGN KEY(run_id) REFERENCES os_runs(run_id))""")
+            columns = {row[1] for row in connection.execute('PRAGMA table_info(os_run_queue)')}
+            if 'startup' not in columns:
+                connection.execute("ALTER TABLE os_run_queue ADD COLUMN startup TEXT NOT NULL DEFAULT 'manual'")
             connection.execute("""CREATE TABLE IF NOT EXISTS os_run_commands(
                 sequence INTEGER PRIMARY KEY AUTOINCREMENT, request_id TEXT UNIQUE NOT NULL,
                 run_id TEXT NOT NULL, action TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', error TEXT,
@@ -29,16 +32,16 @@ class SqliteRunQueueRepository:
 
     def entries(self):
         return tuple(QueuedRun(*row) for row in self.connection.execute(
-            "SELECT sequence,run_id,source,request_id,fingerprint FROM os_run_queue ORDER BY sequence"))
+            "SELECT sequence,run_id,source,request_id,fingerprint,startup FROM os_run_queue ORDER BY sequence"))
 
     def submission(self, request_id):
         row = self.connection.execute(
-            "SELECT sequence,run_id,source,request_id,fingerprint FROM os_run_queue WHERE request_id=?",
+            "SELECT sequence,run_id,source,request_id,fingerprint,startup FROM os_run_queue WHERE request_id=?",
             (request_id,)).fetchone()
         return QueuedRun(*row) if row else None
 
     def head(self):
-        row = self.connection.execute("""SELECT q.sequence,q.run_id,q.source,q.request_id,q.fingerprint
+        row = self.connection.execute("""SELECT q.sequence,q.run_id,q.source,q.request_id,q.fingerprint,q.startup
             FROM os_run_queue q JOIN os_runs r ON q.run_id=r.run_id
             WHERE r.status NOT IN ('completed','failed','cancelled') OR r.body_outcome IS NULL
             ORDER BY q.sequence LIMIT 1""").fetchone()

@@ -248,6 +248,7 @@ class QueueSubmission:
     request_id: str
     fingerprint: str
     source: str
+    startup: str = "manual"
 
 
 @dataclass(frozen=True)
@@ -257,6 +258,7 @@ class QueuedRun:
     source: str
     request_id: str
     fingerprint: str
+    startup: str = "manual"
 
 
 @dataclass(frozen=True)

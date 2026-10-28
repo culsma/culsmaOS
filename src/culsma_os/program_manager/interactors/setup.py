@@ -109,6 +109,16 @@ class RunSetupInteractor:
             self.state.confirm_setup(run_id)
             return result
 
+    def start_automatic(self, run_id):
+        """Advance simulation setup using its own evidence label, never a human attestation."""
+        if self.snapshot.mode != 'simulation':
+            return False
+        plan = self.get(run_id)
+        if plan['phase'] != 'confirmed':
+            self.begin_loading(run_id, plan['fingerprint'])
+        self.confirm(run_id, plan['fingerprint'], True, 'simulation_fixture')
+        return True
+
     def require_dispatch(self, run_id):
         if not self.enabled():
             return

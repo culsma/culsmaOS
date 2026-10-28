@@ -22,6 +22,7 @@ class RecordingUseCase:
     ('list_programs',{},'programs','list'),
     ('preview_program',{'program_id':'transfer.culs'},'programs','preview'),
     ('inspect_program',{'program_id':'transfer.culs'},'programs','inspect'),
+    ('start_program',{'program_id':'transfer.culs','snapshot_id':'snapshot','request_id':'start'},'programs','start'),
     ('submit_program',{'program_id':'transfer.culs','snapshot_id':'snapshot','request_id':'submit'},'programs','submit'),
     ('control_run',{'run_id':'run','action':'cancel','request_id':'cancel'},'programs','cancel'),
 ])

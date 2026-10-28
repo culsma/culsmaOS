@@ -55,3 +55,16 @@ def test_shared_activity_is_run_scoped_bounded_and_preserves_failed_commands():
         assert activity[0]['status']=='failed' and activity[0]['error']=='SETUP_PLAN_STALE'
         assert all(row['origin']=='local-mcp-process' for row in activity)
         assert repository.activity('absent')==[]
+
+
+def test_queue_migration_keeps_old_runs_manual_and_preserves_automatic_start(tmp_path):
+    from culsma_os.program_manager.repositories.queue import SqliteRunQueueRepository
+    path=tmp_path/'queue.sqlite3'
+    with sqlite3.connect(path) as db:
+        db.execute('CREATE TABLE os_run_queue(sequence INTEGER PRIMARY KEY,run_id TEXT,source TEXT,request_id TEXT,fingerprint TEXT)')
+        db.execute("INSERT INTO os_run_queue VALUES(1,'old','source','request','fingerprint')")
+        repository=SqliteRunQueueRepository(db)
+        assert repository.submission('request').startup == 'manual'
+        db.execute("UPDATE os_run_queue SET startup='automatic' WHERE run_id='old'")
+    with sqlite3.connect(path) as db:
+        assert SqliteRunQueueRepository(db).entries()[0].startup == 'automatic'

@@ -19,6 +19,7 @@ class ConsoleSettings:
     drafts_path: Path | None = None
     program_root: Path | None = None
     program_store: Path | None = None
+    home_path: Path | None = None
 
     def __post_init__(self):
         if type(self.port) is not int or not 0 <= self.port <= 65535:

@@ -51,8 +51,8 @@ class SqliteTaskRepository:
                 )
                 if queue_submission is not None:
                     self.connection.execute(
-                        "INSERT INTO os_run_queue(run_id,source,request_id,fingerprint) VALUES(?,?,?,?)",
-                        (record.run_id, queue_submission.source, queue_submission.request_id, queue_submission.fingerprint))
+                        "INSERT INTO os_run_queue(run_id,source,request_id,fingerprint,startup) VALUES(?,?,?,?,?)",
+                        (record.run_id, queue_submission.source, queue_submission.request_id, queue_submission.fingerprint, queue_submission.startup))
                 return replace(record, revision=1)
             changed = self.connection.execute(
                 "UPDATE os_runs SET status=?,checkpoint=?,revision=revision+1,error=?,body_outcome=?,body_error=? WHERE run_id=? AND revision=?",

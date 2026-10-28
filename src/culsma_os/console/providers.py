@@ -32,7 +32,7 @@ class ConsoleApplicationFactory:
         repository = SqliteStationConfigurationRepository(settings.drafts_path or Path('run-artifacts/console/drafts.sqlite3'))
         profiles = DeviceProfileInteractor(DriverProfileInteractor())
         source = ProgramSourceInteractor(FileProgramSourceRepository(settings.program_root,
-            settings.program_store or Path('run-artifacts/console/programs')),CompilationInteractor(),HostedRuntimeInteractor())
+            settings.program_store or Path('run-artifacts/console/programs'), settings.home_path),CompilationInteractor(),HostedRuntimeInteractor())
         from culsma_os.workspace_manager.interactors import LabwareConfigurationInteractor
         return ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
             StationConfigurationInteractor(tokens,repository,profiles),ConsoleSessionInteractor(tokens),
@@ -49,7 +49,7 @@ class ConsoleApplicationFactory:
         tokens = TokenInteractor(SessionCredentialRepository())
         resident = ResidentClientAdapter(settings.socket_path, timeout=10)
         source = ProgramSourceInteractor(FileProgramSourceRepository(settings.program_root,
-            settings.program_store or Path('run-artifacts/console/programs')), CompilationInteractor(), HostedRuntimeInteractor())
+            settings.program_store or Path('run-artifacts/console/programs'), settings.home_path), CompilationInteractor(), HostedRuntimeInteractor())
         bridge = MCPServerAdapter(SetupInteractionInteractor(tokens,resident),
             ConsoleProgramInteractor(tokens,source,resident),
             AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)))

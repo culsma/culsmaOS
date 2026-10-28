@@ -90,10 +90,12 @@ class CulsmaOSCLI:
         console.add_argument("--port", type=int, default=8765)
         console.add_argument("--drafts-db", type=Path, default=Path("run-artifacts/console/drafts.sqlite3"))
         console.add_argument("--program-root", type=Path, help="Allow console selection of .culs files under this directory")
+        console.add_argument("--home", type=Path, default=Path.home() / "Culsma", help="User Home directory; programs default to HOME/projects")
         console.add_argument("--program-store", type=Path, default=Path("run-artifacts/console/programs"))
         mcp = commands.add_parser('mcp', help='Expose a local resident to an external AI over MCP stdio')
         mcp.add_argument('--socket',type=Path,required=True)
         mcp.add_argument('--program-root',type=Path)
+        mcp.add_argument("--home", type=Path, default=Path.home() / "Culsma", help="User Home directory; programs default to HOME/projects")
         mcp.add_argument('--program-store',type=Path,default=Path('run-artifacts/console/programs'))
         desktop = commands.add_parser("desktop", help="Start the local desktop console and resident as one product")
         desktop.add_argument("--state-dir", type=Path, default=Path("run-artifacts/desktop"))
@@ -101,6 +103,7 @@ class CulsmaOSCLI:
         desktop.add_argument("--driver", default="opentrons-simulator")
         desktop.add_argument("--driver-config", type=Path)
         desktop.add_argument("--program-root", type=Path)
+        desktop.add_argument("--home", type=Path, default=Path.home() / "Culsma", help="User Home directory; programs default to HOME/projects")
         desktop.add_argument("--drafts-db", type=Path)
         desktop.add_argument("--application", type=Path, help="Built Flutter executable; normally installed with the product")
         args = parser.parse_args(argv)
@@ -131,7 +134,7 @@ class CulsmaOSCLI:
             from culsma_os.console.providers import ConsoleApplicationFactory
             try:
                 ConsoleApplicationFactory().build_mcp(ConsoleSettings(args.socket,program_root=args.program_root,
-                    program_store=args.program_store)).execute()
+                    program_store=args.program_store,home_path=args.home)).execute()
             except (ImportError,ValueError,OSError) as error:
                 parser.exit(2,f'{error}\n')
             return
@@ -151,7 +154,7 @@ class CulsmaOSCLI:
                 '--driver-config', str(args.driver_config.resolve()), '--station-id', 'desktop',
                 '--artifacts-dir', str(state / 'runs')]
             settings = ConsoleSettings(socket, 0, args.drafts_db.resolve() if args.drafts_db else state / 'drafts.sqlite3',
-                args.program_root.resolve() if args.program_root else None, state / 'programs')
+                args.program_root.resolve() if args.program_root else None, state / 'programs', args.home)
             try:
                 application = ConsoleApplicationFactory().build_desktop(settings, application.resolve(), resident_command, state / 'resident.log')
                 result = application.execute()
@@ -162,7 +165,7 @@ class CulsmaOSCLI:
             from culsma_os.console.models import ConsoleSettings
             from culsma_os.console.providers import ConsoleApplicationFactory
             try:
-                server = ConsoleApplicationFactory().build(ConsoleSettings(args.socket.resolve(), args.port, args.drafts_db.resolve(), args.program_root, args.program_store.resolve()))
+                server = ConsoleApplicationFactory().build(ConsoleSettings(args.socket.resolve(), args.port, args.drafts_db.resolve(), args.program_root, args.program_store.resolve(), args.home))
             except (ValueError, OSError) as error:
                 parser.exit(2, f"{error}\n")
             try:

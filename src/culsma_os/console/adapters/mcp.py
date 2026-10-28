@@ -24,9 +24,10 @@ class MCPServerAdapter:
             (self.revise_loading_plan, False, 'Revise the exact loading plan using fixed or preferred allocation addresses; confirmation is invalidated.'),
             (self.begin_loading, False, 'Reserve the station for loading. This does not confirm that physical loading occurred.'),
             (self.loading_request_status, True, 'Read a durable loading command receipt; pending is not application.'),
-            (self.list_programs, True, 'List programs inside the explicitly configured program root.'),
+            (self.list_programs, True, 'List protocol files and their source directory in the configured program root or Culsma Home.'),
             (self.preview_program, True, 'Preview experiment requirements against the current station without creating a run or reserving resources.'),
             (self.inspect_program, True, 'Inspect and freeze a program source snapshot before submission.'),
+            (self.start_program, False, 'Start a reviewed program; preparation and simulation loading advance automatically. Physical loading still requires an operator.'),
             (self.submit_program, False, 'Submit a reviewed program snapshot to the existing OS queue.'),
             (self.control_run, False, 'Request pause, resume or cancellation at an OS execution boundary.'),
         ]:
@@ -74,6 +75,11 @@ class MCPServerAdapter:
     def submit_program(self, program_id: str, snapshot_id: str, request_id: str,
                        configuration_fingerprint: str | None = None) -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest('submit', program_id, snapshot_id,
+            request_id, configuration_fingerprint=configuration_fingerprint))
+
+    def start_program(self, program_id: str, snapshot_id: str, request_id: str,
+                      configuration_fingerprint: str | None = None) -> dict[str, Any]:
+        return self.programs.execute(self.raw_credential, ConsoleProgramRequest('start', program_id, snapshot_id,
             request_id, configuration_fingerprint=configuration_fingerprint))
 
     def control_run(self, run_id: str, action: Literal['pause','resume','cancel'], request_id: str) -> dict[str, Any]:

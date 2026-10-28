@@ -25,7 +25,7 @@ try {
  await page.getByText('Station state and resources',{exact:true}).click();
  await page.getByRole('heading',{name:'Station reservations',exact:true}).waitFor();
  await nav.getByRole('link',{name:'Workstation',exact:true}).click();
- await page.getByRole('combobox',{name:'Experiment',exact:true}).waitFor();
+ await page.getByRole('complementary',{name:'Program files'}).waitFor();
  await page.getByRole('link',{name:'System Settings: rack layout',exact:true}).waitFor();
  // Force several station snapshots while the actual deck is horizontally scrolled.
  await page.setViewportSize({width:900,height:960});

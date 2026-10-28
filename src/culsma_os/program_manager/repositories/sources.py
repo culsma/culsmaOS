@@ -17,12 +17,25 @@ class FileProgramSourceRepository:
     max_file_bytes = 250000
     max_total_bytes = 2000000
 
-    def __init__(self, root, store):
-        self.root = Path(root).resolve() if root is not None else None
+    def __init__(self, root, store, home=None):
+        self.home = Path(home).expanduser().resolve() if home is not None else None
+        self.root = Path(root).expanduser().resolve() if root is not None else self.home / "projects" if self.home else None
         self.store = Path(store).resolve()
         self.lock = Lock()
         if self.root is not None and self.store.is_relative_to(self.root):
             raise ConsoleProgramError('PROGRAM_STORE_INSIDE_SOURCE_ROOT')
+
+    def initialize_home(self):
+        """Create user directories lazily after authorization, preserving existing files."""
+        if self.home is None:
+            return
+        try:
+            for directory in (self.home, self.home / "projects", self.home / "results"):
+                if directory.is_symlink():
+                    raise ConsoleProgramError("PROGRAM_HOME_UNAVAILABLE", "unavailable")
+                directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        except OSError as error:
+            raise ConsoleProgramError("PROGRAM_HOME_UNAVAILABLE", "unavailable") from error
 
     def validate_id(self, value):
         if (not isinstance(value, str) or not value or len(value) > 240
@@ -35,6 +48,7 @@ class FileProgramSourceRepository:
     def source_ids(self):
         if self.root is None:
             return []
+        self.initialize_home()
         if not self.root.is_dir():
             raise ConsoleProgramError('PROGRAM_ROOT_UNAVAILABLE', 'unavailable')
         result = []
@@ -81,8 +95,13 @@ class FileProgramSourceRepository:
         return self.root is not None
 
     def list(self):
-        return {'enabled':self.root is not None,
-                'programs':[{'program_id':name} for name in self.source_ids()]}
+        result = {'enabled':self.root is not None,
+                  'programs':[{'program_id':name} for name in self.source_ids()]}
+        if self.root is not None:
+            result['source_root'] = str(self.root)
+        if self.home is not None:
+            result['home'] = str(self.home)
+        return result
 
     def fingerprint(self, sources):
         encoded = json.dumps(sources, sort_keys=True, ensure_ascii=True, separators=(',', ':')).encode()

@@ -129,3 +129,63 @@ def test_concurrent_source_snapshots_converge(programs):
         snapshots=list(workers.map(lambda repository:repository.capture(),[programs.sources,other]))
     assert snapshots[0]==snapshots[1]
     assert programs.sources.load(snapshots[0].snapshot_id)==snapshots[0]
+
+
+def test_home_is_initialized_after_authorized_list_and_preserves_projects(programs, tmp_path):
+    user_home = tmp_path / 'Culsma'
+    sources = FileProgramSourceRepository(None, tmp_path / 'snapshots', user_home)
+    programs.source_interactor.sources = sources
+    with pytest.raises(ConsoleAccessError):
+        programs.interactor.execute(None, ConsoleProgramRequest('list'))
+    assert not user_home.exists()
+    view = programs.interactor.execute(programs.credential, ConsoleProgramRequest('list'))
+    assert view['enabled'] and view['source_root'] == str(user_home / 'projects')
+    assert view['home'] == str(user_home) and view['programs'] == []
+    assert (user_home / 'results').is_dir()
+    project = user_home / 'projects' / 'standard-curve'
+    project.mkdir()
+    source = project / 'dilution.culs'
+    source.write_text(programs.source.read_text())
+    (project / 'materials.json').write_text('{}')
+    (project / '.hidden.culs').write_text('private')
+    (user_home / 'results' / 'ignored.culs').write_text('not a project')
+    view = programs.interactor.execute(programs.credential, ConsoleProgramRequest('list'))
+    assert view['programs'] == [{'program_id': 'standard-curve/dilution.culs'}]
+    inspection = programs.interactor.execute(programs.credential,
+        ConsoleProgramRequest('inspect', 'standard-curve/dilution.culs'))
+    assert inspection['valid'] and not programs.calls
+    assert source.read_text() == programs.source.read_text()
+    assert (project / 'materials.json').read_text() == '{}'
+
+
+def test_home_rejects_non_directory_and_linked_projects(tmp_path):
+    user_home = tmp_path / 'Culsma'
+    user_home.mkdir()
+    outside = tmp_path / 'outside'
+    outside.mkdir()
+    (user_home / 'projects').symlink_to(outside, target_is_directory=True)
+    sources = FileProgramSourceRepository(None, tmp_path / 'snapshots', user_home)
+    with pytest.raises(ConsoleProgramError, match='PROGRAM_HOME_UNAVAILABLE'):
+        sources.list()
+    assert not list(outside.iterdir())
+    (user_home / 'projects').unlink()
+    (user_home / 'projects').write_text('existing user file')
+    with pytest.raises(ConsoleProgramError, match='PROGRAM_HOME_UNAVAILABLE'):
+        sources.list()
+    assert (user_home / 'projects').read_text() == 'existing user file'
+
+
+def test_explicit_program_root_takes_precedence_over_home(programs, tmp_path):
+    sources = FileProgramSourceRepository(programs.root, tmp_path / 'snapshots', tmp_path / 'Culsma')
+    assert sources.list()['source_root'] == str(programs.root)
+    assert sources.source_ids() == ['transfer.culs']
+
+
+def test_start_delegates_one_durable_command_with_reviewed_source(programs):
+    view = programs.interactor.execute(programs.credential, ConsoleProgramRequest('inspect','transfer.culs'))
+    request = ConsoleProgramRequest('start','transfer.culs',view['snapshot_id'],'start-1',configuration_fingerprint='a'*64)
+    result = programs.interactor.execute(programs.credential, request)
+    assert result['run']['accepted']
+    assert len(programs.calls) == 1 and programs.calls[0]['action'] == 'start'
+    assert programs.calls[0]['configuration_fingerprint'] == 'a'*64
+    assert Path(programs.calls[0]['source']).read_text() == programs.source.read_text()

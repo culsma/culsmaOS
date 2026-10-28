@@ -33,8 +33,11 @@ export class ConsoleWorkstation {
     const actions=a.element('div','','config-actions');
     const fresh=a.element('a','New experiment','action-link');fresh.href='#programs';actions.append(fresh);
     root.append(actions);
-    for(const name of ['program','layout','run']) {
-      const region=a.element('div');region.dataset.region='workstation-'+name+'-host';root.append(region);
+    const main=a.element('div','','workstation-main');main.dataset.region='workstation-main';
+    const files=a.element('div');files.dataset.region='workstation-files';
+    const detail=a.element('div','','program-detail');main.append(files,detail);root.append(main);
+    for(const name of ['program','run','layout']) {
+      const region=a.element('div');region.dataset.region='workstation-'+name+'-host';detail.append(region);
       if(name==='program') region.dataset.region='workstation-program';
     }
     for(const [name,label] of [['runs','Runs and history'],['state','Station state and resources']]) {
@@ -86,6 +89,7 @@ export class ConsoleWorkstation {
     if(a.activation.view?.active && activeFingerprint && activeFingerprint!==a.activation.view.active.fingerprint) {
       a.activation.view.active.fingerprint=activeFingerprint;force=true;
     }
+    if(mounted || force) a.programs.mountFiles();
     const program=a.content.querySelector('[data-region=workstation-program]');
     const switched=program.hidden!==Boolean(run);program.hidden=Boolean(run);
     if(!run && (mounted || switched || force || !program.childNodes.length)) {
@@ -99,7 +103,7 @@ export class ConsoleWorkstation {
     this.region('layout',JSON.stringify(editableLayout),target=>target.replaceChildren(this.layout.render(editableLayout)));
     this.region('run',JSON.stringify([run,run ? null:data.host.status,a.setup.plans.get(run?.run_id),a.programs.controlMessages.get(run?.run_id)]),target=>{
       if(run) a.renderRun(run,target);
-      else {const card=a.card('Station readiness');card.append(a.badge(data.host.status),a.element('p','Choose a protocol above. Its loading plan and execution results will appear here.','note'));target.replaceChildren(card);}
+      else {const card=a.card('Station readiness');card.append(a.badge(data.host.status),a.element('p','Choose a protocol from Files. Its loading plan and execution results will appear here.','note'));target.replaceChildren(card);}
     },force);
     this.region('runs',JSON.stringify(data.runs),target=>{
       target.replaceChildren(a.element('h2','Active runs and queue'),a.runTable(a.navigation.constructor.runs(data.runs || [])),
@@ -111,6 +115,9 @@ export class ConsoleWorkstation {
       if(navigation.section==='state') a.content.querySelector('[data-region=workstation-state]').open=true;
     }
     a.interaction.view(run ? 'run':'station',{loadState:'ready',runId:run?.run_id,runState:run?.status,hostState:data.host.status,section:'workstation'});
+    if(run && (this.displayedRun!==run.run_id || this.displayedStatus!==run.status && ['completed','failed','cancelled','needs_reconciliation'].includes(run.status)))
+      a.content.querySelector('[data-region=run-outcome]')?.scrollIntoView({block:'start'});
+    this.displayedRun=run?.run_id;this.displayedStatus=run?.status;
     if(data.host.blocked_run) a.showAlert(`Run ${data.host.blocked_run} retains the queue: ${a.display(data.host.blocked_reason)}. Inspect its evidence before further action.`);
     else if(data.host.worker_error) a.showAlert(data.host.worker_error);
   }
