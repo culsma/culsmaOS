@@ -2,6 +2,12 @@
   "schema": "culsma_public_assets_v1",
   "files": [
     {
+      "path": "frontend/console/assets/culsma-os-wordmark.png",
+      "kind": "brand-image",
+      "source": "Byte-identical shared CulsmaOS wordmark: assets/culsma-os-wordmark.png",
+      "sha256": "67f67511aa2104511f99b210612bf750f8a195879e8f5050a9b655c12b2c01c4"
+    },
+    {
       "path": "frontend/console/assets/fonts/Roboto-Medium.ttf",
       "kind": "font",
       "sha256": "f205cc511821ea56078a105557fcea6253129404d411c997e1866fbd006abb68",
@@ -12,18 +18,6 @@
       "kind": "font",
       "sha256": "79e851404657dac2106b3d22ad256d47824a9a5765458edb72c9102a45816d95",
       "source": "Flutter 3.47.7 material_fonts / Roboto Apache-2.0"
-    },
-    {
-      "path": "frontend/console/test/goldens/layout-1100.png",
-      "kind": "golden",
-      "sha256": "499fd829ff38238e8a41e601e1b21a9a3cb27accda65ceac5ef44e0c5e553def",
-      "source": "Reviewed deterministic Flutter reference image; not a generated test report"
-    },
-    {
-      "path": "frontend/console/test/goldens/layout-390.png",
-      "kind": "golden",
-      "sha256": "426333da4f3fc83cea43ef7bcb3d97b74167c4581bfc2ee3e4326b71f3090acd",
-      "source": "Reviewed deterministic Flutter reference image; not a generated test report"
     },
     {
       "path": "frontend/console/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png",
@@ -70,44 +64,188 @@
     {
       "path": "frontend/console/test/goldens/hamilton-1400.png",
       "kind": "golden",
-      "sha256": "bb22b1ac2f22df11f0127d1da6f59a5649314304696a6f683a77e96ba62c7550",
-      "source": "Reviewed deterministic Flutter reference image; not a generated test report"
+      "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
+      "sha256": "89db7bd1c4142d2b77889bcb29697e37f60859440ead947ed31f6092ceb844cc"
     },
     {
       "path": "frontend/console/test/goldens/hamilton-export-1400.png",
       "kind": "golden",
-      "source": "Reviewed deterministic Flutter reference image; not a generated test report",
-      "sha256": "6e1322a1ad183fe65ca90803ac02a2470f62e954265c06b369c063c3c1e71b2f"
+      "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
+      "sha256": "65e36b9c183641b0d348e21ef5901586e23622d399ae497ca56ebbca7f7559f9"
     },
     {
-      "path": "tests/modules/console/goldens/run-setup-1280.png",
+      "path": "frontend/console/test/goldens/layout-1100.png",
       "kind": "golden",
-      "sha256": "04814571649c89e4d8dbfc962f058c06ee0714f524b87c627228b8834441d506",
-      "source": "Reviewed deterministic browser loading-screen reference; not a generated test report"
+      "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
+      "sha256": "ee4bda7c80aa38623c7a2997f5ce8d84615b2f2c6103f7f74ae832269730475b"
     },
     {
-      "path": "tests/modules/console/goldens/loading-layout-1280.png",
+      "path": "frontend/console/test/goldens/layout-390.png",
       "kind": "golden",
-      "source": "Reviewed deterministic browser loading-screen reference; not a generated test report",
-      "sha256": "91a5efcd0efc54c8ec54bf308eae4d520fd986ad8d1e8fc0df1b118fa18ba256"
+      "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
+      "sha256": "2319f4b66b4731dd86ab0480c8d4c881ccc4dc34fcd123435a03f777b4e3ce65"
     },
     {
-      "path": "tests/modules/console/goldens/loading-layout-390.png",
+      "path": "frontend/console/test/goldens/native-experiment-1100.png",
       "kind": "golden",
-      "source": "Reviewed deterministic browser loading-screen reference; not a generated test report",
-      "sha256": "995836f78e20df29b2ae7473be3bbd8904a3e2b97bb16a72115ebb02e2d55132"
+      "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/migration_golden_test.dart",
+      "sha256": "53a53f14b245591019a33c85c1152b5c03ef0dd002fa7c95da525ebbe1563756"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-files-1100.png",
+      "kind": "golden",
+      "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/migration_golden_test.dart",
+      "sha256": "d1ffa0f31aaad7868e9b62442184eaa0efc9404eb8cabddefaa508d3cced45ed"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-position-1100.png",
+      "kind": "golden",
+      "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/mutation_widget_test.dart",
+      "sha256": "2c7672ba231c2e537bb3ea966438345ee0fadb1708806bf3cd0d5da28cf15d3a"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-position-390.png",
+      "kind": "golden",
+      "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/mutation_widget_test.dart",
+      "sha256": "f5dfaa7c0782696bf15c16cdbfc600f165a27400ec321e63d8ed600d7d5de159"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-system_info-1100.png",
+      "kind": "golden",
+      "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/migration_golden_test.dart",
+      "sha256": "3cad19c01a5826e2db2a45a5bb6bff4dc20d1360555863ff2f2f71b73aad170b"
+    },
+    {
+      "path": "tests/modules/console/goldens/carrier-settings-1440.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/carriers_browser.mjs",
+      "sha256": "06db322b09792f6011406b12f07c9a41e40153f63549308bfbcf7f7586019043"
+    },
+    {
+      "path": "tests/modules/console/goldens/carrier-settings-390.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/carriers_browser.mjs",
+      "sha256": "e7d846c80f74bc4e86a5a0ce3fd9b4cdb55ada3580b16caee00b2465e3acf072"
+    },
+    {
+      "path": "tests/modules/console/goldens/desktop-1280.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/navigation_browser.mjs",
+      "sha256": "c46493adc08d27cedd7cd44dba8c4c400e697e095259fdc4b0811959040499f8"
+    },
+    {
+      "path": "tests/modules/console/goldens/desktop-390.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/navigation_browser.mjs",
+      "sha256": "45967c9013250cbb2dda9a7e00b6dbcaf384de8a90d22b9b3e99d07eddc18d38"
+    },
+    {
+      "path": "tests/modules/console/goldens/experiment-preview-1280.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/workstation_flow_browser.mjs",
+      "sha256": "01969885ce8b38881c3314bf14e573012d2ae78797fbeee28e921eff10669f15"
+    },
+    {
+      "path": "tests/modules/console/goldens/experiment-preview-390.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/workstation_flow_browser.mjs",
+      "sha256": "4a9b507115efe2071df5a2f1164872ff3e165500106baec6e0db35853e43d892"
+    },
+    {
+      "path": "tests/modules/console/goldens/experiment-result-1280.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/workstation_flow_browser.mjs",
+      "sha256": "14809a74ff63f5f1e26a48de8fd209e56e6a36d2b081084447ff91256b35e710"
+    },
+    {
+      "path": "tests/modules/console/goldens/experiment-result-390.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/workstation_flow_browser.mjs",
+      "sha256": "278c2809781a04ebd4336b9a396633b871fe2d52fc18d129f519a875a66aeb99"
+    },
+    {
+      "path": "tests/modules/console/goldens/labware-editor-1440.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/labware_browser.mjs",
+      "sha256": "776bc760652e69540e5c5c092623e36b6031efbdb12dcaf93b21641c9e25ac3b"
+    },
+    {
+      "path": "tests/modules/console/goldens/labware-editor-390.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/labware_browser.mjs",
+      "sha256": "035cf957319e228d8a00890893fbc65ba890b1d59571880ca86117c803efa664"
     },
     {
       "path": "tests/modules/console/goldens/layout-import-1280.png",
       "kind": "golden",
-      "sha256": "65cd18f581527dd4803f068a943255486fc87719dd865f46d842a9cc98bd34d8",
-      "source": "Reviewed deterministic browser layout-import reference; not a generated test report"
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/layout_import_browser.mjs",
+      "sha256": "7624fd306e19d2fd18ad2910d093efe56765a6b7801eb82da84f4940176d043d"
     },
     {
       "path": "tests/modules/console/goldens/layout-import-390.png",
       "kind": "golden",
-      "sha256": "0153f7b01ae551251b76705df68215d9be18ce0757cd15f8c9333cd85b70d592",
-      "source": "Reviewed deterministic browser layout-import reference; not a generated test report"
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/layout_import_browser.mjs",
+      "sha256": "faee8a2550a14354f9ac67106c31a471dfaa2175cdc9111784a13b45851e7d05"
+    },
+    {
+      "path": "tests/modules/console/goldens/loading-layout-1280.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/loading_layout_browser.mjs",
+      "sha256": "8b86504f12888595f199c265acfdd1f6494c1deab119daccc093d3e62e1cb121"
+    },
+    {
+      "path": "tests/modules/console/goldens/loading-layout-390.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/loading_layout_browser.mjs",
+      "sha256": "6057274697bae4b0f272f78b6f5facae846f0abf735bb4edff0ceca1f57a8d01"
+    },
+    {
+      "path": "tests/modules/console/goldens/occupied-labware-1440.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/labware_browser.mjs",
+      "sha256": "3f9973f04b8a39fd4abe3f72c995c4358dec4b784a53c9772997042b1880b8c4"
+    },
+    {
+      "path": "tests/modules/console/goldens/occupied-labware-390.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/labware_browser.mjs",
+      "sha256": "426aa559f908749162e715e492af6766f73be90f0e92535849629c4143540b31"
+    },
+    {
+      "path": "tests/modules/console/goldens/overview-layout-1280-right.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/overview_layout_browser.mjs",
+      "sha256": "5c6b98f4bd15e1e1f5e87cd139f8581f13ab89d83b329a0daecb489ebd82ad05"
+    },
+    {
+      "path": "tests/modules/console/goldens/overview-layout-1280.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/overview_layout_browser.mjs",
+      "sha256": "133fee1765ed0f2160bd869f90a836d58cf80af74787c2bb6f86ec76c221fe67"
+    },
+    {
+      "path": "tests/modules/console/goldens/overview-layout-390-right.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/overview_layout_browser.mjs",
+      "sha256": "abd5c57be2423dcc2a16dcc9947f48bb184fbff936486f89fc1dbad2b4090704"
+    },
+    {
+      "path": "tests/modules/console/goldens/overview-layout-390.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/overview_layout_browser.mjs",
+      "sha256": "f991968c83b5a50894d91b664e8e0da72f65e6b229f1a3304a3bf1db19f3c16b"
+    },
+    {
+      "path": "tests/modules/console/goldens/run-setup-1280.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/setup_browser.mjs",
+      "sha256": "5a46c1b703d922367da9e106f1a68b7bccb8dafd4a413af8bb6c88d3044e0743"
+    },
+    {
+      "path": "tests/modules/console/goldens/view-reveal-1280.png",
+      "kind": "golden",
+      "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/view_interaction_browser.mjs",
+      "sha256": "d969b016002383588f2170fab3ffc269953f24bc98dd82e97789351ff52866e3"
     }
   ]
 }

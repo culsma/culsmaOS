@@ -84,7 +84,7 @@ export class RunSetupDeck {
           if(carrier.span>=3)slot.append(app.element('span',site,'setup-deck-stack-label'));
           if(!stack.length) {
             if(options.onSelectSite) {
-              const empty=app.configButton(carrier.span<3 ? site:'＋',()=>options.onSelectSite(carrier.id,site),'',
+              const empty=app.configButton(carrier.span<3 ? site:'+',()=>options.onSelectSite(carrier.id,site),'',
                 {action:'workstation.select-labware-site',entity:carrier.id+'/'+site});
               empty.setAttribute('aria-label',`Place labware · ${carrier.id} · site ${site}`);empty.title=`Empty position · ${carrier.id} · site ${site}`;slot.append(empty);
             } else slot.append(app.element('span','—','note'));
@@ -115,7 +115,7 @@ export class RunSetupDeck {
           cell.addEventListener('click',() => onInspect(item.id));
         } else {cell.dataset.required = 'false';cell.setAttribute('aria-label',`Site ${site} · ${label}; ${options.inactiveScope || 'outside this loading checklist'}`);}
         if(!placed && options.onSelectSite) {
-          const empty=app.configButton(carrier.span<3 ? '＋':`${site} · Empty`,()=>options.onSelectSite(carrier.id,site),'',
+          const empty=app.configButton(carrier.span<3 ? '+':`${site} · Empty`,()=>options.onSelectSite(carrier.id,site),'',
             {action:'workstation.select-labware-site',entity:carrier.id+'/'+site});
           empty.setAttribute('aria-label',`Place labware · ${carrier.id} · site ${site}`);sites.append(empty);
         } else sites.append(cell);
