@@ -21,7 +21,9 @@ void main() {
       final controller = LayoutController(api);
       await controller.load();
       expect(controller.message, isNull);
-      await tester.pumpWidget(CulsmaConsole(controller: controller));
+      await tester.pumpWidget(
+        CulsmaConsole(controller: controller, initialView: 'settings'),
+      );
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const ValueKey('position-1')));
       await tester.tap(find.byKey(const ValueKey('position-1')));
@@ -136,7 +138,9 @@ void main() {
         reason:
             'Install the optional Hamilton configuration plugin before this cross-platform E2E',
       );
-      await tester.pumpWidget(CulsmaConsole(controller: controller));
+      await tester.pumpWidget(
+        CulsmaConsole(controller: controller, initialView: 'settings'),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Open station setup'));
       await tester.pumpAndSettle();

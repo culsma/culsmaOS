@@ -1,6 +1,7 @@
 """Fixed-resource, loopback-only HTTP adapter for the local OS console."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
+from dataclasses import fields
 import json
 import logging
 from urllib.parse import unquote, urlsplit
@@ -8,13 +9,18 @@ from urllib.parse import unquote, urlsplit
 from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadRequest, ConsoleProgramRequest, ConsoleProgramError, SetupInteractionRequest
 from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError, ProgramBindingRequest, LabwareRequest
 from culsma_os.auth.models import ConsoleAccessError
+from culsma_os.resource_manager.models import SupplyReplacementRequest,SupplyReplacementError
 from culsma_os.lifecycle_manager.models import ConsoleActivationRequest
+from culsma_os.console_interaction.models import ViewInteractionError, ViewStateReadRequest, ViewRequest, RendererSessionRequest
 
 
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None):
+        self.view_reads, self.view_requests, self.renderer_sessions = view_reads, view_requests, renderer_sessions
+        self.settings = settings
+        self.supplies = supplies
         self.labware = labware
         self.commands, self.configuration, self.sessions = commands, configuration, sessions
         self.programs, self.bindings, self.activation = programs, bindings, activation
@@ -36,6 +42,8 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         "/carriers.js": ("carriers.js", "text/javascript; charset=utf-8"),
         "/labware.js": ("labware.js", "text/javascript; charset=utf-8"),
         "/workstation.js": ("workstation.js", "text/javascript; charset=utf-8"),
+        "/console-windows.js": ("console-windows.js", "text/javascript; charset=utf-8"),
+        "/console-shell.js": ("console-shell.js", "text/javascript; charset=utf-8"),
         "/app.js": ("app.js", "text/javascript; charset=utf-8"),
         "/interaction.js": ("interaction.js", "text/javascript; charset=utf-8"),
         "/programs.js": ("programs.js", "text/javascript; charset=utf-8"),
@@ -83,11 +91,15 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             if url.query or url.fragment or url.scheme or url.netloc:
                 raise ConsoleReadError("CONSOLE_REQUEST_INVALID", "invalid_request")
             if url.path in self.static_resources:
+                if not self.server.settings.serve_frontend:
+                    raise ConsoleReadError("CONSOLE_ROUTE_NOT_FOUND", "not_found")
                 name, content_type = self.static_resources[url.path]
                 payload = files("culsma_os.console").joinpath("web", name).read_bytes()
                 self.respond(200, payload, content_type)
                 return
             if url.path == '/api/v1/session' and self.server.sessions is not None:
+                if not self.server.settings.serve_frontend:
+                    raise ConsoleReadError('CONSOLE_ROUTE_NOT_FOUND','not_found')
                 if self.headers.get('X-Culsma-Console') != '1' or self.headers.get('Sec-Fetch-Site') != 'same-origin':
                     raise ConsoleReadError('CONSOLE_BOOTSTRAP_CONTEXT_REJECTED','forbidden')
                 result = self.server.sessions.execute()
@@ -108,7 +120,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                 return
             result = self.server.commands.execute(self.route(url.path))
             self.respond(200, json.dumps(result.as_dict()).encode())
-        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError) as error:
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError) as error:
             status = {"forbidden": 403, "not_found": 404, "invalid_request": 400,
                       "read_only": 405, "unavailable": 503, "bad_response": 502, "unauthenticated":401, "conflict":409}[error.kind]
             self.respond(status, json.dumps({"schema": "culsma_console_v1", "ok": False,
@@ -168,6 +180,12 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             raise ConsoleReadError('SETUP_REQUEST_INVALID','invalid_request')
         return SetupInteractionRequest(**payload)
 
+    def supply_request(self,payload):
+        if (not isinstance(payload,dict) or set(payload)-{f.name for f in fields(SupplyReplacementRequest)}
+                or not isinstance(payload.get('action'),str) or type(payload.get('simulation_acknowledged',False)) is not bool):
+            raise ConsoleReadError('SUPPLY_REQUEST_INVALID','invalid_request')
+        return SupplyReplacementRequest(**payload)
+
     def labware_request(self, payload):
         if (not isinstance(payload, dict) or set(payload) - {'action','expected_fingerprint','change'}
                 or not isinstance(payload.get('action'), str) or not isinstance(payload.get('expected_fingerprint'), str)
@@ -175,11 +193,37 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             raise ConsoleReadError('LABWARE_REQUEST_INVALID', 'invalid_request')
         return LabwareRequest(**payload)
 
+    def interaction_request(self, payload, model):
+        if (not isinstance(payload, dict) or set(payload) - {field.name for field in fields(model)}
+                or any(value is not None and not isinstance(value, (str, int, dict)) for value in payload.values())
+                or any(key in payload and payload[key] is not None and type(payload[key]) is not int
+                       for key in ['revision', 'expected_revision'])
+                or any(key in payload and not isinstance(payload[key], str) for key in
+                       ['action','request_id','session_id','epoch','view','entity_id','outcome'] if payload.get(key) is not None)
+                or payload.get('state') is not None and not isinstance(payload['state'], dict)):
+            raise ConsoleReadError('CONSOLE_VIEW_REQUEST_INVALID', 'invalid_request')
+        try:
+            return model(**payload)
+        except TypeError:
+            raise ConsoleReadError('CONSOLE_VIEW_REQUEST_INVALID', 'invalid_request') from None
+
+    def view_read_request(self, payload):
+        return self.interaction_request(payload, ViewStateReadRequest)
+
+    def view_request(self, payload):
+        return self.interaction_request(payload, ViewRequest)
+
+    def renderer_request(self, payload):
+        return self.interaction_request(payload, RendererSessionRequest)
+
     def do_POST(self):
         try:
             url = urlsplit(self.path)
             self.validate_context(True)
-            endpoints = {'/api/v1/configuration/labware':(self.server.labware,self.labware_request,'culsma_configuration_v1'),'/api/v1/setup':(self.server.setup_commands,self.setup_request,'culsma_setup_console_v1'),
+            endpoints = {'/api/v1/consumables':(self.server.supplies,self.supply_request,'culsma_supply_v1'),'/api/v1/console/views/read':(self.server.view_reads,self.view_read_request,'culsma_view_interaction_v1'),
+                         '/api/v1/console/views/request':(self.server.view_requests,self.view_request,'culsma_view_interaction_v1'),
+                         '/api/v1/console/renderer':(self.server.renderer_sessions,self.renderer_request,'culsma_view_interaction_v1'),
+                         '/api/v1/configuration/labware':(self.server.labware,self.labware_request,'culsma_configuration_v1'),'/api/v1/setup':(self.server.setup_commands,self.setup_request,'culsma_setup_console_v1'),
                          '/api/v1/setup/confirmation':(self.server.setup_confirmation,self.setup_request,'culsma_setup_console_v1'),
                          '/api/v1/configuration/activation':(self.server.activation,self.activation_request,'culsma_configuration_v1'),
                          '/api/v1/configuration/program-bindings':(self.server.bindings,self.binding_request,'culsma_configuration_v1'),
@@ -210,7 +254,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             interactor, parse_request, schema = endpoints[url.path]
             result = interactor.execute(self.headers.get('Authorization'),parse_request(payload))
             self.respond(200,json.dumps({'schema':schema,'data':result}).encode())
-        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError) as error:
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError) as error:
             status = {'forbidden':403,'unauthenticated':401,'conflict':409,'not_found':404,'invalid_request':400,'unavailable':503,'bad_response':502}[error.kind]
             self.respond(status,json.dumps({'ok':False,'error':{'code':error.code,
                 'diagnostics':getattr(error,'diagnostics',())}}).encode())

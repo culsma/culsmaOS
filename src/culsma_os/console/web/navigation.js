@@ -1,14 +1,10 @@
 /** Navigation is presentation state only; changing pages never issues a command. */
 export class ConsoleNavigation {
-  static groups = [
-    {label:'Workstation',items:[['Workstation','#station']]},
-    {label:'System Settings',items:[['System Settings','#configuration']]},
-    {label:'System Info',items:[['System Info','#system']]}
-  ];
   static terminal = new Set(['completed','cancelled','failed','rejected']);
 
   static resolve(hash) {
-    const route=hash || '#station';
+    const route=hash || '#programs';
+    if(route==='#desktop') return {page:'desktop',group:'Desktop',label:'Desktop'};
     const run=route.match(/^#run\/([^/]+)(?:\/(preparation|execution|results))?$/);
     if(run) return {page:'run',section:run[2] || null,runId:decodeURIComponent(run[1]),group:'Workstation'};
     if(route==='#configuration') return {page:'configuration',section:'layout',group:'System Settings',label:'System Settings'};
@@ -27,34 +23,11 @@ export class ConsoleNavigation {
     return records.filter(run=>this.terminal.has(run.status)===history);
   }
 
-  constructor(app) {
-    this.app=app;
-    const nav=document.querySelector('#console-navigation');
-    for(const group of ConsoleNavigation.groups) {
-      const section=app.element('section','','navigation-group');
-      section.dataset.navigationGroup=group.label;
-      for(const [label,href] of group.items) {
-        const link=app.element('a',label);link.href=href;
-        app.interaction.identify(link,{action:'navigate.'+ConsoleNavigation.resolve(href).page,entity:href});
-        section.append(link);
-      }
-      nav.append(section);
-    }
-    const toggle=document.querySelector('#navigation-toggle');
-    toggle.addEventListener('click',()=>{
-      const expanded=toggle.getAttribute('aria-expanded')!=='true';
-      toggle.setAttribute('aria-expanded',String(expanded));nav.classList.toggle('menu-open',expanded);
-    });
-  }
+  constructor(app) { this.app=app; }
 
   select() {
     const current=ConsoleNavigation.resolve(location.hash);
-    for(const link of document.querySelectorAll('#console-navigation a')) {
-      const active=ConsoleNavigation.resolve(link.hash).group===current.group;
-      if(active) link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
-    }
-    for(const group of document.querySelectorAll('[data-navigation-group]')) group.dataset.active=String(group.dataset.navigationGroup===current.group);
-    document.querySelector('#page-context').textContent='Local laboratory workspace';
+    const context=document.querySelector('#page-context');
+    if(context) context.textContent=current.page==='run' ? 'Experiment execution':'Local laboratory workspace';
   }
-
 }

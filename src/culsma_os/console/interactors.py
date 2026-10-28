@@ -1,11 +1,12 @@
 """Local desktop lifecycle; execution and resource ownership stay in the resident."""
+from hashlib import sha256
 import threading
 import time
 from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadRequest
 from .models import NativeApplicationPort, LocalResidentStartupPort
 
 
-class DesktopConsoleInteractor:
+class ConsoleApplicationLifecycleInteractor:
     def __init__(self, server, sessions, application: NativeApplicationPort,
                  resident: LocalResidentStartupPort | None = None, timeout=30):
         self.server, self.sessions = server, sessions
@@ -42,8 +43,13 @@ class DesktopConsoleInteractor:
             try:
                 session = self.sessions.execute()
                 # Capability remains private to the child pipe; no new public bootstrap endpoint.
-                return self.application.run({'schema': 'culsma_desktop_v1', 'origin': self.server.url,
-                                             'access_token': session['access_token']})
+                connection = {'schema': 'culsma_desktop_v1', 'origin': self.server.url,
+                              'access_token': session['access_token']}
+                if session.get('renderer_access_token'):
+                    connection['renderer_access_token'] = session['renderer_access_token']
+                if hasattr(self.server, 'settings'):
+                    connection['station_key'] = sha256(str(self.server.settings.socket_path.resolve()).encode()).hexdigest()
+                return self.application.run(connection)
             finally:
                 self.server.shutdown()
                 thread.join(timeout=5)

@@ -106,17 +106,6 @@ nav{flex-wrap:wrap;gap:12px 24px}
 .layout-equipment-card button {display:block; width:100%; margin:4px 0; padding:6px; font-size:11px; overflow-wrap:anywhere;}
 .layout-equipment-card button[aria-pressed=true] {background:#d8e8f7; border-color:#6a96bc;}
 
-/* Product navigation: resources, experiment tasks and read-only system facts. */
-.console-shell{display:grid;grid-template-columns:224px minmax(0,1fr);gap:30px;max-width:1480px;margin:auto;padding:0 24px}
-.console-shell main{max-width:none;width:100%;min-width:0;padding:30px 0;margin:0}
-.sidebar{min-width:0;padding:30px 0;align-self:start;position:sticky;top:0;max-height:100vh;overflow-y:auto}
-#console-navigation{display:flex;flex-direction:column;gap:24px;border:0;margin:0;padding:0}
-.navigation-group{display:flex;flex-direction:column;gap:3px;min-width:0}
-.navigation-group h2{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#728195;margin:0 10px 9px}
-#console-navigation a{border:0;padding:10px 12px;border-radius:7px;font-size:14px;font-weight:500;color:#53677c;white-space:normal;line-height:1.4}
-#console-navigation a[aria-current=page]{background:#e4edf7;color:#193f67;font-weight:700}
-.navigation-group[data-active=true] h2{color:#193f67}
-#navigation-toggle{display:none}
 .section-tabs{display:flex;gap:6px;border-bottom:1px solid #dce3ec;margin:20px 0;padding-bottom:10px;flex-wrap:wrap}
 .section-tabs [role=tab]{border:1px solid transparent;background:transparent;color:#64778c}
 .section-tabs [aria-selected=true]{background:#e4edf7;border-color:#abc2dd;color:#193f67}
@@ -125,15 +114,6 @@ nav{flex-wrap:wrap;gap:12px 24px}
 .evidence-disclosure>summary{cursor:pointer;font-weight:600;color:#193f67}
 .evidence-disclosure>.card{border:0;padding:20px 0 0;margin-bottom:0}
 .action-link{display:inline-block;border:1px solid #c5d1df;border-radius:7px;padding:9px 14px;margin:0 0 12px;font-weight:600}
-@media(max-width:900px){
- .console-shell{grid-template-columns:minmax(0,1fr);gap:0;padding:0 18px}
- .sidebar{position:static;padding:16px 0 0;max-height:none}
- #navigation-toggle{display:block;width:100%;text-align:left}
- #console-navigation{display:none;margin-top:12px;padding:16px;background:white;border:1px solid #dce3ec;border-radius:9px}
- #console-navigation.menu-open{display:flex}
- .console-shell main{padding-top:22px}
- .topbar{padding:12px 18px}.brand{width:210px}.top-label{font-size:12px;white-space:normal}
-}
 
 [data-region=workstation-layout]{margin-bottom:24px}
 [data-region=workstation-layout] .setup-deck-site[data-required=true]{background:#fff;border-color:#bccbda}
@@ -201,3 +181,42 @@ nav{flex-wrap:wrap;gap:12px 24px}
 @media(max-width:760px){.workstation-main{grid-template-columns:minmax(0,1fr)}[data-region=workstation-files]{position:static}.program-files{max-height:280px}}
 
 .program-detail>[data-region]> .card{margin-bottom:16px}
+
+.console-revealed { outline: 3px solid #167c91; outline-offset: 3px; }
+
+/* Desktop shell. Window geometry is independent of the driver deck scale. */
+[hidden]{display:none!important}
+body{height:100dvh;overflow:hidden;background:#e7edf3}
+.desktop{position:relative;width:100%;height:100dvh;background:radial-gradient(ellipse at 40% 15%,#f6f9fc 0,#e4edf5 60%,#d1dfec 100%)}
+.desktop-home{position:absolute;inset:0 0 74px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;color:#567087;pointer-events:none}
+.desktop-home img{width:68px;height:68px;object-fit:contain;opacity:.8;margin-bottom:16px}.desktop-home h1{font-size:32px;font-weight:550;margin:0 0 10px;color:#274763}.desktop-home p{margin:4px 0}
+.window-layer{position:absolute;inset:0 0 74px;overflow:hidden}
+.console-window{position:absolute;display:flex;flex-direction:column;width:min(1100px,calc(100% - 42px));height:min(760px,calc(100% - 48px));min-width:360px;min-height:220px;max-width:100%;max-height:100%;resize:both;overflow:hidden;background:#f7f9fc;border:1px solid #b6c6d6;border-radius:12px;box-shadow:0 12px 38px #21425f22}
+.console-window[data-active=true]{border-color:#7f9ebc;box-shadow:0 18px 54px #16375233}
+.window-titlebar{height:44px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 8px 0 10px;background:#e9eef4;border-bottom:1px solid #cad6e1;user-select:none;touch-action:none}
+.console-window[data-active=true]>.window-titlebar{background:#fdfefe}
+.window-title{border:0;background:transparent;padding:6px 8px;border-radius:5px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;min-width:0}
+.window-controls{display:flex;gap:4px;flex-shrink:0}.window-controls button{border:0;background:transparent;width:32px;height:30px;padding:0;font:20px system-ui;border-radius:5px;color:#496177}.window-controls button:hover{background:#dce6f0}.window-controls button:last-child:hover{background:#f7dcdf;color:#95384a}
+.window-surface{flex:1;min-height:0;width:100%;max-width:none;overflow:auto;padding:24px;margin:0;overscroll-behavior:contain;scrollbar-gutter:stable;background:#f5f7fa}
+.window-surface .page-heading{gap:12px;margin-bottom:12px}.window-surface h1{font-size:23px;margin:0}.window-surface .eyebrow{font-size:10px;margin:0 0 5px}.window-surface .page-heading>button{font-size:12px;padding:7px 12px}
+.window-surface .status-strip{margin-bottom:18px;flex-wrap:wrap;gap:8px;font-size:11px}.window-surface footer{margin-top:18px;padding-top:12px}
+.window-activate-cover{position:absolute;inset:44px 0 0;z-index:2;background:transparent;border:0;border-radius:0;cursor:default}
+.console-window.maximized{left:0!important;top:0!important;width:100%!important;height:100%!important;border-radius:0;resize:none}
+.taskbar{position:absolute;inset:auto 0 0;height:74px;display:flex;align-items:center;gap:12px;border:0;border-top:1px solid #b8cadc;background:#f9fbfef2;padding:10px 16px;margin:0;box-shadow:0 -4px 20px #1738540a;flex-wrap:nowrap;z-index:10000}
+.taskbar-brand{display:flex;padding:0;width:132px;flex-shrink:0;border:0!important}.taskbar-brand img{width:100%;height:auto;display:block}
+#console-navigation.taskbar-launchers{display:flex;flex-direction:row;align-items:center;gap:5px;margin:0;padding:0;border:0;flex-shrink:0}
+#console-navigation.taskbar-launchers a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 9px;border:0;border-radius:7px;white-space:nowrap;font-size:10px;line-height:1.2;font-weight:500;color:#46627d}
+#console-navigation.taskbar-launchers a:hover{background:#e8eff6}#console-navigation.taskbar-launchers a[aria-current=page]{background:#dceafa;color:#173d63}
+.taskbar-icon{font:22px system-ui;line-height:24px}.taskbar-divider{height:32px;width:1px;background:#ccd9e5;flex-shrink:0}
+.window-tasks{display:flex;gap:7px;min-width:0;overflow-x:auto;align-items:center;scrollbar-width:thin;flex:1}
+.window-task{max-width:210px;min-width:88px;flex-shrink:0;border:1px solid #cddbe7;border-radius:7px;padding:9px 11px;background:#eef3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:500}
+.window-task[aria-pressed=true]{background:#deebf9;border-color:#94b1cc;box-shadow:inset 0 -2px #315d83}.window-task[data-minimized=true]{opacity:.7}
+.taskbar-local{margin-left:auto;font-size:10px;color:#6f8496}.shell-notice{position:absolute;bottom:84px;left:50%;transform:translateX(-50%);z-index:10001;max-width:calc(100% - 24px);margin:0;padding:12px 18px;border:1px solid #c5d8e8;border-radius:9px;background:#fff;box-shadow:0 4px 20px #18364d22;font-size:13px}
+.window-surface [data-region=workstation-files]{position:sticky;top:0}.window-surface .program-files{max-height:65vh}
+@media(max-width:900px){.taskbar-brand{width:100px}.taskbar{gap:8px;padding:8px}.taskbar-label{display:none}#console-navigation.taskbar-launchers a{padding:8px}.taskbar-local{display:none}}
+@media(max-width:720px){.console-window{left:0!important;top:0!important;width:100%!important;height:100%!important;min-width:0;border:0;border-radius:0;resize:none}.window-surface{padding:16px}.window-titlebar{height:42px;min-height:42px}.window-activate-cover{top:42px}.window-controls button{width:30px}.window-controls button[data-action="window.maximize"]{display:none}.taskbar{height:66px;gap:6px}.window-layer,.desktop-home{bottom:66px}.taskbar-brand{width:64px}.window-task{min-width:72px;max-width:130px;font-size:10px;padding:8px}.taskbar-divider{margin:0 2px}.taskbar-icon{font-size:20px}.window-surface .workstation-main{grid-template-columns:minmax(0,1fr)}.window-surface [data-region=workstation-files]{position:static}.window-surface .program-files{max-height:260px}}
+
+/* Fixed applications use a single launcher; only experiment windows need task entries. */
+#console-navigation.taskbar-launchers a{position:relative}
+#console-navigation.taskbar-launchers a[data-open=true]::after{content:"";position:absolute;bottom:0;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:#65809a}
+#console-navigation.taskbar-launchers a[aria-current=page]::after{background:#244f79}

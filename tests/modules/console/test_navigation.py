@@ -15,13 +15,13 @@ for(const [hash,page] of [['#station','station'],['#configuration','configuratio
  assert.equal(N.resolve(hash).page,page);
 assert.deepEqual(N.resolve('#run/test-run/results'),{page:'run',section:'results',runId:'test-run',group:'Workstation'});
 assert.equal(N.resolve('#run/test-run').section,null);
-assert.equal(N.resolve('').page,'station');
+assert.equal(N.resolve('').page,'programs');
 assert.equal(N.phase({status:'awaiting_setup'}),'preparation');
 assert.equal(N.phase({status:'running'}),'execution');
 assert.equal(N.phase({status:'needs_reconciliation'}),'execution');
 assert.equal(N.phase({status:'completed'}),'results');
 assert.equal(N.phase({status:'completed'},'preparation'),'preparation');
-assert.deepEqual(N.groups.map(g=>g.label),['Workstation','System Settings','System Info']);
+assert.equal(N.resolve('#desktop').page,'desktop');
 assert.equal(N.resolve('#configuration').group,'System Settings');
 assert.equal(N.resolve('#programs').group,'Workstation');
 const records=[{run_id:'active',status:'running'},{run_id:'unknown',status:'needs_reconciliation'},

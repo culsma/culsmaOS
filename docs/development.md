@@ -97,61 +97,39 @@ python tools/check_distribution.py --directory dist
 
 Build and verify artifacts locally before uploading a release.
 
-## Station console (development checkout)
+## Native station console (development checkout)
 
-This console is under development and is not part of the published 0.1.1 wheel.
-Install this checkout using the local development command above. Start an existing
-resident service, then attach the console from another terminal:
-
-```sh
-# Terminal 1
-culsma-os serve --socket /tmp/culsma-console.sock \
-  --host-db run-artifacts/console/os.sqlite3 \
-  --driver-config examples/transfer/deck.json \
-  --artifacts-dir run-artifacts/console
-# Terminal 2
-culsma-os console --socket /tmp/culsma-console.sock --port 8765 \
-  --program-root examples/transfer
-```
-
-Open the printed loopback URL. Station, run list and run detail display OS records;
-a fresh service can have no device records until its first accepted run. Use
-**Submit program** to select a source, check its snapshot and submit it to this
-service. The CLI remains available:
+The console is a local Flutter application and is not included in the published
+0.1.1 wheel. Build it locally with the pinned FVM SDK, then attach it to an
+existing resident:
 
 ```sh
-culsma-os host-status --socket /tmp/culsma-console.sock
-# Wait for ready, then:
-culsma-os submit examples/transfer/transfer.culs --socket /tmp/culsma-console.sock
+cd frontend/console
+fvm flutter build macos --release --no-pub
+cd ../..
+culsma-os desktop --socket /tmp/culsma-console.sock --program-root examples
 ```
 
-Stopping the console does not stop the resident service. An unavailable host is
-shown as disconnected; the console never starts or resumes execution implicitly.
-
-Run detail also reads a separate run-scoped evidence view. Expand intent, execution
-and registration records to inspect their identities and payloads. Device attempts
-and no-action logical completions are separate; derived collective evidence keeps
-its coverage label. Missing receipts and unmatched registrations stay explicit.
-Evidence and registration share one read snapshot; the run summary is independent.
-The view does not claim hardware timing or include every semantic declaration.
+The native bundle must be staged at the path used by the desktop launcher when
+running from source. Tests and local development use the same Python API owners;
+there is no independently deployed frontend server. The older embedded pages
+remain migration references; native startup does not serve those pages or their
+credential bootstrap.
 
 ### Console navigation
 
-The sidebar has three destinations: **Workstation**, **System Settings** and
-**System Info**. Workstation combines the existing program selector, source check,
-loading plan and confirmation, execution controls, and results in one page. Runs,
-history and station resource records are expandable sections. Run URLs select an
-experiment inside the same workstation; legacy stage URLs remain accepted. Raw
-evidence and completed loading plans are collapsed by default.
+| Window | Existing functionality |
+| --- | --- |
+| Files | Protocol directory tree, source inspection, double-click start |
+| Experiment | Loading plan/preferences, operator confirmation, status, pause/resume/cancel, result and evidence |
+| Workstation | Current layout, container placement/replacement/removal, run history, supported simulated tip-box replacement |
+| System Settings | Rack replacement and advanced saved layout/configuration editor |
+| System Info | Verified active equipment declarations, device records, consumables, locks, reservations, driver metadata, runtime and service state |
 
-The current deck comes from the verified host configuration, including startup
-settings without a saved draft. It never substitutes a draft or historical run;
-a selected run's preparation shows its own loading plan separately. Layout reads
-create no instrument session. Stable view regions preserve deck scroll during
-polling. System Settings contains the existing persistent layout editor and
-advanced configuration tools; System Info keeps the four read-only information
-sections. Navigation does not issue execution commands. File drag-and-drop and
-new material or labware editing capabilities are outside this change.
+One workbar opens or restores these windows. Experiments have separate windows.
+Moving, minimizing or closing a window does not cancel an experiment. Unsaved
+settings are retained. File drag-and-drop, hardware discovery, PAWS and physical
+inventory detection are outside this migration.
 
 ### Configuration drafts
 
@@ -188,25 +166,18 @@ before effects. A saved configuration draft is not activated by submission.
 
 Run detail offers pause, resume and cancel at supported boundaries. Acknowledged,
 pending, applied and rejected requests remain distinct. A lost response retains
-the request ID in browser session storage; retry uses that identity. No action is
+the request ID in local application-support storage; an explicit retry uses that identity. No action is
 automatically retried, and unknown outcomes retain isolation. This development
 console supports one local operator; it is not a LAN service or user login system.
 
-### Shared human and browser-agent operation
+### Human and external AI operation
 
-The same native buttons and labeled inputs support mouse, keyboard and DOM-based
-browser agents. Prefer accessible roles/names; stable `data-action`, `data-field`
-(JSON pointer), `data-collection` and `data-entity-id` markers disambiguate controls.
-The content region exposes the visible page, busy state, saved revision, dirty
-state and reviewed snapshot. **Last operation** distinguishes pending requests,
-acknowledgements, applied/rejected results and unavailable responses.
-
-These markers describe the page; they grant no authority and expose no credential
-or alternate command API. Configuration conflicts retain local edits. The page
-cannot identify a human versus an AI that uses the same browser session. MCP uses
-a separate process identity and restricted capability; it cannot attest physical
-loading. Browser agents sharing the operator session still share that authority.
-
+Native controls expose named accessibility elements and stable semantic IDs.
+External AI uses MCP for program and loading operations, run controls and their
+receipts, supported simulated tip replacement, and requesting native views.
+The renderer reports whether a requested view was displayed; a display receipt
+is not execution evidence. Both paths use the same authorized backend Interactors.
+MCP cannot confirm physical loading on behalf of the operator.
 
 ## Native Hamilton layout export
 
@@ -313,6 +284,40 @@ normal OS/console installation and simulator operation do not load it.
 | `loading_plan`, `revise_loading_plan` | Read or revise the fingerprinted loading plan |
 | `begin_loading`, `loading_request_status` | Reserve for loading and inspect durable command outcomes |
 
+### Shared console view control
+
+`view_state` lists live renderer sessions, their `epoch`, `revision` and reported view.
+Select an explicit session before `open_view(session_id, epoch, expected_revision,
+request_id, view, entity_id)` or `reveal_entity(..., entity_id)`. Supported views are
+`experiment`, `workstation`, `files`, `settings` and `system_info`. Experiment views
+require a run ID; workstation entities are checked against the declared driver layout.
+`view_request_status(request_id)` returns `accepted`, `displayed`, `deferred`,
+`rejected` or `expired`. A display receipt is a renderer report, not execution evidence.
+
+The console HTTP process and stdio MCP process share a presentation-only SQLite
+store derived from the same resident socket path (`<socket>.views.sqlite3`). The store
+is created lazily when a renderer registers. `ConsoleSettings.view_store_path` permits
+a trusted composition override; no HTTP or MCP argument accepts a database path.
+Credentials remain process-local and in memory. Only an Auth-issued renderer
+credential can register, report or acknowledge its own session. MCP receives read
+and presentation capabilities, without renderer or physical-confirmation authority.
+
+`ConsoleShell` connects the current console views to this contract using bounded
+polling. It opens the existing views and highlights declared items, preserving unsaved
+edits and open editors by reporting `deferred`. It does not execute program or
+configuration commands. Sessions expire after 15 seconds without a heartbeat;
+unhandled requests expire after 30 seconds and are never replayed on a new renderer.
+Request IDs are idempotent; changed payloads or stale view revisions are rejected.
+Closing the renderer leaves resident runs and instrument reservations unchanged.
+This implements the shared interaction channel; the proposed windowed desktop
+appearance and PAWS/resource inventory integration remain later work.
+
+The three-layer module is `console_interaction/{interactors,repository,models}.py`.
+`ConsoleApplicationLifecycleInteractor` is the renamed console launcher; view control
+uses `ViewStateReadInteractor`, `ViewRequestInteractor` and `RendererSessionInteractor`.
+The protocol/browser acceptance is `tests/integration/test_console_view_interaction.py`;
+its isolated MCP subprocess and browser Golden check do not dispatch device actions.
+
 Single-clicking a protocol inspects its captured source. Double-clicking or choosing
 `Run protocol` performs the offline requirement check and sends one durable `start`
 request. The resident records automatic startup in the queue and owns final planning,
@@ -361,7 +366,7 @@ capability: `catalogue(path)` supplies compatible site/model choices and
 `prepare(path, change)` returns a detached configuration and generic layout.
 `ResidentLabwareInteractor` checks the current identity; `LabwareConfigurationInteractor`
 saves a checked draft. Application uses the existing idle/resource/activation guards.
-HTTP and DOM controls carry requests only. Hamilton implements native and generated
+HTTP and native controls carry requests only. Hamilton implements native and generated
 layouts; other drivers without the capability report editing unavailable. No vendor
 files are read by the frontend. Editing neither loads labware nor confirms contents.
 Existing native labware can be replaced or removed, including definitions outside
@@ -393,14 +398,52 @@ with reasons. Physical installation and experiment loading remain operator check
 authorized file listing creates `projects/` and `results/` without replacing existing
 files. Put `.culs` programs and their imported `.culs` libraries in `projects/`;
 project subdirectories appear under Files. Non-program files stay on disk and are
-not shown in this first browser. `results/` is available for user exports; resident
+not shown in the current protocol file browser. `results/` is available for user exports; resident
 evidence continues to use its configured artifacts directory. `--program-root`
 selects an existing source directory instead. The console shows the actual source
 path and Refresh files rescans it.
 
 Single-click inspects a captured program. Double-click or Run protocol automatically
 checks preparation, submits the reviewed snapshot and starts simulation; errors stop
-progress and are shown in the same Workstation. HTTP and MCP share the Program Manager
+progress and are shown in the experiment window. HTTP and MCP share the Program Manager
 use cases. Overlapping reads cannot replace a newer selection; duplicate launch gestures
 are collapsed and unknown submission responses retain their request identity. Drag/drop
 and editing non-program files remain outside this initial slice.
+
+
+### Native console window framework
+
+The product UI is the Flutter application in `frontend/console`. `culsma-os desktop`
+starts its local API with static pages and browser credential bootstrap disabled.
+Console and renderer credentials travel through the private child stdin pipe.
+The older embedded-page preview remains only as migration/reference material.
+
+`NativeConsoleInteractor` owns renderer-local window state; `ConsoleDesktop` and
+`ConsoleNativeWindow` render the workbar and windows. Four fixed application entries
+open or restore their own windows; only experiments add separate task entries.
+Closing a view never cancels a run. Unsaved settings cannot be closed or minimized.
+Files uses the existing Program Manager start operation and retains an unresolved
+request identity in application-support storage; it is not automatically resent.
+`NativeRendererInteractor` uses the existing renderer session protocol for MCP open
+and reveal requests. Display receipts remain presentation reports.
+
+Native views cover file inspection/start, run results/history, direct imported-deck
+position editing, loading plans and confirmation, the existing layout editor and
+system facts and detailed resource accounting. Pause/resume/cancel actions retain exact request identities and read worker receipts; acknowledgement is not application. System Info reads saved active origins separately from editable proposals. System Settings also presents compatible rack replacements separately
+from Workstation container edits. Position choices come from the driver catalogue. One save prepares
+and applies a checked draft; the editor waits for its receipt and the visible
+active fingerprint. Loading windows show the deck, initial contents, supplies and
+placement preferences. A changed shared plan invalidates operator acknowledgement.
+Running and terminal windows keep the loading plan collapsed; outcome and material
+results stay first. A loading confirmation records preparation, not execution success.
+Pending mutation identities persist in application-support storage; status polling
+never repeats a write. Backend behavior and human-confirmation permissions are unchanged.
+
+Local checks: Flutter unit/widget tests and Golden comparisons; `tools/test_native_shell.py`
+starts a real macOS Flutter app against isolated OS/HTTP/MCP owners and a labelled
+device double. It verifies a nested protocol tree, pause/resume/cancel with applied
+receipts, results, window restoration and an MCP display receipt. No remote simulator or physical instrument is used by this test.
+
+`tools/test_native_operations.py` checks native diagram remove/place and explicit
+loading confirmation through the real OS/HTTP boundary with an isolated device
+double. It does not use or replenish the live preview inventory.

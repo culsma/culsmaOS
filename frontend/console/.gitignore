@@ -11,3 +11,6 @@ macos/Runner.xcworkspace/xcuserdata/
 macos/Runner.xcodeproj/xcuserdata/
 test/failures/
 .idea/
+
+# Flutter Golden mismatch reports are temporary, not test baselines.
+test/**/failures/

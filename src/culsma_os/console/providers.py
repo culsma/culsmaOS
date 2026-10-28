@@ -1,5 +1,8 @@
 """Composition only; device workers and configuration application stay resident-owned."""
 from pathlib import Path
+import hashlib
+from culsma_os.console_interaction.interactors import ViewStateReadInteractor, ViewRequestInteractor, RendererSessionInteractor
+from culsma_os.console_interaction.repository import SqliteViewInteractionRepository
 from culsma_os.auth.interactors import TokenInteractor
 from culsma_os.auth.repository import SessionCredentialRepository
 from culsma_os.program_manager.adapters.resident import ResidentClientAdapter
@@ -20,11 +23,20 @@ from culsma_os.program_manager.interactors.setup_interaction import SetupInterac
 
 
 class ConsoleApplicationFactory:
+    def build_view_interaction(self, settings, tokens, observation):
+        path = settings.view_store_path or settings.socket_path.with_name(settings.socket_path.name + '.views.sqlite3')
+        station_id = hashlib.sha256(str(settings.socket_path.resolve()).encode()).hexdigest()
+        repository = SqliteViewInteractionRepository(path, station_id)
+        return (ViewStateReadInteractor(tokens, repository),
+                ViewRequestInteractor(tokens, repository, observation),
+                RendererSessionInteractor(tokens, repository))
+
     def build_desktop(self, settings, executable, resident_command=None, log_path=None):
-        from .interactors import DesktopConsoleInteractor
+        from .interactors import ConsoleApplicationLifecycleInteractor
         from .adapters.desktop import NativeConsoleProcessAdapter, ResidentProcessAdapter
-        server = self.build(settings)
-        return DesktopConsoleInteractor(server, server.sessions, NativeConsoleProcessAdapter(executable),
+        from dataclasses import replace
+        server = self.build(replace(settings,serve_frontend=False))
+        return ConsoleApplicationLifecycleInteractor(server, server.sessions, NativeConsoleProcessAdapter(executable),
             ResidentProcessAdapter(resident_command, log_path, Path(log_path).parent/'stations') if resident_command else None)
 
     def build(self, settings):
@@ -34,6 +46,7 @@ class ConsoleApplicationFactory:
         source = ProgramSourceInteractor(FileProgramSourceRepository(settings.program_root,
             settings.program_store or Path('run-artifacts/console/programs'), settings.home_path),CompilationInteractor(),HostedRuntimeInteractor())
         from culsma_os.workspace_manager.interactors import LabwareConfigurationInteractor
+        from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
         return ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
             StationConfigurationInteractor(tokens,repository,profiles),ConsoleSessionInteractor(tokens),
             ConsoleProgramInteractor(tokens,source,ResidentClientAdapter(settings.socket_path,timeout=10)),
@@ -41,7 +54,9 @@ class ConsoleApplicationFactory:
             ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),ResidentClientAdapter(settings.socket_path,timeout=10)),
             SetupInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
             SetupConfirmationInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
-            LabwareConfigurationInteractor(tokens,repository,ResidentClientAdapter(settings.socket_path,timeout=10)))
+            LabwareConfigurationInteractor(tokens,repository,ResidentClientAdapter(settings.socket_path,timeout=10)),
+            *self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3))),
+            supplies=SupplyInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)))
 
     def build_mcp(self, settings):
         from .adapters.mcp import MCPServerAdapter
@@ -50,7 +65,9 @@ class ConsoleApplicationFactory:
         resident = ResidentClientAdapter(settings.socket_path, timeout=10)
         source = ProgramSourceInteractor(FileProgramSourceRepository(settings.program_root,
             settings.program_store or Path('run-artifacts/console/programs'), settings.home_path), CompilationInteractor(), HostedRuntimeInteractor())
+        view_reads, view_requests, _ = self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(resident))
+        from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
         bridge = MCPServerAdapter(SetupInteractionInteractor(tokens,resident),
             ConsoleProgramInteractor(tokens,source,resident),
-            AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)))
+            AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)),view_reads,view_requests,SupplyInteractionInteractor(tokens,resident))
         return MCPHostInteractor(tokens,bridge)

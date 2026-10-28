@@ -9,7 +9,9 @@ void main() {
     'select position and move labware through native labeled controls',
     (tester) async {
       final c = LayoutFixture.controller();
-      await tester.pumpWidget(CulsmaConsole(controller: c));
+      await tester.pumpWidget(
+        CulsmaConsole(controller: c, initialView: 'settings'),
+      );
       await tester.pumpAndSettle();
       final semantics = tester.ensureSemantics();
       await tester.ensureVisible(find.byKey(const ValueKey('position-1')));
@@ -33,7 +35,9 @@ void main() {
     tester,
   ) async {
     final c = LayoutFixture.controller();
-    await tester.pumpWidget(CulsmaConsole(controller: c));
+    await tester.pumpWidget(
+      CulsmaConsole(controller: c, initialView: 'settings'),
+    );
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('position-3')));
     await tester.tap(find.byKey(const ValueKey('position-3')));
@@ -55,14 +59,16 @@ void main() {
     'system navigation preserves edits and keyboard traversal works',
     (tester) async {
       final c = LayoutFixture.controller();
-      await tester.pumpWidget(CulsmaConsole(controller: c));
+      await tester.pumpWidget(
+        CulsmaConsole(controller: c, initialView: 'settings'),
+      );
       await tester.pumpAndSettle();
       c.move(c.definition!.items(c.proposal!).first, '3');
       await tester.pumpAndSettle();
-      await tester.tap(find.text('System Information'));
+      await tester.tap(find.byKey(const ValueKey('launcher-system_info')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('save-layout')), findsNothing);
-      await tester.tap(find.text('Layout').first);
+      expect(find.byKey(const Key('save-layout')).hitTestable(), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('launcher-settings')));
       await tester.pumpAndSettle();
       expect(c.dirty, isTrue);
       expect(c.proposal!['labware']['tubes']['slot'], '3');
@@ -81,7 +87,9 @@ void main() {
       final c = LayoutFixture.controller(
         installedProfile: LayoutFixture.hamiltonProfile(),
       );
-      await tester.pumpWidget(CulsmaConsole(controller: c));
+      await tester.pumpWidget(
+        CulsmaConsole(controller: c, initialView: 'settings'),
+      );
       await tester.pumpAndSettle();
       expect(
         tester
@@ -133,7 +141,9 @@ void main() {
       hamilton['template']['carriers'] = <String, dynamic>{};
       hamilton['template']['labware'] = <String, dynamic>{};
       c.profiles.add(hamilton);
-      await tester.pumpWidget(CulsmaConsole(controller: c));
+      await tester.pumpWidget(
+        CulsmaConsole(controller: c, initialView: 'settings'),
+      );
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const ValueKey('position-3')));
       await tester.tap(find.byKey(const ValueKey('position-3')));

@@ -298,6 +298,7 @@ class SqliteRunReservationRepository:
 
 
 class ResourceInspectionRepository(Protocol):
+    def supply_loads(self): ...
     def accounting(self): ...
     def locks(self): ...
     def permits(self): ...
@@ -311,9 +312,12 @@ class SqliteResourceInspectionRepository:
     def __init__(self, local, station):
         self.local, self.station = local, station
 
+    def supply_loads(self):
+        return [json.loads(r[0]) for r in self.station.rows('os_supply_loads','SELECT record FROM os_supply_loads ORDER BY sequence')]
+
     def accounting(self):
         return {'local_accounting': 'recorded' if {'os_resource_locks', 'os_permits'} <= self.local.tables else 'unavailable',
-                'station_accounting': 'recorded' if {'os_station_usage', 'os_run_reservations',
+                'station_accounting': 'unresolved_supply' if any(r['status']=='applying' for r in self.supply_loads()) else 'recorded' if {'os_station_usage', 'os_run_reservations',
                     'os_run_resources'} <= self.station.tables else 'unavailable'}
 
     def locks(self):
@@ -342,3 +346,42 @@ class SqliteResourceInspectionRepository:
         return [{'evidence_id': row[0], 'device_id': row[1], 'consumption': json.loads(row[2])}
             for row in self.station.rows('os_station_usage',
                 'SELECT evidence_id,device_id,consumption FROM os_station_usage ORDER BY evidence_id')]
+
+
+class SupplyLoadRepository(Protocol):
+    def records(self, device_id=None): ...
+    def get(self, request_id): ...
+    def insert(self, record): ...
+    def settle(self, request_id, status, receipt): ...
+
+
+class SqliteSupplyLoadRepository:
+    """Station-owned replacement intents and immutable terminal receipts."""
+    def __init__(self, connection):
+        self.connection=connection
+        with connection:
+            connection.execute('CREATE TABLE IF NOT EXISTS os_supply_loads(sequence INTEGER PRIMARY KEY AUTOINCREMENT, request_id TEXT UNIQUE NOT NULL,device_id TEXT NOT NULL,record TEXT NOT NULL)')
+
+    def records(self, device_id=None):
+        rows=self.connection.execute('SELECT record FROM os_supply_loads'+(' WHERE device_id=?' if device_id else '')+' ORDER BY sequence', (device_id,) if device_id else ())
+        return [json.loads(row[0]) for row in rows]
+
+    def get(self, request_id):
+        row=self.connection.execute('SELECT record FROM os_supply_loads WHERE request_id=?',(request_id,)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def insert(self, record):
+        with self.connection:
+            self.connection.execute('INSERT INTO os_supply_loads(request_id,device_id,record) VALUES(?,?,?)',
+                (record['request_id'],record['device_id'],json.dumps(record,sort_keys=True)))
+
+    def settle(self, request_id, status, receipt):
+        with self.connection:
+            value=self.get(request_id)
+            if value['status']!='applying':
+                if value['status']!=status or value['receipt']!=receipt:raise ValueError('SUPPLY_RECEIPT_CONFLICT')
+                return value
+            value.update(status=status,receipt=receipt)
+            self.connection.execute('UPDATE os_supply_loads SET record=? WHERE request_id=?',
+                (json.dumps(value,sort_keys=True),request_id))
+            return value

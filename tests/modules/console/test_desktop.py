@@ -4,7 +4,7 @@ import threading
 from types import SimpleNamespace
 
 import pytest
-from culsma_os.console.interactors import DesktopConsoleInteractor
+from culsma_os.console.interactors import ConsoleApplicationLifecycleInteractor
 from culsma_os.console.adapters.desktop import NativeConsoleProcessAdapter
 from culsma_os.program_manager.models import ConsoleReadError
 
@@ -46,7 +46,7 @@ class DesktopFixture:
 
 def test_desktop_waits_for_ready_and_passes_private_connection():
     f = DesktopFixture([ConsoleReadError('CONSOLE_HOST_UNAVAILABLE','unavailable'), 'starting', 'ready'])
-    assert DesktopConsoleInteractor(f, f.sessions, f, f).execute() == 0
+    assert ConsoleApplicationLifecycleInteractor(f, f.sessions, f, f).execute() == 0
     assert f.events.index('start-resident') < f.events.index('run-ui')
     assert f.connection == {'schema':'culsma_desktop_v1','origin':f.url,'access_token':'private-test-capability'}
     assert f.events[-2:] == ['stop-console','close-console']
@@ -55,7 +55,7 @@ def test_desktop_waits_for_ready_and_passes_private_connection():
 
 def test_attach_does_not_start_another_resident():
     f = DesktopFixture(['ready'])
-    DesktopConsoleInteractor(f, f.sessions, f).execute()
+    ConsoleApplicationLifecycleInteractor(f, f.sessions, f).execute()
     assert 'start-resident' not in f.events
 
 
@@ -63,14 +63,14 @@ def test_attach_does_not_start_another_resident():
 def test_desktop_failed_or_timed_out_start_never_opens_ui(state, diagnostic):
     f = DesktopFixture([state])
     with pytest.raises(ValueError, match=diagnostic):
-        DesktopConsoleInteractor(f, f.sessions, f, timeout=0).execute()
+        ConsoleApplicationLifecycleInteractor(f, f.sessions, f, timeout=0).execute()
     assert f.events == ['close-console']
 
 
 def test_attach_missing_resident_is_explicit():
     f = DesktopFixture([ConsoleReadError('CONSOLE_HOST_UNAVAILABLE','unavailable')])
     with pytest.raises(ValueError, match='DESKTOP_RESIDENT_REQUIRED'):
-        DesktopConsoleInteractor(f, f.sessions, f).execute()
+        ConsoleApplicationLifecycleInteractor(f, f.sessions, f).execute()
     assert f.events == ['close-console']
 
 
@@ -108,3 +108,14 @@ def test_desktop_cli_missing_application_has_no_startup_side_effect(tmp_path, ca
     assert error.value.code == 2
     assert 'DESKTOP_APPLICATION_NOT_INSTALLED' in capsys.readouterr().err
     assert not (tmp_path/'state').exists()
+
+
+def test_native_private_pipe_includes_renderer_identity_and_station_key(tmp_path):
+    from culsma_os.console.models import ConsoleSettings
+    from hashlib import sha256
+    f=DesktopFixture(['ready'])
+    f.settings=ConsoleSettings(tmp_path/'station.sock')
+    f.sessions=SimpleNamespace(execute=lambda:{'access_token':'console-fixture','renderer_access_token':'renderer-fixture'})
+    ConsoleApplicationLifecycleInteractor(f,f.sessions,f).execute()
+    assert f.connection['renderer_access_token']=='renderer-fixture'
+    assert f.connection['station_key']==sha256(str(f.settings.socket_path.resolve()).encode()).hexdigest()

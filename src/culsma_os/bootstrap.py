@@ -154,9 +154,12 @@ class OSApplicationFactory:
             SqliteRunEventRepository(connections[7]),
             usage,
         )
+        from .resource_manager.repository import SqliteSupplyLoadRepository
+        consumables=ConsumableInteractor(device,evidence,SqliteSupplyLoadRepository(connections[8]))
+        device.consumables=consumables
         resource = ResourceInteractor(
             SqliteResourceRepository(connections[3]),
-            ConsumableInteractor(device, evidence),
+            consumables,
         )
         state = RunStateInteractor(task_repository, host, evidence)
         tasks = TaskInteractor(task_repository, preparation, state)
@@ -385,6 +388,14 @@ class ResidentCommandFactory:
         preview = RunSetupPreviewInteractor(getattr(factory, 'build_workspace_reader', lambda: None)(),
             configuration, context, SetupRequirementsInteractor(RuntimeCheckpointCodecInteractor()),
             WorkspacePlanningInteractor(), HostedRuntimeInteractor())
+        from .resource_manager.interactors import SupplyReplacementInteractor,StationPathInteractor
+        from .resource_manager.repository import SqliteSupplyLoadRepository
+        path=StationPathInteractor().database_path(context)
+        supply_connection=DatabaseConnection(path).open()
+        supply_guard=SqliteRunReservationRepository(DatabaseConnection(path).open(),path.with_suffix('.dispatch.lock'))
+        replacement_port=getattr(factory,'build_consumable_replacement',lambda context:None)(context)
+        devices=self.applications.build_device_inspector(context)
+        supplies=SupplyReplacementInteractor(SqliteSupplyLoadRepository(supply_connection),supply_guard,replacement_port,devices)
         return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
             HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
-            self.applications.build_device_inspector(context),configuration,setup_requests,layout,labware,preview)
+            devices,configuration,setup_requests,layout,labware,preview,supplies)

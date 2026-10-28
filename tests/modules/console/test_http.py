@@ -59,7 +59,7 @@ class TestConsoleHTTP:
 
     def test_static_resources_are_packaged_and_allowlisted(self, console):
         harness, resident = console
-        for path, mime in [('/', 'text/html'), ('/app.js', 'text/javascript'),
+        for path, mime in [('/', 'text/html'), ('/app.js', 'text/javascript'), ('/console-windows.js', 'text/javascript'), ('/console-shell.js', 'text/javascript'),
                            ('/interaction.js', 'text/javascript'), ('/navigation.js', 'text/javascript'), ('/workstation.js', 'text/javascript'), ('/workstation-layout.js', 'text/javascript'), ('/layout-import.js', 'text/javascript'), ('/setup-deck.js', 'text/javascript'), ('/setup-layout.js', 'text/javascript'), ('/configuration.js', 'text/javascript'), ('/style.css', 'text/css'), ('/assets/culsma-os-wordmark.png', 'image/png')]:
             status, headers, payload = harness.request('GET', path)
             assert status == 200 and headers['Content-Type'].startswith(mime) and payload

@@ -152,7 +152,9 @@ void main() {
     final config = PlacementFixture.configuration();
     config['carriers']['narrow'] = {'model': 'RGT_CAR_5R60_A00', 'track': '1'};
     c.edit(config);
-    await tester.pumpWidget(CulsmaConsole(controller: c));
+    await tester.pumpWidget(
+      CulsmaConsole(controller: c, initialView: 'settings'),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('carrier-narrow')));
     await tester.pumpAndSettle();

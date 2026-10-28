@@ -24,6 +24,7 @@ class RecordingUseCase:
     ('inspect_program',{'program_id':'transfer.culs'},'programs','inspect'),
     ('start_program',{'program_id':'transfer.culs','snapshot_id':'snapshot','request_id':'start'},'programs','start'),
     ('submit_program',{'program_id':'transfer.culs','snapshot_id':'snapshot','request_id':'submit'},'programs','submit'),
+    ('control_request_status',{'run_id':'run','request_id':'pause'},'programs','control-status'),
     ('control_run',{'run_id':'run','action':'cancel','request_id':'cancel'},'programs','cancel'),
 ])
 def test_tools_forward_unchanged_process_credential_and_typed_request(method,arguments,owner,action):
@@ -40,3 +41,35 @@ def test_tools_forward_unchanged_process_credential_and_typed_request(method,arg
         assert request.fingerprint==arguments['fingerprint']
     if method=='submit_program':
         assert (request.program_id,request.snapshot_id,request.request_id)==('transfer.culs','snapshot','submit')
+
+
+@pytest.mark.parametrize('method,arguments,action',[
+    ('view_state',{},'sessions'),
+    ('view_request_status',{'request_id':'show'},'receipt'),
+    ('open_view',{'session_id':'s','epoch':'e','expected_revision':0,'request_id':'show','view':'experiment','entity_id':'run'},'open'),
+    ('reveal_entity',{'session_id':'s','epoch':'e','expected_revision':0,'request_id':'reveal','entity_id':'plate'},'reveal'),
+])
+def test_view_tools_delegate_to_shared_use_cases(method,arguments,action):
+    read=RecordingUseCase();write=RecordingUseCase()
+    adapter=MCPServerAdapter(RecordingUseCase(),RecordingUseCase(),RecordingUseCase(),read,write)
+    adapter.raw_credential='Bearer test-automation'
+    assert getattr(adapter,method)(**arguments)=={'result':'delegated'}
+    raw,request=(read.calls or write.calls)[0]
+    assert raw==adapter.raw_credential and request.action==action
+    assert len(read.calls)+len(write.calls)==1
+    assert not hasattr(adapter,'acknowledge_rendering')
+
+
+@pytest.mark.parametrize('method,args,action',[
+    ('tip_supply',{},'show'),
+    ('tip_replacement_status',{'request_id':'box'},'status'),
+    ('replace_simulated_tip_box',{'request_id':'box','expected_revision':'a'*64,'resource_id':'tips','positions':['1'],'simulation_acknowledged':True},'replace'),
+])
+def test_supply_tools_delegate_to_the_shared_authorized_entry(method,args,action):
+    supplies=RecordingUseCase()
+    adapter=MCPServerAdapter(None,None,None,supplies=supplies)
+    adapter.raw_credential='Bearer test-automation'
+    assert getattr(adapter,method)(**args)=={'result':'delegated'}
+    raw,request=supplies.calls[0]
+    assert raw==adapter.raw_credential and request.action==action
+    assert len(supplies.calls)==1 and 'origin' not in asdict(request)

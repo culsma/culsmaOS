@@ -3,27 +3,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>CulsmaOS · Station console</title>
+  <title>CulsmaOS · Console</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="assets/culsma-logo.png">
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="#station"><img src="/assets/culsma-os-wordmark.png" alt="CulsmaOS"></a>
-    <div class="top-label">Station console <span class="badge neutral">Local operation</span></div>
-  </header>
-  <div class="console-shell">
-  <aside class="sidebar" aria-label="Console navigation"><button id="navigation-toggle" type="button" aria-expanded="false" aria-controls="console-navigation">Navigation</button><nav id="console-navigation" aria-label="Console pages"></nav></aside>
-  <main data-ui-schema="culsma_console_ui_v1">
+  <div class="desktop" data-region="desktop">
+    <div id="desktop-home" class="desktop-home"><img src="/assets/culsma-logo.png" alt=""><h1>CulsmaOS</h1><p>Your laboratory workspace</p><p class="note">Open Files to run a protocol, or Workstation to inspect the deck.</p></div>
+    <div id="window-layer" class="window-layer" aria-label="Console windows"></div>
+    <p id="shell-notice" class="shell-notice" role="status" hidden></p>
+  <main id="view-surface" class="window-surface" data-ui-schema="culsma_console_ui_v1">
     <div class="page-heading"><div><p class="eyebrow" id="page-context">Local laboratory workspace</p><h1 id="title">Workstation</h1></div><button id="refresh" data-action="console.refresh" type="button">Refresh</button></div>
 
     <div class="status-strip" role="status" aria-live="polite"><span id="connection" class="badge neutral">Connecting</span><span id="observed">Waiting for the resident service</span></div>
     <section id="operation-status" aria-label="Last operation" class="operation-status" role="status" aria-live="polite" aria-atomic="true" hidden></section>
     <section id="alert" class="alert" role="alert" hidden></section>
     <section id="content" aria-label="Station information" aria-busy="true"><p class="empty">Reading OS records…</p></section>
-    <footer>OS records and simulator execution evidence. No live hardware or scientific measurement is implied. Snapshots are separate reads.</footer>
+    <footer>OS records · execution evidence follows the connected driver.</footer>
   </main>
+    <nav id="taskbar" class="taskbar" aria-label="Console pages">
+      <a class="taskbar-brand" href="#desktop" aria-label="Show desktop"><img src="/assets/culsma-os-wordmark.png" alt="CulsmaOS"></a>
+      <div id="console-navigation" class="taskbar-launchers"></div>
+      <div class="taskbar-divider"></div>
+      <div id="window-tasks" class="window-tasks" role="group" aria-label="Open windows"></div>
+      <span class="taskbar-local" title="Local console">Local</span>
+    </nav>
   </div>
 </body>
 </html>

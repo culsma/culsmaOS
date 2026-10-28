@@ -20,7 +20,11 @@ class ConsoleSettings:
     program_root: Path | None = None
     program_store: Path | None = None
     home_path: Path | None = None
+    view_store_path: Path | None = None
+    serve_frontend: bool = True
 
     def __post_init__(self):
+        if type(self.serve_frontend) is not bool:
+            raise ValueError("CONSOLE_FRONTEND_SETTING_INVALID")
         if type(self.port) is not int or not 0 <= self.port <= 65535:
             raise ValueError("CONSOLE_PORT_INVALID")

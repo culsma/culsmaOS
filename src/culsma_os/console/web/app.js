@@ -1,3 +1,4 @@
+import {ConsoleShell} from './console-shell.js';
 import {ConsoleNavigation} from './navigation.js';
 import {ConsoleWorkstation} from './workstation.js';
 import {ConsoleRunSetup} from './setup.js';
@@ -31,11 +32,13 @@ class StationConsoleApp {
     this.systemInformation = new ConsoleSystemInformation(this);
     this.navigation = new ConsoleNavigation(this);
     this.workstation = new ConsoleWorkstation(this);
+    this.shell = new ConsoleShell(this);
   }
 
   start() {
-    this.button.addEventListener('click', () => this.refresh());
-    window.addEventListener('hashchange', () => { this.renderKey=null; window.scrollTo({top: 0}); this.navigation.select(); this.refresh(); });
+    this.shell.workspace.start();
+    this.shell.start();
+    window.addEventListener('hashchange', () => this.shell.workspace.navigate(location.hash));
     document.addEventListener('visibilitychange', () => {
       clearTimeout(this.timer);
       if (!document.hidden) this.refresh();
@@ -451,7 +454,7 @@ class StationConsoleApp {
 
   async refresh() {
     clearTimeout(this.timer);
-    if (document.hidden) return;
+    if (document.hidden || !this.shell.workspace.isCurrentRoute()) return;
     if (this.busy) { this.pending = true; return; }
     if (['configuration','system'].includes(ConsoleNavigation.resolve(location.hash).page)) {
       await this.refreshConfiguration();return;

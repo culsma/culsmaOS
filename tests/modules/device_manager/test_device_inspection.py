@@ -65,7 +65,7 @@ def test_known_consumption_deduplicates_station_without_writing_back(tmp_path):
     before=fixture.dump()
     result=fixture.query()
     tips=result['devices'][0]['consumables']['tips']
-    assert tips=={'configured_capacity':96,'known_consumed':5,'remaining_upper_bound':91,
+    assert tips=={'loaded_capacity':96,'current_load_id':'initial','current_load_consumed':5,'configured_capacity':96,'known_consumed':5,'remaining_upper_bound':91,
                   'available_from_records':91,'status':'recorded'}
     assert fixture.dump()==before
     # A committed local receipt missing from the station is counted, never silently synchronized.
@@ -211,7 +211,7 @@ def test_inspection_ownership_and_read_only_architecture():
     files={
         'device_manager/repository.py':{'os_devices'},
         'workspace_manager/repository.py':{'os_layouts','os_labware_positions','os_motion_registrations','os_station_motion_intents','os_workspace_imports'},
-        'resource_manager/repository.py':{'os_resource_locks','os_permits','os_run_reservations','os_run_resources','os_station_usage','os_run_releases'},
+        'resource_manager/repository.py':{'os_resource_locks','os_permits','os_run_reservations','os_run_resources','os_station_usage','os_run_releases','os_supply_loads'},
         'event_journal/repositories/inspection.py':{'os_attempts','os_evidence','os_logical_completions'},
         'material_system/repositories/inspection.py':{'os_material_changes'},
     }

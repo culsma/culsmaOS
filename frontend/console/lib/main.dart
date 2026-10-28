@@ -1,5 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
+import 'features/console/interactor/console_interactor.dart';
+import 'features/console/interactor/renderer_interactor.dart';
+import 'features/console/repository/pending_request_repository.dart';
+import 'features/console/repository/mutation_repository.dart';
 import 'package:flutter/material.dart';
 import 'api/console_api.dart';
 import 'app.dart';
@@ -19,8 +24,41 @@ Future<void> main() async {
       LocalConsoleApi(connection),
       archives: FileLayoutArchiveRepository(),
     );
-    runApp(CulsmaConsole(controller: controller));
-    await controller.load();
+    final stationKey =
+        connection.stationKey ??
+        sha256.convert(utf8.encode(connection.origin.toString())).toString();
+    final requests = FilePendingRequestRepository(
+      File(
+        '${Platform.environment['HOME']}/Library/Application Support/culsmaOS/$stationKey/pending-run.json',
+      ),
+    );
+    final console = NativeConsoleInteractor(
+      controller.api,
+      controller,
+      requests: requests,
+      mutations: FileConsoleMutationRepository(
+        File(
+          '${Platform.environment['HOME']}/Library/Application Support/culsmaOS/$stationKey/pending-changes.json',
+        ),
+      ),
+    );
+    final renderer = connection.rendererToken == null
+        ? null
+        : NativeRendererInteractor(
+            LocalConsoleApi(
+              DesktopConnection(connection.origin, connection.rendererToken!),
+            ),
+            console,
+          );
+    runApp(
+      CulsmaConsole(
+        controller: controller,
+        console: console,
+        renderer: renderer,
+      ),
+    );
+    await Future.wait([controller.load(), console.start()]);
+    renderer?.start();
   } catch (_) {
     runApp(
       const MaterialApp(

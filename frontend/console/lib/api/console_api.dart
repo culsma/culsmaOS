@@ -20,7 +20,13 @@ class ConsoleApiError implements Exception {
 class DesktopConnection {
   final Uri origin;
   final String token;
-  const DesktopConnection(this.origin, this.token);
+  final String? rendererToken, stationKey;
+  const DesktopConnection(
+    this.origin,
+    this.token, {
+    this.rendererToken,
+    this.stationKey,
+  });
 
   factory DesktopConnection.fromJson(Map<String, dynamic> json) {
     final uri = Uri.parse(json['origin'] as String);
@@ -36,7 +42,20 @@ class DesktopConnection {
         token.isEmpty) {
       throw const FormatException('DESKTOP_CONNECTION_INVALID');
     }
-    return DesktopConnection(uri, token);
+    final renderer = json['renderer_access_token'],
+        station = json['station_key'];
+    if (renderer != null && (renderer is! String || renderer.isEmpty) ||
+        station != null &&
+            (station is! String ||
+                !RegExp(r'^[a-f0-9]{64}$').hasMatch(station))) {
+      throw const FormatException('DESKTOP_CONNECTION_INVALID');
+    }
+    return DesktopConnection(
+      uri,
+      token,
+      rendererToken: renderer,
+      stationKey: station,
+    );
   }
 }
 

@@ -1,0 +1,430 @@
+import 'dart:async';
+import 'dart:math';
+import 'dart:ui';
+import 'package:flutter/foundation.dart';
+import '../../../api/console_api.dart';
+import '../../layout/interactor/layout_controller.dart';
+import '../model/console_model.dart';
+import '../repository/pending_request_repository.dart';
+import '../repository/mutation_repository.dart';
+import 'labware_interactor.dart';
+import 'setup_interactor.dart';
+import 'supply_interactor.dart';
+import 'run_control_interactor.dart';
+import 'system_information_interactor.dart';
+
+/// Native presentation coordinator. Backend Interactors own every experiment decision.
+class NativeConsoleInteractor extends ChangeNotifier {
+  final ConsoleApi api;
+  final LayoutController layout;
+  final PendingRequestRepository? requests;
+  late final NativeLabwareInteractor labware;
+  late final NativeSetupInteractor setup;
+  late final NativeSupplyInteractor supplies;
+  late final NativeRunControlInteractor controls;
+  late final NativeSystemInformationInteractor information;
+  final windows = <ConsoleWindowModel>[];
+  final runs = <String, Map<String, dynamic>>{};
+  Map<String, dynamic>? station, library, inspection, pendingStart;
+  String? activeId, selectedFile, selectedEntity, message;
+  bool busy = false, disposed = false;
+  int selectionVersion = 0;
+  Timer? timer;
+  Future<bool> Function(String)? revealTarget;
+  NativeConsoleInteractor(
+    this.api,
+    this.layout, {
+    this.requests,
+    ConsoleMutationRepository? mutations,
+    String initialView = 'files',
+  }) {
+    labware = NativeLabwareInteractor(api, mutations)
+      ..addListener(notifyViewChanged);
+    information = NativeSystemInformationInteractor(api)
+      ..addListener(notifyViewChanged);
+    controls = NativeRunControlInteractor(api, mutations)
+      ..addListener(notifyViewChanged);
+    supplies = NativeSupplyInteractor(api, mutations)
+      ..addListener(notifyViewChanged);
+    setup = NativeSetupInteractor(api, mutations)
+      ..addListener(notifyViewChanged);
+    open(initialView);
+  }
+  ConsoleWindowModel? get active =>
+      windows.where((w) => w.id == activeId).firstOrNull;
+  String? get stationProblem {
+    final host = station?['host'];
+    if (host?['worker_error'] != null)
+      return 'Station worker: ${host['worker_error']}';
+    if (host?['blocked_run'] != null)
+      return 'Run ${host['blocked_run']} holds the queue: ${host['blocked_reason'] ?? 'Inspect its record'}';
+    return null;
+  }
+
+  bool get dirty =>
+      layout.dirty ||
+      labware.editing ||
+      labware.pending != null ||
+      labware.blocked ||
+      setup.dirty ||
+      supplies.editing ||
+      supplies.pending != null ||
+      supplies.blocked;
+  bool get working =>
+      busy ||
+      layout.busy ||
+      labware.busy ||
+      setup.busy ||
+      supplies.busy ||
+      controls.busy.isNotEmpty;
+
+  ConsoleWindowModel open(String view, [String? entityId]) {
+    if (view == 'desktop') {
+      showDesktop();
+      return ConsoleWindowModel(
+        'desktop',
+        'desktop',
+        'Desktop',
+        null,
+        Rect.zero,
+      );
+    }
+    if (view == 'experiment' && (entityId == null || entityId.isEmpty))
+      throw const FormatException('RUN_ID_REQUIRED');
+    final title = view == 'experiment'
+        ? 'Experiment · ${entityId!.substring(0, min(8, entityId.length))}'
+        : ConsoleWindowDescriptor.applications
+              .firstWhere((a) => a.view == view)
+              .label;
+    final id = view == 'experiment' ? 'run:$entityId' : view;
+    final existing = windows.where((w) => w.id == id).firstOrNull;
+    final window =
+        existing ??
+        ConsoleWindowModel(
+          id,
+          view,
+          title,
+          entityId,
+          Rect.fromLTWH(
+            20 + (windows.length % 5) * 22,
+            18 + (windows.length % 5) * 22,
+            1080,
+            720,
+          ),
+        );
+    if (existing != null) windows.remove(existing);
+    windows.add(window);
+    window.minimized = false;
+    activeId = id;
+    selectedEntity = null;
+    message = null;
+    notifyListeners();
+    return window;
+  }
+
+  void showDesktop() {
+    for (final w in windows) {
+      w.minimized = true;
+    }
+    activeId = null;
+    notifyListeners();
+  }
+
+  bool protect(ConsoleWindowModel w) {
+    if (working) {
+      message = 'A console operation is finishing.';
+      notifyListeners();
+      return true;
+    }
+    if (w.view == 'experiment' &&
+        (setup.edits[w.entityId]?['dirty'] == true ||
+            setup.acknowledged(w.entityId!))) {
+      message =
+          'Save or discard placement edits and clear loading acknowledgement before closing this window.';
+      notifyListeners();
+      return true;
+    }
+    if (w.view == 'settings' &&
+        (dirty || layout.writeUncertain || layout.pendingRequest != null)) {
+      message =
+          'Save or discard the open edit before closing or minimizing this window.';
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  void closeWindow(ConsoleWindowModel w) {
+    if (protect(w)) return;
+    windows.remove(w);
+    selectRemaining(w);
+  }
+
+  void minimize(ConsoleWindowModel w) {
+    if (protect(w)) return;
+    w.minimized = true;
+    selectRemaining(w);
+  }
+
+  void selectRemaining(ConsoleWindowModel w) {
+    if (activeId == w.id)
+      activeId = windows.where((v) => !v.minimized).lastOrNull?.id;
+    notifyListeners();
+  }
+
+  void maximize(ConsoleWindowModel w) {
+    w.maximized = !w.maximized;
+    notifyListeners();
+  }
+
+  void move(ConsoleWindowModel w, Offset delta, Size area) {
+    if (w.maximized) return;
+    final width = min(w.bounds.width, area.width),
+        height = min(w.bounds.height, area.height);
+    w.bounds = Rect.fromLTWH(
+      (w.bounds.left + delta.dx).clamp(0, max(0, area.width - width)),
+      (w.bounds.top + delta.dy).clamp(0, max(0, area.height - height)),
+      w.bounds.width,
+      w.bounds.height,
+    );
+    notifyListeners();
+  }
+
+  void resize(ConsoleWindowModel w, Offset delta, Size area) {
+    w.bounds = Rect.fromLTWH(
+      w.bounds.left,
+      w.bounds.top,
+      (w.bounds.width + delta.dx).clamp(
+        min(390, area.width),
+        max(min(390, area.width), area.width - w.bounds.left),
+      ),
+      (w.bounds.height + delta.dy).clamp(
+        min(260, area.height),
+        max(min(260, area.height), area.height - w.bounds.top),
+      ),
+    );
+    notifyListeners();
+  }
+
+  Future<void> start() async {
+    try {
+      pendingStart = await requests?.read();
+      await labware.restore();
+      await supplies.restore();
+    } catch (_) {
+      message = 'Pending run records could not be read. Starting is disabled.';
+      pendingStart = {'blocked': true};
+    }
+    await refresh();
+    schedule();
+  }
+
+  void schedule() {
+    timer?.cancel();
+    if (!disposed)
+      timer = Timer(const Duration(seconds: 2), () async {
+        await refresh();
+        schedule();
+      });
+  }
+
+  Future<void> refresh() async {
+    if (busy || disposed) return;
+    busy = true;
+    notifyListeners();
+    try {
+      station = await api.read('/api/v1/station');
+      await information.observe(station);
+      await supplies.refresh();
+      final pendingLayout = labware.pending;
+      await labware.observe(stationLayout());
+      if (pendingLayout != null &&
+          labware.pending == null &&
+          !layout.dirty &&
+          !layout.busy &&
+          !layout.writeUncertain &&
+          layout.pendingRequest == null) {
+        layout.proposal = null;
+        layout.draft = null;
+        await layout.load();
+      }
+      if (library == null) library = await api.read('/api/v1/programs');
+      final observed = {
+        for (final w in windows)
+          if (w.entityId != null) w.entityId!,
+        ...controls.pending.keys,
+      };
+      for (final run in observed) {
+        try {
+          runs[run] = await api.read(
+            '/api/v1/runs/${Uri.encodeComponent(run)}',
+          );
+          await controls.observe(runs[run]!);
+          if (active?.entityId == run) await setup.observe(runs[run]!);
+        } catch (error) {
+          message = 'Experiment $run unavailable: $error';
+        }
+      }
+    } catch (error) {
+      message = error.toString();
+    } finally {
+      busy = false;
+      if (!disposed) notifyListeners();
+    }
+  }
+
+  Map<String, dynamic>? stationLayout() {
+    final value = station?['layout'];
+    if (value is! Map) return null;
+    return {
+      ...Map<String, dynamic>.from(value),
+      'editing_ready':
+          station?['host']?['status'] == 'ready' &&
+          pendingStart == null &&
+          !(station?['runs'] as List? ?? []).any(
+            (run) => !{
+              'completed',
+              'failed',
+              'rejected',
+              'cancelled',
+            }.contains(run['status']),
+          ),
+    };
+  }
+
+  Future<void> refreshFiles() async {
+    if (busy) return;
+    library = null;
+    await refresh();
+  }
+
+  Future<void> inspectFile(String id) async {
+    if (pendingStart != null || busy) return;
+    final version = ++selectionVersion;
+    selectedFile = id;
+    busy = true;
+    notifyListeners();
+    try {
+      final result = await api.command('/api/v1/programs', {
+        'action': 'inspect',
+        'program_id': id,
+      });
+      if (version == selectionVersion) inspection = result;
+    } catch (error) {
+      message = error.toString();
+    } finally {
+      busy = false;
+      if (!disposed) notifyListeners();
+    }
+  }
+
+  String requestId() => List.generate(
+    16,
+    (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ).join();
+  Future<void> launch(String id) async {
+    if (working || pendingStart != null) return;
+    if (dirty) {
+      message =
+          'Finish or discard the current edit before starting another experiment.';
+      notifyListeners();
+      return;
+    }
+
+    busy = true;
+    selectedFile = id;
+    message = null;
+    notifyListeners();
+    try {
+      final result = await api.command('/api/v1/programs', {
+        'action': 'inspect',
+        'program_id': id,
+      });
+      inspection = result;
+      if (result['valid'] != true) {
+        message = 'Protocol validation failed.';
+        return;
+      }
+      final payload = {
+        'action': 'start',
+        'program_id': id,
+        'snapshot_id': result['snapshot_id'],
+        'request_id': requestId(),
+      };
+      if (requests == null) {
+        message = 'Durable run request storage is unavailable.';
+        return;
+      }
+      await requests!.save(payload);
+      pendingStart = payload;
+      await sendPendingStart();
+    } catch (error) {
+      message = error.toString();
+    } finally {
+      busy = false;
+      if (!disposed) notifyListeners();
+    }
+  }
+
+  Future<void> checkPendingStart() async {
+    if (busy || pendingStart == null || pendingStart!['blocked'] == true)
+      return;
+    busy = true;
+    notifyListeners();
+    try {
+      await sendPendingStart();
+    } finally {
+      busy = false;
+      if (!disposed) notifyListeners();
+    }
+  }
+
+  Future<void> sendPendingStart() async {
+    try {
+      final result = await api.command('/api/v1/programs', pendingStart!);
+      final run = Map<String, dynamic>.from(result['run']);
+      // Clear only after recording an authoritative run identity in memory.
+      runs[run['run_id']] = run;
+      open('experiment', run['run_id']);
+      await requests!.clear();
+      pendingStart = null;
+    } on ConsoleApiError catch (error) {
+      if (error.status != null && error.status! < 500) {
+        await requests!.clear();
+        pendingStart = null;
+      }
+      message = error.responseUnknown
+          ? 'Run response unknown. Check the retained request; no automatic retry.'
+          : error.code;
+    } catch (error) {
+      message = error.toString();
+    }
+  }
+
+  void notifyViewChanged() => notifyListeners();
+
+  void reveal(String entity) {
+    open('workstation');
+    selectedEntity = entity;
+    notifyListeners();
+  }
+
+  Map<String, dynamic> get viewState => {
+    'view': active?.view ?? 'desktop',
+    'entity_id': active?.entityId,
+    'selected_entity_id': selectedEntity,
+    'dirty': dirty,
+    'busy': working,
+  };
+  @override
+  void dispose() {
+    disposed = true;
+    timer?.cancel();
+    information.dispose();
+    controls.dispose();
+    supplies.dispose();
+    labware.dispose();
+    setup.dispose();
+    super.dispose();
+  }
+}

@@ -6,7 +6,7 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
         self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
@@ -14,8 +14,12 @@ class ResidentCommandInteractor:
         self.layout = layout
         self.labware = labware
         self.setup_preview = setup_preview
+        self.supplies = supplies
 
     def execute(self, request):
+        if request.action in {'supply-show','supply-replace','supply-status'}:
+            if self.supplies is None:raise ValueError('SUPPLY_REPLACEMENT_UNSUPPORTED')
+            return self.supplies.execute(request.action.removeprefix('supply-'),request.supply_change or {},request.supply_origin,self.require_idle_configuration)
         if request.action in {'labware-catalogue', 'labware-prepare'}:
             if self.labware is None:
                 raise ValueError('LABWARE_EDITOR_UNAVAILABLE')
@@ -66,6 +70,7 @@ class ResidentCommandInteractor:
                 raise ValueError('SETUP_PREVIEW_UNAVAILABLE')
             return self.setup_preview.preview(self.compile(request))
         if request.action in {'submit','start'}:
+            if self.supplies:self.supplies.require_settled()
             return self.submit(request)
         if request.action in {'pause', 'resume', 'cancel'}:
             self.require_run(request.run_id)
@@ -126,6 +131,9 @@ class ResidentCommandInteractor:
         return {**self.describe(run_id), 'request_id': submission.request_id, 'accepted': True}
 
     def close(self):
+        if self.supplies:
+            self.supplies.repository.connection.close()
+            self.supplies.guard.close()
         self.inspector.close()
 
 

@@ -31,3 +31,29 @@ class RunReleaseConfirmation:
     generation: int
     revision: int
     evidence_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SupplyReplacementRequest:
+    action: str = 'show'
+    request_id: str | None = None
+    expected_revision: str | None = None
+    resource_id: str | None = None
+    positions: list[str] | None = None
+    simulation_acknowledged: bool = False
+
+
+class SupplyReplacementError(ValueError):
+    def __init__(self, code, kind='conflict'):
+        super().__init__(code)
+        self.code, self.kind = code, kind
+
+
+from typing import Protocol
+
+
+class SupplyReplacementPort(Protocol):
+    """Optional driver-owned simulation stock boundary; no vendor types cross it."""
+    def describe(self) -> dict: ...
+    def replace(self, request_id: str, expected_revision: str, positions: list[str]) -> dict: ...
+    def receipt(self, request_id: str, token: str, resource: str) -> dict | None: ...

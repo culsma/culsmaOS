@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from .repository import ResourceRepository, ResourceInspectionRepository
-from .models import ExecutionPermit, ResourceConflict
+from .models import ExecutionPermit, ResourceConflict, SupplyReplacementPort
 
 
 class ResourceInteractor:
@@ -48,13 +48,16 @@ class ResourceInteractor:
 
 
 class ConsumableInteractor:
-    def __init__(self, device, evidence):
+    def __init__(self, device, evidence, loads=None):
         self.device = device
         self.evidence = evidence
+        self.loads = loads
 
     def require(self, device_id, requirements):
-        capacities = self.device.get(device_id).consumable_capacities
-        consumed = self.evidence.known_consumption(device_id)
+        capacities = self.capacities(device_id)
+        consumed = self.current_consumption(device_id)
+        if self.loads and any(r['status']=='applying' for r in self.loads.records()):
+            raise ValueError('SUPPLY_REPLACEMENT_UNRESOLVED')
         if not isinstance(requirements, dict):
             raise ValueError("OS_RESOURCE_REQUIREMENTS_INVALID")
         for resource, amount in requirements.items():
@@ -65,6 +68,34 @@ class ConsumableInteractor:
                 or consumed.get(resource, 0) + amount > capacities[resource]
             ):
                 raise ValueError("OS_CONSUMABLES_INSUFFICIENT")
+
+    def active_loads(self, device_id):
+        values={}
+        for row in self.loads.records(device_id) if self.loads else ():
+            if row['status']=='applied':values[row['resource_id']]=row
+        return values
+
+    def capacities(self, device_id):
+        values=dict(self.device.get(device_id).consumable_capacities)
+        for key,row in self.active_loads(device_id).items():
+            if key in values:values[key]=len(row['positions'])
+        return values
+
+    def current_consumption(self,device_id):
+        totals=self.evidence.known_consumption(device_id);loads=self.active_loads(device_id)
+        current={key:totals.get(key,0)-(loads[key]['baseline'] if key in loads else 0)
+            for key in self.device.get(device_id).consumable_capacities}
+        if any(v<0 for v in current.values()):raise ValueError('SUPPLY_ACCOUNTING_STALE')
+        return current
+
+    def restore(self,port,device_id):
+        loads=self.active_loads(device_id)
+        active={key:value for key,value in loads.items() if key in self.device.get(device_id).consumable_capacities}
+        if active:
+            restore=getattr(port,'restore_supply_loads',None)
+            if restore is None:raise ValueError('SUPPLY_RESTORE_UNSUPPORTED')
+            restore(active)
+        return self.current_consumption(device_id)
 
 
 class StationUsageInteractor:
@@ -196,7 +227,7 @@ class ResourceInspectionInteractor:
                 'station_reservations': self.repository.reservations(),
                 'station_locks': self.repository.station_locks(),
                 'station_run_stores': self.repository.run_stores(),
-                'station_usage': self.repository.usage(), **self.repository.accounting()}
+                'station_usage': self.repository.usage(), 'supply_loads':self.repository.supply_loads(), **self.repository.accounting()}
 
     def consumables(self, device, evidence, resources, unresolved):
         totals = dict(evidence.known_consumption)
@@ -211,8 +242,149 @@ class ResourceInspectionInteractor:
         uncertain = bool(unresolved or occupied or evidence.accounting != 'recorded'
                          or resources['local_accounting'] != 'recorded'
                          or resources['station_accounting'] != 'recorded')
-        return {name: {'configured_capacity': capacity, 'known_consumed': totals.get(name, 0),
-            'remaining_upper_bound': max(0, capacity - totals.get(name, 0)),
-            'available_from_records': None if uncertain else max(0, capacity - totals.get(name, 0)),
-            'status': 'unknown' if uncertain else 'recorded'}
-            for name, capacity in device.consumable_capacities.items()}
+        loads={}
+        for row in resources.get('supply_loads',[]):
+            if row['device_id']==device.device_id and row['status']=='applied':loads[row['resource_id']]=row
+        result={}
+        for name,capacity in device.consumable_capacities.items():
+            load=loads.get(name);baseline=load['baseline'] if load else 0
+            loaded=len(load['positions']) if load else capacity
+            active=totals.get(name,0)-baseline
+            unknown=uncertain or active<0
+            result[name]={'configured_capacity':capacity,'loaded_capacity':loaded,'known_consumed':totals.get(name,0),
+                'current_load_id':load['request_id'] if load else 'initial','current_load_consumed':active,
+                'remaining_upper_bound':max(0,loaded-active),
+                'available_from_records':None if unknown else max(0,loaded-active),'status':'unknown' if unknown else 'recorded'}
+        return result
+
+
+
+class SupplyReplacementInteractor:
+    """Resident-owned, guarded simulation replacement with durable two-store reconciliation."""
+    def __init__(self, repository, guard, port: "SupplyReplacementPort | None", devices):
+        self.repository,self.guard,self.port,self.devices=repository,guard,port,devices
+
+    def current(self):
+        from .models import SupplyReplacementError
+        if self.port is None:return {'supported':False,'reason':'The installed driver has no consumable replacement port.'}
+        view=self.port.describe()
+        if not view.get('supported'):return view
+        records=self.repository.records(view['device_id'])
+        applied=[r for r in records if r['status']=='applied' and r['resource_id']==view['resource_id']]
+        pending=[r for r in records if r['status']=='applying']
+        from hashlib import sha256
+        import json
+        view={**view,'driver_revision':view['revision'], 'current_load':applied[-1] if applied else None,
+              'pending':pending,'history':records}
+        view['revision']=sha256(json.dumps({'driver':view['driver_revision'],'last':applied[-1]['request_id'] if applied else None},sort_keys=True).encode()).hexdigest()
+        return view
+
+    def require_settled(self):
+        if any(r['status']=='applying' for r in self.repository.records()):
+            raise ValueError('SUPPLY_REPLACEMENT_UNRESOLVED')
+
+    def baseline(self, view):
+        resource=view['resource_id'];device=view['device_id'];report=self.devices.execute()
+        row=next((d for d in report['devices'] if d['device_id']==device),None)
+        counts=row['consumables'].get(resource) if row else None
+        if counts is None or counts.get('status')!='recorded' or type(counts.get('known_consumed')) is not int:
+            raise ValueError('SUPPLY_ACCOUNTING_UNAVAILABLE')
+        consumed=counts['known_consumed']
+        previous=view['current_load']['baseline'] if view['current_load'] else 0
+        if consumed-previous!=len(view['stock']['used']):
+            raise ValueError('SUPPLY_ACCOUNTING_MISMATCH')
+        return consumed
+
+    def execute(self, action, payload, origin, require_idle):
+        from .models import SupplyReplacementError
+        if action=='show':return self.current()
+        with self.guard.guard():
+            old=self.repository.get(payload['request_id'])
+            if action=='status':
+                if old is None:raise SupplyReplacementError('SUPPLY_REQUEST_NOT_FOUND','not_found')
+                return self.reconcile(old)
+            if old is not None:
+                if old['payload']!=payload or old['origin']!=origin:
+                    raise SupplyReplacementError('SUPPLY_REQUEST_CONFLICT')
+                return self.reconcile(old)
+            require_idle()
+            self.require_settled()
+            view=self.current()
+            if not view.get('supported') or view['mode']!='simulation':
+                raise SupplyReplacementError('SUPPLY_SIMULATION_REPLACEMENT_UNSUPPORTED')
+            if payload['expected_revision']!=view['revision'] or payload['resource_id']!=view['resource_id']:
+                raise SupplyReplacementError('SUPPLY_PROFILE_STALE')
+            positions=payload['positions']
+            if not positions or len(positions)!=len(set(positions)) or not set(positions)<=set(view['position_choices']):
+                raise SupplyReplacementError('SUPPLY_POSITIONS_INVALID','invalid_request')
+            record={'request_id':payload['request_id'],'payload':payload,'origin':origin,'status':'applying',
+                'device_id':view['device_id'],'resource_id':view['resource_id'],'positions':positions,
+                'baseline':self.baseline(view),'driver_token':view['stock']['token'],'previous_load':view['stock']['load_id'],
+                'source':'simulation_declaration','physical_observation':False,'receipt':None}
+            self.repository.insert(record)
+            try:
+                receipt=self.port.replace(record['request_id'],view['driver_revision'],positions)
+                return self.accept_receipt(record,receipt)
+            except Exception:
+                return record  # Persisted intent retains isolation. Status only reads a receipt.
+
+    def accept_receipt(self, record, receipt):
+        if not isinstance(receipt,dict) or receipt.get('request_id')!=record['request_id']:return record
+        if receipt.get('status')=='applied':
+            if (receipt.get('resource_id')!=record['resource_id'] or receipt.get('positions')!=record['positions']
+                    or receipt.get('load_id')!=record['request_id'] or receipt.get('source')!='local_model'
+                    or receipt.get('physical_observation') is not False):return record
+            return self.repository.settle(record['request_id'],'applied',receipt)
+        if receipt.get('status') in {'rejected','not_applied'}:
+            return self.repository.settle(record['request_id'],'rejected',receipt)
+        return record
+
+    def reconcile(self, record):
+        if record['status']!='applying' or self.port is None:return record
+        try:receipt=self.port.receipt(record['request_id'],record['driver_token'],record['resource_id'])
+        except Exception:return record
+        return self.accept_receipt(record,receipt)
+
+
+from culsma_os.auth.interactors import AuthorizedInteractor
+
+
+class SupplyInteractionInteractor(AuthorizedInteractor):
+    required_capability='consumables:simulate'
+
+    def __init__(self,tokens,resident):
+        super().__init__(tokens)
+        self.resident=resident
+
+    def perform_authorized(self,caller,request):
+        import re
+        from dataclasses import asdict
+        from .models import SupplyReplacementRequest,SupplyReplacementError
+        if not isinstance(request,SupplyReplacementRequest) or request.action not in {'show','replace','status'}:
+            raise SupplyReplacementError('SUPPLY_REQUEST_INVALID','invalid_request')
+        value=asdict(request)
+        if request.action=='show':
+            if any(value[k] is not None for k in ['request_id','expected_revision','resource_id','positions']) or request.simulation_acknowledged:
+                raise SupplyReplacementError('SUPPLY_REQUEST_INVALID','invalid_request')
+        else:
+            if not isinstance(request.request_id,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',request.request_id) is None:
+                raise SupplyReplacementError('SUPPLY_REQUEST_INVALID','invalid_request')
+            if request.action=='replace':
+                if (request.simulation_acknowledged is not True or not isinstance(request.expected_revision,str)
+                        or re.fullmatch(r'[a-f0-9]{64}',request.expected_revision) is None
+                        or not isinstance(request.resource_id,str) or not 1<=len(request.resource_id)<=256
+                        or not isinstance(request.positions,list) or not 1<=len(request.positions)<=384
+                        or any(not isinstance(p,str) or not 1<=len(p)<=128 for p in request.positions)):
+                    raise SupplyReplacementError('SUPPLY_REQUEST_INVALID','invalid_request')
+            elif any(value[k] is not None for k in ['expected_revision','resource_id','positions']) or request.simulation_acknowledged:
+                raise SupplyReplacementError('SUPPLY_REQUEST_INVALID','invalid_request')
+        try:return self.resident.execute({'action':'supply-'+request.action,'supply_change':value,'supply_origin':caller.subject})
+        except SupplyReplacementError:raise
+        except ValueError as e:
+            code=str(e)
+            if re.fullmatch(r'[A-Z][A-Z0-9_]{0,79}',code) is None:code='SUPPLY_HOST_REJECTED'
+            raise SupplyReplacementError(code,'conflict') from e
+        except OSError as e:raise SupplyReplacementError('SUPPLY_HOST_UNAVAILABLE','unavailable') from e
+        except ValueError as e:
+            code=str(e)
+            raise SupplyReplacementError(code if re.fullmatch(r'[A-Z][A-Z0-9_]{0,79}',code) else 'SUPPLY_REQUEST_REJECTED') from e

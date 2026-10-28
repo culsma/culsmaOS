@@ -30,6 +30,7 @@ try {
  await page.setViewportSize({width:1440,height:1000});
  await settings.getByRole('button',{name:'Apply rack replacement',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('#operation-status')?.dataset.outcome==='applied');
+ await page.waitForFunction(()=>document.querySelector('#content')?.getAttribute('aria-busy')==='false' && !document.querySelector('#content [data-region="carrier-proposal"]'));
  await settings.getByRole('combobox',{name:'Installed rack',exact:true}).selectOption('carrier:PREVIEW_T37_38_4R200');
  await page.waitForFunction(()=>document.querySelector('[data-region="carrier-settings"]')?.dataset.currentModel==='RGT_CAR_5R60_A00');
  if(actions.filter(action=>action==='apply').length!==1)throw new Error('Replacement application replayed');

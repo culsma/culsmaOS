@@ -74,8 +74,7 @@ export class ConsolePrograms {
           a.element('p',preparation.diagnostic,'mono'));
       } else if(inspection.valid && this.opened) view.append(a.element('p','This driver does not provide a loading preview. Running still uses the station configuration and execution checks.','notice'));
       if(preparation && preparation.status!=='unsupported') view.append(a.configButton('Change station labware',()=>{
-        this.inspection=null;this.selection=null;this.render();
-        a.content.querySelector('[data-region=workstation-layout-host]')?.scrollIntoView({block:'start'});
+        location.hash='#station';
       },'',{action:'program.edit-labware'}));
       if(!this.opened && inspection.valid) view.append(a.element('p',`${inspection.allocations.length} containers or wells · Culsma protocol`,'experiment-summary'),a.element('p','Run this protocol to check preparation and start on the current workstation.','note'));
       const technical=a.element('details');technical.append(a.element('summary','Protocol source and validation details'),
@@ -212,7 +211,7 @@ export class ConsolePrograms {
 
   openFile(programId, prepare) {
     if(this.pending('submission') || this.launching) return;
-    if(location.hash!=='#station' && location.hash!=='#programs') location.hash='#station';
+    if(location.hash!=='#programs') location.hash='#programs';
     return prepare ? this.launch(programId):this.inspect(programId,false);
   }
 

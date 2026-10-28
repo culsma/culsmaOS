@@ -8,6 +8,7 @@ class DeviceInteractor:
         self.readiness = readiness
         self.configured_snapshot = configured_snapshot
         self.restored_consumption = None
+        self.consumables = None
 
     def register(self, snapshot):
         if snapshot.mode != "simulation":
@@ -58,10 +59,11 @@ class DeviceInteractor:
         self.readiness.check_ready()
 
     def restore_consumables(self, device_id, evidence):
-        consumption = evidence.known_consumption(device_id)
-        if consumption != self.restored_consumption:
-            self.readiness.restore_consumables(consumption)
-            self.restored_consumption = dict(consumption)
+        consumption = self.consumables.restore(self.readiness,device_id) if self.consumables else evidence.known_consumption(device_id)
+        # A new load can have the same count as the previous restoration.
+        # Restore the authoritative current-load cursor even when its count is unchanged.
+        self.readiness.restore_consumables(consumption)
+        self.restored_consumption = dict(consumption)
 
 
 class DeviceInspectionInteractor:

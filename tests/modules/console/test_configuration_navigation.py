@@ -38,7 +38,7 @@ def test_current_configuration_requires_exact_origin():
 const record={draft_id:'station',revision:2,fingerprint:'saved',driver:'external',configuration:{value:2}};
 const active={fingerprint:'host',origin:{draft_id:'station',revision:2,configuration_fingerprint:'saved'}};
 const calls=[];let starts=0;
-const app={activation:{view:{active}},configWorking:null,
+const app={activation:{view:{active}},configWorking:null,configDirty:()=>true,
  configurationFetch:async (path,payload)=>{calls.push(payload);return {draft:record};},
  startConfigDraft:()=>{starts++;}};
 const controller=new ConsoleConfiguration(app);

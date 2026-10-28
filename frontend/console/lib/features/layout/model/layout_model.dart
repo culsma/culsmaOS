@@ -238,6 +238,23 @@ class LayoutDefinition {
     return updated;
   }
 
+  String? presentationPosition(
+    Map<String, dynamic> configuration,
+    String name,
+  ) {
+    final all = items(configuration), visited = <String>{};
+    var current = all.where((i) => i.name == name).firstOrNull;
+    while (current != null && visited.add(current.name)) {
+      final position = footprint(
+        current,
+      ).where((id) => positions.any((p) => p.id == id)).firstOrNull;
+      if (position != null) return position;
+      final parent = current.parent;
+      current = all.where((i) => i.name == parent).firstOrNull;
+    }
+    return null;
+  }
+
   LayoutItem? occupant(Map<String, dynamic> configuration, String position) {
     for (final item in items(configuration)) {
       if (item.parent == null && footprint(item).contains(position))

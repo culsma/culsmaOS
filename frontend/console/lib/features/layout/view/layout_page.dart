@@ -649,6 +649,7 @@ class DeckBoard extends StatelessWidget {
   final String? selected;
   final bool enabled;
   final ValueChanged<String> onSelect;
+  final Map<String, GlobalKey>? positionKeys;
   const DeckBoard({
     super.key,
     required this.definition,
@@ -656,6 +657,7 @@ class DeckBoard extends StatelessWidget {
     required this.selected,
     required this.enabled,
     required this.onSelect,
+    this.positionKeys,
   });
 
   @override
@@ -684,6 +686,7 @@ class DeckBoard extends StatelessWidget {
                               .where((i) => i.parent == item.name)
                               .toList();
                     return Positioned(
+                      key: positionKeys?.putIfAbsent(p.id, () => GlobalKey()),
                       left: bounds.maxWidth * p.x / definition.width,
                       top: bounds.maxHeight * p.y / definition.height,
                       width: bounds.maxWidth * p.width / definition.width,

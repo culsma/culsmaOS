@@ -32,6 +32,9 @@ class RunSetupInteractor:
                 previous = self.get(run_id)
             except KeyError:
                 previous = {'revision': 0, 'phase': 'planned'}
+            if self.catalogue is not None and getattr(self.device,'consumables',None) is not None:
+                self.device.restore_consumables(self.snapshot.device_id,self.evidence)
+                self.catalogue=self.device.readiness.describe_workspace()
             result = self.planner.plan(self.requirements.inspect(record.checkpoint), self.catalogue, preferences)
             identity = {'plan': data['plan_fingerprint'], 'initial': data['initial_fingerprint'],
                         'configuration': self.snapshot.configuration_revision, 'catalogue': self.codec.fingerprint(self.catalogue)}

@@ -279,6 +279,8 @@ class ResidentCommand:
     setup_acknowledged: bool = False
     setup_origin: str | None = None
     labware_change: dict | None = None
+    supply_change: dict | None = None
+    supply_origin: str | None = None
 
 class ResidentAdmissionError(ValueError):
     def __init__(self, code, diagnostics=()):

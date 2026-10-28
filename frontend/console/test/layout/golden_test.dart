@@ -33,7 +33,7 @@ void main() {
       await tester.pumpWidget(
         RepaintBoundary(
           key: const Key('golden-root'),
-          child: CulsmaConsole(controller: c),
+          child: CulsmaConsole(controller: c, initialView: 'settings'),
         ),
       );
       await tester.pumpAndSettle();
@@ -56,7 +56,7 @@ void main() {
     await tester.pumpWidget(
       RepaintBoundary(
         key: const Key('hamilton-golden'),
-        child: CulsmaConsole(controller: c),
+        child: CulsmaConsole(controller: c, initialView: 'settings'),
       ),
     );
     await tester.pumpAndSettle();
@@ -88,7 +88,7 @@ void main() {
     await tester.pumpWidget(
       RepaintBoundary(
         key: const Key('export-golden'),
-        child: CulsmaConsole(controller: c),
+        child: CulsmaConsole(controller: c, initialView: 'settings'),
       ),
     );
     await tester.pumpAndSettle();

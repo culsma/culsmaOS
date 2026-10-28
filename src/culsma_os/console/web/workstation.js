@@ -26,21 +26,19 @@ export class ConsoleWorkstation {
   }
 
   /** Stable sections keep editing and horizontal deck scroll independent of polling. */
-  mount() {
-    const a=this.app;
-    if(a.content.querySelector('[data-region=workstation-workspace]')) return false;
-    const root=a.element('div');root.dataset.region='workstation-workspace';
-    const actions=a.element('div','','config-actions');
-    const fresh=a.element('a','New experiment','action-link');fresh.href='#programs';actions.append(fresh);
-    root.append(actions);
-    const main=a.element('div','','workstation-main');main.dataset.region='workstation-main';
-    const files=a.element('div');files.dataset.region='workstation-files';
-    const detail=a.element('div','','program-detail');main.append(files,detail);root.append(main);
-    for(const name of ['program','run','layout']) {
-      const region=a.element('div');region.dataset.region='workstation-'+name+'-host';detail.append(region);
-      if(name==='program') region.dataset.region='workstation-program';
+  mount(navigation) {
+    const a=this.app,mode=navigation.page==='run' ? 'run':navigation.page==='programs' ? 'files':'station';
+    if(a.content.querySelector(`[data-region=workstation-workspace][data-presentation=${mode}]`)) return false;
+    const root=a.element('div');root.dataset.region='workstation-workspace';root.dataset.presentation=mode;
+    if(mode==='files') {
+      const main=a.element('div','','workstation-main');
+      const files=a.element('div');files.dataset.region='workstation-files';
+      const detail=a.element('div','','program-detail');detail.dataset.region='workstation-program';
+      main.append(files,detail);root.append(main);
+    } else {
+      const host=a.element('div');host.dataset.region='workstation-'+(mode==='run' ? 'run':'layout')+'-host';root.append(host);
     }
-    for(const [name,label] of [['runs','Runs and history'],['state','Station state and resources']]) {
+    if(mode==='station') for(const [name,label] of [['runs','Runs and history'],['state','Station state and resources']]) {
       const details=a.element('details','','workstation-disclosure');details.dataset.region='workstation-'+name;
       details.append(a.element('summary',label));
       const body=a.element('div');body.dataset.region='workstation-'+name+'-host';details.append(body);root.append(details);
@@ -81,45 +79,35 @@ export class ConsoleWorkstation {
   }
 
   render(data, run, navigation, force=false) {
-    const a=this.app,mounted=this.mount();
-    if(a.activation.view?.host && a.activation.view.host.status!==data.host.status) {
-      a.activation.view.host.status=data.host.status;force=true;
+    const a=this.app,mounted=this.mount(navigation);
+    if(a.activation.view?.host) a.activation.view.host.status=data.host.status;
+    const fingerprint=data.layout?.configuration_fingerprint;
+    if(a.activation.view?.active && fingerprint)a.activation.view.active.fingerprint=fingerprint;
+    if(navigation.page==='programs') {
+      if(mounted || force || !a.content.querySelector('[data-region=experiment-picker]')) {
+        if(this.libraryError)a.content.querySelector('[data-region=workstation-program]').replaceChildren(a.element('p',this.libraryError,'notice'));
+        else a.programs.render();
+      }
+      a.programs.mountFiles();
+    } else if(run) {
+      this.region('run',JSON.stringify([run,a.setup.plans.get(run.run_id),a.programs.controlMessages.get(run.run_id)]),target=>a.renderRun(run,target),force);
+    } else {
+      const editableLayout={...data.layout,editing_ready:data.host.status==='ready' && !a.activation.pending() && !(data.runs || []).some(item=>!['completed','failed','rejected','cancelled'].includes(item.status))};
+      this.region('layout',JSON.stringify(editableLayout),target=>target.replaceChildren(this.layout.render(editableLayout)));
+      this.region('runs',JSON.stringify(data.runs),target=>{
+        target.replaceChildren(a.element('h2','Active runs and queue'),a.runTable(a.navigation.constructor.runs(data.runs || [])),
+          a.element('h2','Run history'),a.runTable(a.navigation.constructor.runs(data.runs || [],true)));
+      });
+      this.region('state',JSON.stringify(data.devices),target=>this.renderState(data,target));
+      if(mounted || force) {
+        if(['active','history'].includes(navigation.section))a.content.querySelector('[data-region=workstation-runs]').open=true;
+        if(navigation.section==='state')a.content.querySelector('[data-region=workstation-state]').open=true;
+      }
     }
-    const activeFingerprint=data.layout?.configuration_fingerprint;
-    if(a.activation.view?.active && activeFingerprint && activeFingerprint!==a.activation.view.active.fingerprint) {
-      a.activation.view.active.fingerprint=activeFingerprint;force=true;
-    }
-    if(mounted || force) a.programs.mountFiles();
-    const program=a.content.querySelector('[data-region=workstation-program]');
-    const switched=program.hidden!==Boolean(run);program.hidden=Boolean(run);
-    if(!run && (mounted || switched || force || !program.childNodes.length)) {
-      if(this.libraryError) program.replaceChildren(a.element('p',`Program selection unavailable: ${this.libraryError}`,'notice'));
-      else a.programs.render();
-    }
-    const layoutHost=a.content.querySelector('[data-region=workstation-layout-host]');
-    // A run's loading plan already includes the experiment-specific deck and contents.
-    layoutHost.hidden=Boolean(run?.status==='awaiting_setup' && run?.result?.os?.setup || !run && a.programs.inspection?.preparation?.plan);
-    const editableLayout={...data.layout,editing_ready:data.host.status==='ready' && !a.activation.pending() && !(data.runs || []).some(run=>!['completed','failed','rejected','cancelled'].includes(run.status))};
-    this.region('layout',JSON.stringify(editableLayout),target=>target.replaceChildren(this.layout.render(editableLayout)));
-    this.region('run',JSON.stringify([run,run ? null:data.host.status,a.setup.plans.get(run?.run_id),a.programs.controlMessages.get(run?.run_id)]),target=>{
-      if(run) a.renderRun(run,target);
-      else {const card=a.card('Station readiness');card.append(a.badge(data.host.status),a.element('p','Choose a protocol from Files. Its loading plan and execution results will appear here.','note'));target.replaceChildren(card);}
-    },force);
-    this.region('runs',JSON.stringify(data.runs),target=>{
-      target.replaceChildren(a.element('h2','Active runs and queue'),a.runTable(a.navigation.constructor.runs(data.runs || [])),
-        a.element('h2','Run history'),a.runTable(a.navigation.constructor.runs(data.runs || [],true)));
-    });
-    this.region('state',JSON.stringify(data.devices),target=>this.renderState(data,target));
-    if(mounted || force) {
-      if(['active','history'].includes(navigation.section)) a.content.querySelector('[data-region=workstation-runs]').open=true;
-      if(navigation.section==='state') a.content.querySelector('[data-region=workstation-state]').open=true;
-    }
-    a.interaction.view(run ? 'run':'station',{loadState:'ready',runId:run?.run_id,runState:run?.status,hostState:data.host.status,section:'workstation'});
-    if(run && (this.displayedRun!==run.run_id || this.displayedStatus!==run.status && ['completed','failed','cancelled','needs_reconciliation'].includes(run.status)))
-      a.content.querySelector('[data-region=run-outcome]')?.scrollIntoView({block:'start'});
-    this.displayedRun=run?.run_id;this.displayedStatus=run?.status;
-    if(data.host.blocked_run) a.showAlert(`Run ${data.host.blocked_run} retains the queue: ${a.display(data.host.blocked_reason)}. Inspect its evidence before further action.`);
-    else if(data.host.worker_error) a.showAlert(data.host.worker_error);
+    a.interaction.view(run ? 'run':navigation.page==='programs' ? 'programs':'station',
+      {loadState:'ready',runId:run?.run_id,runState:run?.status,hostState:data.host.status,section:navigation.page});
+    if(data.host.blocked_run)a.showAlert(`Run ${data.host.blocked_run} retains the queue: ${a.display(data.host.blocked_reason)}. Inspect its evidence before further action.`);
+    else if(data.host.worker_error)a.showAlert(data.host.worker_error);
   }
 
   async read(path, signal) {
@@ -144,7 +132,7 @@ export class ConsoleWorkstation {
       if(selected) {await a.programs.observeControl(selected.data.run_id);await a.setup.observe(selected.data);}
       if(route!==(location.hash || '#station')) {a.pending=true;return;}
       a.lastObserved=station.observed_at;
-      document.querySelector('#title').textContent='Workstation';a.navigation.select();
+      document.querySelector('#title').textContent=navigation.runId ? 'Experiment':navigation.page==='programs' ? 'Files':'Workstation';a.navigation.select();
       document.querySelector('#connection').replaceChildren(a.badge('Connected'));
       document.querySelector('#observed').textContent=`${a.display(station.data.host.status)} · Read ${new Date(station.observed_at).toLocaleTimeString()} · OS records`;
       const changedRun=this.runId!==selected?.data.run_id;

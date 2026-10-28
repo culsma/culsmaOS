@@ -13,6 +13,7 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
+    self.title = "CulsmaOS"
     accessibilityAdapter.attach(to: self)
   }
 }

@@ -26,6 +26,13 @@ class TokenInteractor:
                 self.repository.store_automation(hashlib.sha256(self.automation_token.encode()).hexdigest())
             return self.automation_token
 
+    def issue_renderer_session(self):
+        with self.lock:
+            token = secrets.token_urlsafe(32)
+            subject = 'local-renderer-' + secrets.token_hex(16)
+            self.repository.store_renderer(hashlib.sha256(token.encode()).hexdigest(), subject)
+            return token
+
     def execute(self, raw_credential):
         if (not isinstance(raw_credential,str) or not raw_credential.startswith('Bearer ')
                 or len(raw_credential) > 256):
@@ -34,10 +41,13 @@ class TokenInteractor:
         current = self.repository.current()
         if current is not None and hmac.compare_digest(current, digest):
             return CallerContext('local-console-process', frozenset({'configuration:drafts','configuration:activate',
-                'programs:execute','setup:operate','setup:confirm'}))
+                'consumables:simulate','programs:execute','setup:operate','setup:confirm','console:views:read','console:views:request'}))
         automation = self.repository.current_automation()
         if automation is not None and hmac.compare_digest(automation, digest):
-            return CallerContext('local-mcp-process', frozenset({'programs:execute','setup:operate'}))
+            return CallerContext('local-mcp-process', frozenset({'consumables:simulate','programs:execute','setup:operate','console:views:read','console:views:request'}))
+        renderer = self.repository.renderer(digest)
+        if renderer is not None:
+            return CallerContext(renderer, frozenset({'console:renderer'}))
         raise ConsoleAccessError('CONSOLE_SESSION_INVALID')
 
 
