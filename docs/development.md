@@ -414,7 +414,9 @@ Browsing is read-only. HTTP `/api/v1/files` and MCP `file_roots`, `list_director
 
 Single-click previews a file; double-click opens a folder or checks a `.culs` program.
 The native review highlights the required positions on the declared deck, links numbered
-loading cards to those positions, and uses driver-supplied display labels and generic
+loading cards to those positions. Carrier columns use letters, carrier sites keep numeric
+labels, and preparation items use P1/P2 markers; physical track numbers remain separate.
+The review uses driver-supplied display labels and generic
 container/plate/reservoir/tip symbols. Track pitch is preserved while scrolling. It lists
 the proposed container models, track/site locations,
 initial liquid amounts, empty wells and configured tip positions. **Run simulation**

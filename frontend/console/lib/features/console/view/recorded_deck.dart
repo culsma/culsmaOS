@@ -134,8 +134,8 @@ class RecordedDeckBoard extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              'C${index + 1}',
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+              RecordedDeck.carrierLabel(index),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
             for (final site in sites)
               Expanded(

@@ -7,6 +7,7 @@ import 'package:culsma_console/features/console/interactor/run_review_interactor
 import 'package:culsma_console/features/console/view/preparation_layout.dart';
 import 'package:culsma_console/features/console/view/recorded_deck.dart';
 import 'package:culsma_console/features/console/view/labware_symbol.dart';
+import 'package:culsma_console/features/console/model/console_model.dart';
 
 void main() {
   final fixture = jsonDecode(
@@ -28,7 +29,7 @@ void main() {
     'real driver loading plan retains readable types and exact layout identities',
     () {
       final items = review.loadingItems(plan);
-      expect(items.map((i) => i['number']), ['1', '2', '3', '4']);
+      expect(items.map((i) => i['number']), ['P1', 'P2', 'P3', 'P4']);
       expect(items.map((i) => i['kind']), [
         'reservoir',
         'reservoir',
@@ -37,11 +38,25 @@ void main() {
       ]);
       expect(items.last['title'], 'Filter tip rack');
       expect(items.last['id'], 'HTF_B4_TEST');
+      expect(items.last['carrier_address'], 'Carrier B · Site 4');
+      expect(items.first['carrier_address'], 'Carrier F · Site 2');
+      expect(items[2]['carrier_address'], 'Carrier E · Site 4');
       expect(items.first['model_label'], contains('60 mL reagent vessel'));
       expect(items[2]['title'], 'Destination plate');
       expect(items[2]['placement']['track'], '29');
     },
   );
+  test('carrier letters never become physical rail numbers', () {
+    expect(RecordedDeck.carrierLabel(0), 'A');
+    expect(RecordedDeck.carrierLabel(11), 'L');
+    expect(RecordedDeck.carrierLabel(25), 'Z');
+    expect(RecordedDeck.carrierLabel(26), 'AA');
+    expect(() => RecordedDeck.carrierLabel(-1), throwsRangeError);
+    expect(
+      review.carrierAddress({}, {'track': '10', 'site': '4'}),
+      'Track 10 · Position 4',
+    );
+  });
   for (final width in [1280.0, 390.0]) {
     testWidgets(
       'graphical loading plan golden and persistent scrolling $width',

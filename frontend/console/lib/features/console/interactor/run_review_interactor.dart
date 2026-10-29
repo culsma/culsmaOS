@@ -1,3 +1,5 @@
+import '../model/console_model.dart';
+
 /// Presents the existing loading plan without inventing inventory or hardware facts.
 class NativeRunReviewInteractor {
   bool simulationAvailable(Map? station, [Map? inspection]) {
@@ -72,7 +74,8 @@ class NativeRunReviewInteractor {
         'model_label':
             item['display']?['label'] ?? 'Container model not described',
         'supply': false,
-        'number': '${result.length + 1}',
+        'carrier_address': carrierAddress(plan, item['placement']),
+        'number': 'P${result.length + 1}',
       });
     }
     for (final supply in plan['supplies'] as List? ?? []) {
@@ -86,10 +89,20 @@ class NativeRunReviewInteractor {
             supply['display']?['label'] ?? 'Supply model not described',
         'supply': true,
         'placement': supply,
-        'number': '${result.length + 1}',
+        'carrier_address': carrierAddress(plan, supply),
+        'number': 'P${result.length + 1}',
       });
     }
     return result;
+  }
+
+  String carrierAddress(Map plan, Map? placement) {
+    final scene = plan['layout']?['definition']?['diagram']?['scene'];
+    final carriers = scene?['carriers'] as List? ?? [];
+    final index = carriers.indexWhere((c) => c['id'] == placement?['carrier']);
+    if (index < 0) return location(placement);
+    final site = placement?['site'];
+    return 'Carrier ${RecordedDeck.carrierLabel(index)}${site == null ? '' : ' · Site $site'}';
   }
 
   String tipInstruction(Map supply) {

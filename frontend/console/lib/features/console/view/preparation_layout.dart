@@ -54,7 +54,7 @@ class NativePreparationLayoutState extends State<NativePreparationLayout> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Highlighted positions are needed for this experiment. Match the numbered positions to the loading cards below.',
+          'Highlighted positions are needed for this experiment. Letters identify carriers; numbers inside each carrier identify sites. P1, P2… link preparation items to the cards below.',
         ),
         const SizedBox(height: 12),
         if (deck != null)
@@ -145,11 +145,21 @@ class NativePreparationLayoutState extends State<NativePreparationLayout> {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                widget.review.location(item['placement']),
+                                item['carrier_address'],
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              if (item['placement']?['track'] != null &&
+                                  item['carrier_address'] !=
+                                      widget.review.location(item['placement']))
+                                Text(
+                                  'Physical track ${item['placement']['track']}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xff62798c),
+                                  ),
+                                ),
                               if (item['supply'] != true) ...[
                                 const SizedBox(height: 6),
                                 Text(item['model_label']),

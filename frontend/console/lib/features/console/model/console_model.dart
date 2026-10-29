@@ -30,6 +30,19 @@ class RecordedDeck {
   final String label;
   final List<Map<String, dynamic>> positions, carriers;
   RecordedDeck(this.label, this.positions, this.carriers);
+
+  /// Presentation labels follow carrier order, independently of physical rails.
+  static String carrierLabel(int index) {
+    if (index < 0) throw RangeError.value(index, 'index');
+    var value = index + 1, label = '';
+    while (value > 0) {
+      value--;
+      label = String.fromCharCode(65 + value % 26) + label;
+      value ~/= 26;
+    }
+    return label;
+  }
+
   static RecordedDeck? fromLayout(Map<String, dynamic>? envelope) {
     if (envelope?['status'] != 'available') return null;
     final definition = envelope?['layout']?['definition'];
