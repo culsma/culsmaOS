@@ -6,7 +6,7 @@ from culsma_os.auth.interactors import AuthorizedInteractor
 from culsma_os.program_manager.models import ConsoleReadRequest
 from .models import ViewInteractionError, ViewStateReadRequest, ViewRequest, RendererSessionRequest, RendererSession, ViewReceipt
 
-VIEWS = {'desktop', 'experiment', 'workstation', 'files', 'settings', 'system_info'}
+VIEWS = {'desktop', 'experiment', 'workstation', 'files', 'settings', 'system_info', 'developer'}
 
 
 def validate_identifier(value):
@@ -109,7 +109,7 @@ class ViewRequestInteractor(AuthorizedInteractor):
             raise ViewInteractionError('CONSOLE_VIEW_TARGET_REQUIRED')
         if request.action == 'reveal' and (request.view != 'workstation' or request.entity_id is None):
             raise ViewInteractionError('CONSOLE_VIEW_REVEAL_UNSUPPORTED')
-        if request.view in {'desktop', 'files', 'settings', 'system_info'} and request.entity_id is not None:
+        if request.view in {'desktop', 'files', 'settings', 'system_info', 'developer'} and request.entity_id is not None:
             raise ViewInteractionError('CONSOLE_VIEW_TARGET_UNEXPECTED')
 
     def validate_target(self, request):

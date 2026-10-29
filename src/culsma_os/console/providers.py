@@ -62,6 +62,7 @@ class ConsoleApplicationFactory:
             settings.program_store or Path('run-artifacts/console/programs'), settings.home_path),CompilationInteractor(),HostedRuntimeInteractor())
         from culsma_os.workspace_manager.interactors import LabwareConfigurationInteractor
         from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
+        from culsma_os.developer_tools.interactors import DeveloperTestInteractor
         return ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
             StationConfigurationInteractor(tokens,repository,profiles),ConsoleSessionInteractor(tokens),
             ConsoleProgramInteractor(tokens,source,ResidentClientAdapter(settings.socket_path,timeout=10),{"installation":self.installation_source(settings)}),
@@ -72,7 +73,8 @@ class ConsoleApplicationFactory:
             LabwareConfigurationInteractor(tokens,repository,ResidentClientAdapter(settings.socket_path,timeout=10)),
             *self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3))),
             supplies=SupplyInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
-            file_reads=self.build_files(settings,tokens,source))
+            file_reads=self.build_files(settings,tokens,source),
+            developer_tests=DeveloperTestInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)))
 
     def build_mcp(self, settings):
         from .adapters.mcp import MCPServerAdapter

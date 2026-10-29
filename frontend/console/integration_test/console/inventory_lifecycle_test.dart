@@ -173,6 +173,32 @@ void main() {
         await tester.pumpWidget(CulsmaConsole(controller: layout, console: c));
         await tester.pumpAndSettle();
         if (const bool.fromEnvironment('INDEPENDENT_SIMULATION')) {
+          c.open('developer');
+          await tester.pumpAndSettle();
+          final beforeTests = (await api.read('/api/v1/station'))['runs'];
+          for (final scenario in [
+            'tip_unavailable',
+            'liquid_insufficient',
+            'interrupted',
+          ]) {
+            await tester.tap(find.byKey(ValueKey('fault-test-$scenario')));
+            for (var i = 0; i < 100 && c.developer.busy; i++) {
+              await tester.pump(const Duration(milliseconds: 100));
+              await Future<void>.delayed(const Duration(milliseconds: 30));
+            }
+            await tester.pumpAndSettle();
+            expect(c.developer.error, isNull);
+            expect(c.developer.result?['supported'], isTrue);
+            expect(find.text('INJECTED TEST RESULT'), findsOneWidget);
+            expect(find.text('Processing flow'), findsOneWidget);
+            expect(find.text('Register new box'), findsNothing);
+            expect(c.developer.result?['station_changed'], isFalse);
+            await tester.ensureVisible(find.text('Clear test result'));
+            await tester.tap(find.text('Clear test result'));
+            await tester.pumpAndSettle();
+          }
+          expect((await api.read('/api/v1/station'))['runs'], beforeTests);
+
           c.open('workstation');
           await tester.pumpAndSettle();
           expect(find.text('Replace tip box…'), findsNothing);

@@ -12,6 +12,7 @@ class ConsoleDesktop extends StatelessWidget {
     'workstation': Icons.grid_view,
     'settings': Icons.settings_outlined,
     'system_info': Icons.info_outline,
+    'developer': Icons.bug_report_outlined,
   };
   @override
   Widget build(BuildContext context) => AnimatedBuilder(

@@ -396,6 +396,9 @@ class ResidentCommandFactory:
         replacement_port=getattr(factory,'build_consumable_replacement',lambda context:None)(context)
         devices=self.applications.build_device_inspector(context)
         supplies=SupplyReplacementInteractor(SqliteSupplyLoadRepository(supply_connection),supply_guard,replacement_port,devices)
+        from .developer_tools.interactors import FaultTestInteractor
+        test_port=getattr(factory,'build_fault_tests',lambda context:None)(context)
+        fault_tests=FaultTestInteractor(test_port, NormalizedReceiptInteractor(getattr(test_port,'fault_mapper',None)))
         return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
             HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
-            devices,configuration,setup_requests,layout,labware,preview,supplies)
+            devices,configuration,setup_requests,layout,labware,preview,supplies,fault_tests)

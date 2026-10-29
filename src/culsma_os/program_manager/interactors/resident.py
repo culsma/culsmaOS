@@ -6,7 +6,7 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None, fault_tests=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
         self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
@@ -15,8 +15,13 @@ class ResidentCommandInteractor:
         self.labware = labware
         self.setup_preview = setup_preview
         self.supplies = supplies
+        self.fault_tests = fault_tests
 
     def execute(self, request):
+        if request.action == 'developer-test':
+            if self.fault_tests is None:
+                raise ValueError('DEVELOPER_TEST_UNAVAILABLE')
+            return self.fault_tests.execute(request.developer_scenario)
         if request.action in {'supply-show','supply-replace','supply-status'}:
             if self.supplies is None:raise ValueError('SUPPLY_REPLACEMENT_UNSUPPORTED')
             return self.supplies.execute(request.action.removeprefix('supply-'),request.supply_change or {},request.supply_origin,self.require_idle_configuration)

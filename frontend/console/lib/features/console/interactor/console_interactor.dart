@@ -14,6 +14,7 @@ import 'run_control_interactor.dart';
 import 'system_information_interactor.dart';
 import 'file_browser_interactor.dart';
 import 'run_review_interactor.dart';
+import 'developer_interactor.dart';
 
 /// Native presentation coordinator. Backend Interactors own every experiment decision.
 class NativeConsoleInteractor extends ChangeNotifier {
@@ -21,6 +22,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   final review = NativeRunReviewInteractor();
   final LayoutController layout;
   final PendingRequestRepository? requests;
+  late final NativeDeveloperInteractor developer;
   late final NativeFileBrowserInteractor files;
   late final NativeLabwareInteractor labware;
   late final NativeSetupInteractor setup;
@@ -44,6 +46,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
     ConsoleMutationRepository? mutations,
     String initialView = 'files',
   }) {
+    developer = NativeDeveloperInteractor(api)..addListener(notifyViewChanged);
     files = NativeFileBrowserInteractor(api)..addListener(notifyViewChanged);
     labware = NativeLabwareInteractor(api, mutations)
       ..addListener(notifyViewChanged);
@@ -488,6 +491,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   void dispose() {
     disposed = true;
     timer?.cancel();
+    developer.dispose();
     files.dispose();
     information.dispose();
     controls.dispose();

@@ -1,0 +1,168 @@
+[
+  {
+    "supported": true,
+    "test_only": true,
+    "scenario": "tip_unavailable",
+    "test_id": "developer-fixture",
+    "outcome": "rejected",
+    "faults": [
+      {
+        "code": "TIP_UNAVAILABLE",
+        "source": "simulation",
+        "execution_state": "not_started",
+        "operation_id": "developer-step",
+        "location": null,
+        "native_details": {
+          "code": "HAM_LOCAL_TIP_UNAVAILABLE",
+          "backend_diagnostic": "HAM_LOCAL_TIP_UNAVAILABLE"
+        }
+      }
+    ],
+    "guidance": {
+      "schema": "culsma_run_guidance_v1",
+      "kind": "preparation",
+      "actions": [
+        "open_workstation",
+        "refresh"
+      ],
+      "device_activity": "none_recorded",
+      "title": "Tips need attention",
+      "message": "The local simulation reported this condition. No physical inspection was performed.",
+      "faults": [
+        {
+          "code": "TIP_UNAVAILABLE",
+          "source": "simulation",
+          "execution_state": "not_started",
+          "operation_id": "developer-step",
+          "location": null,
+          "native_details": {
+            "code": "HAM_LOCAL_TIP_UNAVAILABLE",
+            "backend_diagnostic": "HAM_LOCAL_TIP_UNAVAILABLE"
+          }
+        }
+      ],
+      "next_steps": [
+        "Review the declared loading plan and device settings."
+      ]
+    },
+    "flow": [
+      "Injected into private model state",
+      "Driver converted the diagnostic",
+      "OS validated the fault receipt",
+      "Operator guidance generated"
+    ],
+    "recovery_allowed": false,
+    "station_changed": false
+  },
+  {
+    "supported": true,
+    "test_only": true,
+    "scenario": "liquid_insufficient",
+    "test_id": "developer-fixture",
+    "outcome": "rejected",
+    "faults": [
+      {
+        "code": "LIQUID_INSUFFICIENT",
+        "source": "simulation",
+        "execution_state": "not_started",
+        "operation_id": "developer-step",
+        "location": null,
+        "native_details": {
+          "code": "HAM_LOCAL_INVENTORY_INSUFFICIENT",
+          "backend_diagnostic": "HAM_LOCAL_INVENTORY_INSUFFICIENT"
+        }
+      }
+    ],
+    "guidance": {
+      "schema": "culsma_run_guidance_v1",
+      "kind": "preparation",
+      "actions": [
+        "open_workstation",
+        "refresh"
+      ],
+      "device_activity": "none_recorded",
+      "title": "The liquid supply needs attention",
+      "message": "The local simulation reported this condition. No physical inspection was performed.",
+      "faults": [
+        {
+          "code": "LIQUID_INSUFFICIENT",
+          "source": "simulation",
+          "execution_state": "not_started",
+          "operation_id": "developer-step",
+          "location": null,
+          "native_details": {
+            "code": "HAM_LOCAL_INVENTORY_INSUFFICIENT",
+            "backend_diagnostic": "HAM_LOCAL_INVENTORY_INSUFFICIENT"
+          }
+        }
+      ],
+      "next_steps": [
+        "Review the declared loading plan and device settings."
+      ]
+    },
+    "flow": [
+      "Injected into private model state",
+      "Driver converted the diagnostic",
+      "OS validated the fault receipt",
+      "Operator guidance generated"
+    ],
+    "recovery_allowed": false,
+    "station_changed": false
+  },
+  {
+    "supported": true,
+    "test_only": true,
+    "scenario": "interrupted",
+    "test_id": "developer-fixture",
+    "outcome": "unknown",
+    "faults": [
+      {
+        "code": "DEVICE_ERROR",
+        "source": "simulation",
+        "execution_state": "unknown",
+        "operation_id": "developer-step",
+        "location": null,
+        "native_details": {
+          "code": "HAM_LOCAL_INJECTED_INTERRUPTION",
+          "backend_diagnostic": "HAM_LOCAL_INJECTED_INTERRUPTION"
+        }
+      }
+    ],
+    "guidance": {
+      "schema": "culsma_run_guidance_v1",
+      "kind": "attention",
+      "actions": [
+        "open_workstation",
+        "refresh"
+      ],
+      "device_activity": "recorded",
+      "title": "The device reported a problem",
+      "message": "The local simulation reported this condition. No physical inspection was performed.",
+      "faults": [
+        {
+          "code": "DEVICE_ERROR",
+          "source": "simulation",
+          "execution_state": "unknown",
+          "operation_id": "developer-step",
+          "location": null,
+          "native_details": {
+            "code": "HAM_LOCAL_INJECTED_INTERRUPTION",
+            "backend_diagnostic": "HAM_LOCAL_INJECTED_INTERRUPTION"
+          }
+        }
+      ],
+      "next_steps": [
+        "Review the declared loading plan and device settings.",
+        "Execution remains isolated. An acknowledgement does not authorize repeating an action or resuming the device."
+      ]
+    },
+    "flow": [
+      "Injected into private model state",
+      "Driver converted the diagnostic",
+      "OS validated the fault receipt",
+      "Operator guidance generated"
+    ],
+    "recovery_allowed": false,
+    "station_changed": false
+  }
+]

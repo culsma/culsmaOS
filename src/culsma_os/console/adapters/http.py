@@ -18,10 +18,11 @@ from culsma_os.console_interaction.models import ViewInteractionError, ViewState
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None, file_reads=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None, file_reads=None, developer_tests=None):
         self.view_reads, self.view_requests, self.renderer_sessions = view_reads, view_requests, renderer_sessions
         self.settings = settings
         self.file_reads=file_reads
+        self.developer_tests=developer_tests
         self.supplies = supplies
         self.labware = labware
         self.commands, self.configuration, self.sessions = commands, configuration, sessions
@@ -222,11 +223,17 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
     def renderer_request(self, payload):
         return self.interaction_request(payload, RendererSessionRequest)
 
+    def developer_request(self,payload):
+        from culsma_os.developer_tools.models import FaultTestRequest
+        if not isinstance(payload,dict) or set(payload)!={'scenario'} or not isinstance(payload['scenario'],str):
+            raise ConsoleReadError('DEVELOPER_REQUEST_INVALID','invalid_request')
+        return FaultTestRequest(**payload)
+
     def do_POST(self):
         try:
             url = urlsplit(self.path)
             self.validate_context(True)
-            endpoints = {'/api/v1/files':(self.server.file_reads,self.file_request,'culsma_files_v1'),'/api/v1/consumables':(self.server.supplies,self.supply_request,'culsma_supply_v1'),'/api/v1/console/views/read':(self.server.view_reads,self.view_read_request,'culsma_view_interaction_v1'),
+            endpoints = {'/api/v1/developer/fault-test':(self.server.developer_tests,self.developer_request,'culsma_developer_test_v1'),'/api/v1/files':(self.server.file_reads,self.file_request,'culsma_files_v1'),'/api/v1/consumables':(self.server.supplies,self.supply_request,'culsma_supply_v1'),'/api/v1/console/views/read':(self.server.view_reads,self.view_read_request,'culsma_view_interaction_v1'),
                          '/api/v1/console/views/request':(self.server.view_requests,self.view_request,'culsma_view_interaction_v1'),
                          '/api/v1/console/renderer':(self.server.renderer_sessions,self.renderer_request,'culsma_view_interaction_v1'),
                          '/api/v1/configuration/labware':(self.server.labware,self.labware_request,'culsma_configuration_v1'),'/api/v1/setup':(self.server.setup_commands,self.setup_request,'culsma_setup_console_v1'),

@@ -22,6 +22,7 @@ class ConsoleWindowDescriptor {
     ConsoleWindowDescriptor('workstation', 'Workstation'),
     ConsoleWindowDescriptor('settings', 'System Settings'),
     ConsoleWindowDescriptor('system_info', 'System Info'),
+    ConsoleWindowDescriptor('developer', 'Developer'),
   ];
 }
 
