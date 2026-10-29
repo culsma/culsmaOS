@@ -4,6 +4,7 @@ import 'features/layout/interactor/layout_controller.dart';
 import 'features/console/interactor/console_interactor.dart';
 import 'features/console/view/desktop_shell.dart';
 import 'features/console/interactor/renderer_interactor.dart';
+import 'features/console/view/accessibility_scope.dart';
 
 class CulsmaConsole extends StatefulWidget {
   final LayoutController controller;
@@ -60,6 +61,7 @@ class CulsmaConsoleState extends State<CulsmaConsole>
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
     title: 'CulsmaOS',
+    builder: (context, child) => NativeAccessibilityScope(child: child!),
     theme: ThemeData(
       useMaterial3: true,
       fontFamily: 'Console',

@@ -146,6 +146,7 @@ class NativeFileBrowserView extends StatelessWidget {
                   ? Icons.expand_more
                   : Icons.chevron_right,
               size: 16,
+              semanticLabel: 'Expand ${row['name']}',
             ),
           ),
           Expanded(

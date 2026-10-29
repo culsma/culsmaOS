@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -44,6 +45,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Native installation preview'), findsOneWidget);
       expect(c.runs, isEmpty);
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(
+        location: tester.getCenter(find.byKey(const Key('files-refresh'))),
+      );
+      await tester.pump(const Duration(milliseconds: 800));
+      await mouse.moveTo(
+        tester.getCenter(find.byKey(const Key('launcher-workstation'))),
+      );
+      await tester.pump(const Duration(milliseconds: 800));
+      await mouse.moveTo(
+        tester.getCenter(find.byKey(const Key('launcher-files'))),
+      );
+      await tester.pump(const Duration(milliseconds: 800));
       final folder = find.byKey(
         const ValueKey('file-entry-installation-examples'),
       );
@@ -52,6 +66,10 @@ void main() {
       await tester.tap(folder);
       await tester.pumpAndSettle();
       expect(c.files.path, 'examples');
+      await mouse.moveTo(tester.getCenter(find.byKey(const Key('files-up'))));
+      await tester.pump(const Duration(milliseconds: 800));
+      await mouse.moveTo(tester.getCenter(find.byKey(const Key('files-back'))));
+      await tester.pump(const Duration(milliseconds: 800));
       final file = find.byKey(
         const ValueKey('file-entry-installation-examples/transfer.culs'),
       );
@@ -73,6 +91,7 @@ void main() {
       );
       expect(find.textContaining(RegExp(r'100(?:\.0)? µL')), findsWidgets);
       expect(tester.takeException(), isNull);
+      await mouse.removePointer();
       await tester.pumpWidget(const SizedBox());
     } finally {
       c.dispose();

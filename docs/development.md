@@ -452,3 +452,11 @@ receipts, results, window restoration and an MCP display receipt. No remote simu
 `tools/test_native_operations.py` checks native diagram remove/place and explicit
 loading confirmation through the real OS/HTTP boundary with an isolated device
 double. It does not use or replenish the live preview inventory.
+
+
+Native accessibility remains enabled for screen readers and external AI clients.
+The pinned Flutter 3.47.7 tooltip overlay path can corrupt native AX trees during
+hover and view transitions (flutter/flutter#182444, #175041). The console-wide
+`NativeAccessibilityScope` suppresses hover tooltips while retaining explicit
+control labels and actions. Native file E2E includes pointer hover and rejects AX
+tree errors in the process log; revisit this guard after an SDK fix is verified.

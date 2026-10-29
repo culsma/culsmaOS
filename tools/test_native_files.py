@@ -30,6 +30,7 @@ def run():
             with (output/'flutter-e2e.log').open('w') as log:
                 result=subprocess.run([flutter,'test','integration_test/files_test.dart','-d','macos','--no-pub',
                     '--dart-define=E2E_ORIGIN='+shared.url],cwd=ROOT/'frontend/console',stdout=log,stderr=subprocess.STDOUT,timeout=120)
+            assert 'Failed to update ui::AXTree' not in (output/'flutter-e2e.log').read_text(),'Native accessibility tree became invalid; see flutter-e2e.log'
             assert result.returncode==0,'See run-artifacts/native-files/flutter-e2e.log'
             runs=shared.client.execute({'action':'runs'})['runs']
             assert len(runs)==1 and runs[0]['status']=='completed',runs
