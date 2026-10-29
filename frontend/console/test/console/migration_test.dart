@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:culsma_console/features/console/interactor/protocol_tree_interactor.dart';
 import 'package:culsma_console/features/console/interactor/system_information_interactor.dart';
-import 'package:culsma_console/features/console/view/protocol_tree_view.dart';
 import 'package:culsma_console/features/layout/model/layout_model.dart';
 import 'package:culsma_console/features/console/view/system_information_view.dart';
 import 'package:culsma_console/features/console/interactor/console_interactor.dart';
@@ -97,42 +95,6 @@ void main() {
     },
   );
   test(
-    'tree sorts folders first, handles metadata-like names and preserves duplicate basenames',
-    () {
-      final c = ProtocolTreeInteractor();
-      final nodes = c.build([
-        {'program_id': 'z.culs'},
-        {'program_id': 'B/sample.culs'},
-        {'program_id': 'a/sample.culs'},
-        {'program_id': 'program_id/protocol.culs'},
-      ]);
-      expect(nodes.map((n) => n.name), ['a', 'B', 'program_id', 'z.culs']);
-      expect(nodes[0].children.single.path, 'a/sample.culs');
-      expect(nodes[1].children.single.path, 'B/sample.culs');
-      expect(nodes[2].children.single.path, 'program_id/protocol.culs');
-      for (final invalid in [
-        '/absolute.culs',
-        '../escape.culs',
-        'a//b.culs',
-        'a/./b.culs',
-      ]) {
-        expect(
-          () => c.build([
-            {'program_id': invalid},
-          ]),
-          throwsFormatException,
-        );
-      }
-      expect(
-        () => c.build([
-          {'program_id': 'same.culs'},
-          {'program_id': 'same.culs/child.culs'},
-        ]),
-        throwsFormatException,
-      );
-    },
-  );
-  test(
     'nested layout objects resolve to a deck position, never an internal site',
     () {
       final profile = LayoutFixture.profile(),
@@ -148,43 +110,6 @@ void main() {
       final definition = LayoutDefinition(profile['layout'], configuration);
       expect(definition.presentationPosition(configuration, 'on_module'), '3');
       expect(definition.presentationPosition(configuration, 'missing'), isNull);
-    },
-  );
-  testWidgets(
-    'folder expansion does not run; nested file retains its complete program ID',
-    (tester) async {
-      final opened = <String>[], inspected = <String>[];
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: NativeProtocolTree(
-              programs: const [
-                {'program_id': 'folder/deep/test.culs'},
-                {'program_id': 'other/test.culs'},
-              ],
-              selected: null,
-              busy: false,
-              inspect: inspected.add,
-              run: opened.add,
-            ),
-          ),
-        ),
-      );
-      expect(find.text('test.culs'), findsOneWidget);
-      await tester.tap(find.text('deep'));
-      await tester.pumpAndSettle();
-      expect(opened, isEmpty);
-      final file = find.byKey(
-        const ValueKey('program-file:folder/deep/test.culs'),
-      );
-      await tester.tap(file);
-      await tester.pump(const Duration(milliseconds: 350));
-      expect(inspected, ['folder/deep/test.culs']);
-      await tester.tap(file);
-      await tester.pump(const Duration(milliseconds: 40));
-      await tester.tap(file);
-      await tester.pumpAndSettle();
-      expect(opened, ['folder/deep/test.culs']);
     },
   );
   testWidgets(

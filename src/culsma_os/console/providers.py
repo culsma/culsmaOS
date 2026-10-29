@@ -39,6 +39,21 @@ class ConsoleApplicationFactory:
         return ConsoleApplicationLifecycleInteractor(server, server.sessions, NativeConsoleProcessAdapter(executable),
             ResidentProcessAdapter(resident_command, log_path, Path(log_path).parent/'stations') if resident_command else None)
 
+    def installation_root(self,settings):
+        from culsma_os.file_system.interactors import InstallationRootInteractor
+        return settings.file_root or InstallationRootInteractor().resolve(Path(__file__).parent.parent)
+
+    def installation_source(self,settings):
+        return ProgramSourceInteractor(FileProgramSourceRepository(self.installation_root(settings),
+            (settings.program_store or Path('run-artifacts/console/programs'))/'installation',selected_only=True),
+            CompilationInteractor(),HostedRuntimeInteractor(),selected_only=True)
+
+    def build_files(self,settings,tokens,source):
+        from culsma_os.file_system.interactors import FileReadInteractor
+        from culsma_os.file_system.repository import LocalFileReadRepository
+        return FileReadInteractor(tokens,LocalFileReadRepository({'installation':self.installation_root(settings),
+            'programs':source.sources.root},(source.sources.store,)),source.sources.root)
+
     def build(self, settings):
         tokens = TokenInteractor(SessionCredentialRepository())
         repository = SqliteStationConfigurationRepository(settings.drafts_path or Path('run-artifacts/console/drafts.sqlite3'))
@@ -49,14 +64,15 @@ class ConsoleApplicationFactory:
         from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
         return ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
             StationConfigurationInteractor(tokens,repository,profiles),ConsoleSessionInteractor(tokens),
-            ConsoleProgramInteractor(tokens,source,ResidentClientAdapter(settings.socket_path,timeout=10)),
+            ConsoleProgramInteractor(tokens,source,ResidentClientAdapter(settings.socket_path,timeout=10),{"installation":self.installation_source(settings)}),
             ProgramBindingInteractor(tokens,repository,profiles,source),
             ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),ResidentClientAdapter(settings.socket_path,timeout=10)),
             SetupInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
             SetupConfirmationInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
             LabwareConfigurationInteractor(tokens,repository,ResidentClientAdapter(settings.socket_path,timeout=10)),
             *self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3))),
-            supplies=SupplyInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)))
+            supplies=SupplyInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
+            file_reads=self.build_files(settings,tokens,source))
 
     def build_mcp(self, settings):
         from .adapters.mcp import MCPServerAdapter
@@ -68,6 +84,6 @@ class ConsoleApplicationFactory:
         view_reads, view_requests, _ = self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(resident))
         from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
         bridge = MCPServerAdapter(SetupInteractionInteractor(tokens,resident),
-            ConsoleProgramInteractor(tokens,source,resident),
-            AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)),view_reads,view_requests,SupplyInteractionInteractor(tokens,resident))
+            ConsoleProgramInteractor(tokens,source,resident,{"installation":self.installation_source(settings)}),
+            AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)),view_reads,view_requests,SupplyInteractionInteractor(tokens,resident),self.build_files(settings,tokens,source))
         return MCPHostInteractor(tokens,bridge)

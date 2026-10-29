@@ -7,13 +7,16 @@ from ..models import ConsoleProgramRequest, ConsoleProgramError, ResidentCommand
 class ConsoleProgramInteractor(AuthorizedInteractor):
     required_capability = 'programs:execute'
 
-    def __init__(self, tokens, source, resident: ResidentCommandPort):
+    def __init__(self, tokens, source, resident: ResidentCommandPort, scopes=None):
         super().__init__(tokens)
         self.source, self.resident = source, resident
+        self.scopes={"programs":source,**(scopes or {})}
 
     def perform(self, request):
         if not isinstance(request,ConsoleProgramRequest) or not isinstance(request.action,str):
             raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
+        if not isinstance(request.source_scope,str) or request.source_scope not in self.scopes or request.source_scope!='programs' and request.action not in {'inspect','preview','submit','start'}:raise ConsoleProgramError('PROGRAM_SOURCE_SCOPE_INVALID')
+        source=self.scopes[request.source_scope]
         values = {'program_id':request.program_id,'snapshot_id':request.snapshot_id,
                   'request_id':request.request_id,'run_id':request.run_id}
         if request.configuration_fingerprint is not None:
@@ -32,8 +35,8 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
             self.validate_identity(request.run_id)
             return {'acknowledgement':self.command({'action':request.action,'run_id':request.run_id,'request_id':request.request_id}),
                     'effect':'control_status' if request.action=='control-status' else 'queued_control_request'}
-        snapshot = self.source.snapshot(None if request.action in {'inspect','preview'} else request.snapshot_id)
-        inspection = self.source.inspect_snapshot(snapshot,request.program_id)
+        snapshot = source.snapshot(None if request.action in {'inspect','preview'} else request.snapshot_id,request.program_id)
+        inspection = source.inspect_snapshot(snapshot,request.program_id)
         if request.action == 'inspect':
             return inspection
         if request.action == 'preview':

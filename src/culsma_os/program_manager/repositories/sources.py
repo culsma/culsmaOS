@@ -17,12 +17,13 @@ class FileProgramSourceRepository:
     max_file_bytes = 250000
     max_total_bytes = 2000000
 
-    def __init__(self, root, store, home=None):
+    def __init__(self, root, store, home=None, *, selected_only=False):
         self.home = Path(home).expanduser().resolve() if home is not None else None
         self.root = Path(root).expanduser().resolve() if root is not None else self.home / "projects" if self.home else None
         self.store = Path(store).resolve()
         self.lock = Lock()
-        if self.root is not None and self.store.is_relative_to(self.root):
+        self.selected_only=selected_only
+        if not selected_only and self.root is not None and self.store.is_relative_to(self.root):
             raise ConsoleProgramError('PROGRAM_STORE_INSIDE_SOURCE_ROOT')
 
     def initialize_home(self):
@@ -107,7 +108,15 @@ class FileProgramSourceRepository:
         encoded = json.dumps(sources, sort_keys=True, ensure_ascii=True, separators=(',', ':')).encode()
         return hashlib.sha256(encoded).hexdigest()
 
+    def read_live_source(self,name):
+        if self.root is None:raise ConsoleProgramError('PROGRAM_LIBRARY_DISABLED','unavailable')
+        self.validate_id(name)
+        if self.selected_only and (any(part.startswith('.') for part in name.split('/')) or (self.root/name).is_relative_to(self.store)):
+            raise ConsoleProgramError('PROGRAM_ID_INVALID')
+        return self.read_file(self.root,name)
+
     def capture(self):
+        if self.selected_only:raise ConsoleProgramError('PROGRAM_SELECTION_REQUIRED')
         if self.root is None:
             raise ConsoleProgramError('PROGRAM_LIBRARY_DISABLED', 'unavailable')
         sources = {}
@@ -117,6 +126,14 @@ class FileProgramSourceRepository:
             total += len(sources[name].encode())
             if total > self.max_total_bytes:
                 raise ConsoleProgramError('PROGRAM_LIBRARY_TOO_LARGE')
+        return self.store_snapshot(sources)
+
+    def store_snapshot(self,sources):
+        if len(sources)>self.max_files or sum(len(value.encode()) for value in sources.values())>self.max_total_bytes:
+            raise ConsoleProgramError('PROGRAM_LIBRARY_TOO_LARGE')
+        for name,value in sources.items():
+            self.validate_id(name)
+            if len(value.encode())>self.max_file_bytes:raise ConsoleProgramError('PROGRAM_SOURCE_TOO_LARGE')
         snapshot_id = self.fingerprint(sources)
         with self.lock:
             self.store.mkdir(parents=True, exist_ok=True, mode=0o700)

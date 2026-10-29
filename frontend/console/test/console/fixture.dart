@@ -64,6 +64,54 @@ class NativeConsoleFixtureApi extends FakeConsoleApi {
     String path,
     Map<String, dynamic> body,
   ) async {
+    if (path == '/api/v1/files') {
+      calls.add({'path': path, ...body});
+      if (body['action'] == 'roots')
+        return {
+          'default_root': 'installation',
+          'roots': [
+            {
+              'id': 'installation',
+              'label': 'culsmaOS',
+              'path': '/Culsma/culsmaOS',
+              'available': true,
+            },
+            {
+              'id': 'programs',
+              'label': 'Experiments',
+              'path': '/Culsma/projects',
+              'available': true,
+            },
+          ],
+        };
+      if (body['action'] == 'preview')
+        return {
+          'preview': 'text',
+          'content': 'Protocol source',
+          'truncated': false,
+        };
+      return {
+        'entries': [
+          {
+            'name': 'transfer.culs',
+            'path': 'transfer.culs',
+            'kind': 'file',
+            'extension': '.culs',
+            'size': 120,
+            'modified_ns': 0,
+            'openable': true,
+            'program': {
+              'program_id': 'transfer.culs',
+              'source_scope': body['root'] == 'installation'
+                  ? 'installation'
+                  : 'programs',
+            },
+          },
+        ],
+        'total': 1,
+        'next_offset': null,
+      };
+    }
     if (path == '/api/v1/consumables')
       return {'supported': false, 'reason': 'Test device has no stock port.'};
     if (path == '/api/v1/programs') {

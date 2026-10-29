@@ -120,7 +120,7 @@ credential bootstrap.
 
 | Window | Existing functionality |
 | --- | --- |
-| Files | Protocol directory tree, source inspection, double-click start |
+| Files | Installation-root file browser, bounded preview, double-click start |
 | Experiment | Loading plan/preferences, operator confirmation, status, pause/resume/cancel, result and evidence |
 | Workstation | Current layout, container placement/replacement/removal, run history, supported simulated tip-box replacement |
 | System Settings | Rack replacement and advanced saved layout/configuration editor |
@@ -394,21 +394,24 @@ with reasons. Physical installation and experiment loading remain operator check
 
 ### Home and protocol files
 
-`console`, `desktop` and `mcp` accept `--home` (default `~/Culsma`). The first
-authorized file listing creates `projects/` and `results/` without replacing existing
-files. Put `.culs` programs and their imported `.culs` libraries in `projects/`;
-project subdirectories appear under Files. Non-program files stay on disk and are
-not shown in the current protocol file browser. `results/` is available for user exports; resident
-evidence continues to use its configured artifacts directory. `--program-root`
-selects an existing source directory instead. The console shows the actual source
-path and Refresh files rescans it.
+Files opens the culsmaOS installation directory by default: the repository root in
+source checkouts, or the installed `culsma_os` package in packaged environments.
+`--file-root` explicitly selects a different installation location for deployment.
+The Experiments shortcut retains `--program-root`, or `~/Culsma/projects` by default
+(`--home` changes that Home). Existing files are never moved.
 
-Single-click inspects a captured program. Double-click or Run protocol automatically
-checks preparation, submits the reviewed snapshot and starts simulation; errors stop
-progress and are shown in the experiment window. HTTP and MCP share the Program Manager
-use cases. Overlapping reads cannot replace a newer selection; duplicate launch gestures
-are collapsed and unknown submission responses retain their request identity. Drag/drop
-and editing non-program files remain outside this initial slice.
+The native browser provides folder navigation, back/forward/up, breadcrumbs,
+folder trees, file metadata and bounded UTF-8 previews. Directory reads are paged;
+hidden files, links, special files and execution snapshot storage cannot be opened.
+Browsing is read-only. HTTP `/api/v1/files` and MCP `file_roots`, `list_directory`,
+`preview_file` delegate to the same authorized File System Interactor.
+
+Single-click previews a file; double-click opens a folder or runs a `.culs` program.
+Execution still belongs to Program Manager. Installation programs use
+`source_scope="installation"`; the default `"programs"` retains existing API
+behavior. Installation snapshots include only the selected program and its transitive
+Culsma imports. They do not scan the application tree. Launches retain the exact
+source scope, snapshot and request identity when a response is unknown.
 
 
 ### Native console window framework
@@ -427,7 +430,7 @@ request identity in application-support storage; it is not automatically resent.
 `NativeRendererInteractor` uses the existing renderer session protocol for MCP open
 and reveal requests. Display receipts remain presentation reports.
 
-Native views cover file inspection/start, run results/history, direct imported-deck
+Native views cover file browsing/preview/start, run results/history, direct imported-deck
 position editing, loading plans and confirmation, the existing layout editor and
 system facts and detailed resource accounting. Pause/resume/cancel actions retain exact request identities and read worker receipts; acknowledgement is not application. System Info reads saved active origins separately from editable proposals. System Settings also presents compatible rack replacements separately
 from Workstation container edits. Position choices come from the driver catalogue. One save prepares

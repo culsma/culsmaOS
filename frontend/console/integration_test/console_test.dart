@@ -10,9 +10,15 @@ import 'package:culsma_console/features/console/interactor/renderer_interactor.d
 import 'package:culsma_console/features/console/repository/pending_request_repository.dart';
 import 'package:culsma_console/features/console/repository/mutation_repository.dart';
 
-Future<void> until(WidgetTester tester, bool Function() ready) async {
+Future<void> until(
+  WidgetTester tester,
+  NativeConsoleInteractor console,
+  bool Function() ready, {
+  bool observe = true,
+}) async {
   for (var i = 0; i < 200; i++) {
     await tester.pump(const Duration(milliseconds: 100));
+    if (observe && !console.busy) await console.refresh();
     if (ready()) return;
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }
@@ -62,13 +68,27 @@ void main() {
           CulsmaConsole(controller: layout, console: c, renderer: renderer),
         );
         await tester.pumpAndSettle();
-        expect(find.text('examples'), findsOneWidget);
+        expect(c.files.path, '');
+        await tester.tap(find.text('README.txt'));
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+        expect(find.text('Native file preview fixture'), findsOneWidget);
+        expect(c.windows.where((w) => w.view == 'experiment'), isEmpty);
+        final folder = find.byKey(
+          const ValueKey('file-entry-installation-examples'),
+        );
+        await tester.tap(folder);
+        await tester.pump(const Duration(milliseconds: 70));
+        await tester.tap(folder);
+        await tester.pumpAndSettle();
+        expect(c.files.path, 'examples');
         final file = find.text('transfer.culs');
         await tester.tap(file);
         await tester.pump(const Duration(milliseconds: 70));
         await tester.tap(file);
         await until(
           tester,
+          c,
           () =>
               c.active?.view == 'experiment' &&
               {
@@ -80,6 +100,7 @@ void main() {
         await tester.tap(find.text('Pause run'));
         await until(
           tester,
+          c,
           () =>
               c.runs[c.active?.entityId]?['status'] == 'paused' &&
               c.controls.receipts[c.active?.entityId]?['status'] == 'applied',
@@ -88,6 +109,7 @@ void main() {
         await tester.tap(find.text('Resume run'));
         await until(
           tester,
+          c,
           () =>
               c.runs[c.active?.entityId]?['status'] == 'completed' &&
               c.controls.receipts[c.active?.entityId]?['status'] == 'applied',
@@ -107,6 +129,7 @@ void main() {
         await tester.tap(file);
         await until(
           tester,
+          c,
           () =>
               c.active?.entityId != runId &&
               {
@@ -118,14 +141,23 @@ void main() {
         await tester.tap(find.text('Cancel run'));
         await until(
           tester,
+          c,
           () =>
               c.runs[c.active?.entityId]?['status'] == 'cancelled' &&
               c.controls.receipts[c.active?.entityId]?['status'] == 'applied',
         );
         await tester.pumpAndSettle();
+        c.timer?.cancel();
+        // Hold a foreground presentation fixture; renderer unit tests cover hidden deferral.
+        renderer.visible = true;
         renderer.start();
         // The Python harness now sends open_view through a real MCP subprocess.
-        await until(tester, () => c.active?.view == 'system_info');
+        await until(
+          tester,
+          c,
+          () => c.active?.view == 'system_info',
+          observe: false,
+        );
         await tester.pumpAndSettle();
         expect(
           find.text(

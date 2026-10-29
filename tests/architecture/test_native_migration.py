@@ -13,8 +13,9 @@ def test_native_migration_has_no_vendor_or_worker_implementation_in_views():
     info=(root/'interactor/system_information_interactor.dart').read_text()
     assert 'proposal' not in info.split('class NativeSystemInformationInteractor',1)[1]
     assert "'/api/v1/configuration/active'" in info and 'matches(current, origin)' in info
-    tree=(root/'interactor/protocol_tree_interactor.dart').read_text()
-    assert 'dart:io' not in tree and 'ConsoleApi' not in tree
+    browser=(root/'interactor/file_browser_interactor.dart').read_text()
+    assert 'dart:io' not in browser and 'action: \'start\'' not in browser
+    assert "'/api/v1/files'" in browser
     mcp=ast.parse((ROOT/'src/culsma_os/console/adapters/mcp.py').read_text())
     owner=next(n for n in ast.walk(mcp) if isinstance(n,ast.FunctionDef) and n.name=='control_request_status')
     assert len(owner.body)==1 and isinstance(owner.body[0],ast.Return)

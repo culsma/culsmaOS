@@ -17,6 +17,8 @@ class FilePendingRequestRepository implements PendingRequestRepository {
     final value = jsonDecode(await file.readAsString());
     if (value is! Map<String, dynamic> ||
         value['action'] != 'start' ||
+        (value.containsKey('source_scope') &&
+            !{'installation', 'programs'}.contains(value['source_scope'])) ||
         ![
           'request_id',
           'program_id',

@@ -10,6 +10,7 @@ from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadReques
 from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError, ProgramBindingRequest, LabwareRequest
 from culsma_os.auth.models import ConsoleAccessError
 from culsma_os.resource_manager.models import SupplyReplacementRequest,SupplyReplacementError
+from culsma_os.file_system.models import FileReadRequest,FileReadError
 from culsma_os.lifecycle_manager.models import ConsoleActivationRequest
 from culsma_os.console_interaction.models import ViewInteractionError, ViewStateReadRequest, ViewRequest, RendererSessionRequest
 
@@ -17,9 +18,10 @@ from culsma_os.console_interaction.models import ViewInteractionError, ViewState
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None, file_reads=None):
         self.view_reads, self.view_requests, self.renderer_sessions = view_reads, view_requests, renderer_sessions
         self.settings = settings
+        self.file_reads=file_reads
         self.supplies = supplies
         self.labware = labware
         self.commands, self.configuration, self.sessions = commands, configuration, sessions
@@ -120,7 +122,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                 return
             result = self.server.commands.execute(self.route(url.path))
             self.respond(200, json.dumps(result.as_dict()).encode())
-        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError) as error:
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError,FileReadError) as error:
             status = {"forbidden": 403, "not_found": 404, "invalid_request": 400,
                       "read_only": 405, "unavailable": 503, "bad_response": 502, "unauthenticated":401, "conflict":409}[error.kind]
             self.respond(status, json.dumps({"schema": "culsma_console_v1", "ok": False,
@@ -148,7 +150,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         return StationConfigurationRequest('import_layout',driver=payload['driver'],layout_source=payload['layout_source'])
 
     def program_request(self, payload):
-        allowed = {'action','program_id','snapshot_id','request_id','run_id','configuration_fingerprint'}
+        allowed = {'action','program_id','snapshot_id','request_id','run_id','configuration_fingerprint','source_scope'}
         if (not isinstance(payload,dict) or set(payload)-allowed or not isinstance(payload.get('action'),str)
                 or any(value is not None and not isinstance(value,str) for value in payload.values())):
             raise ConsoleReadError('PROGRAM_REQUEST_INVALID','invalid_request')
@@ -179,6 +181,10 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                 or not {'action','run_id'} <= payload.keys()):
             raise ConsoleReadError('SETUP_REQUEST_INVALID','invalid_request')
         return SetupInteractionRequest(**payload)
+
+    def file_request(self,payload):
+        if not isinstance(payload,dict) or set(payload)-{'action','root','path','offset'} or not isinstance(payload.get('action'),str) or any(k in payload and not isinstance(payload[k],str) for k in ['root','path']) or 'offset' in payload and type(payload['offset']) is not int:raise ConsoleReadError('FILE_REQUEST_INVALID','invalid_request')
+        return FileReadRequest(**payload)
 
     def supply_request(self,payload):
         if (not isinstance(payload,dict) or set(payload)-{f.name for f in fields(SupplyReplacementRequest)}
@@ -220,7 +226,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         try:
             url = urlsplit(self.path)
             self.validate_context(True)
-            endpoints = {'/api/v1/consumables':(self.server.supplies,self.supply_request,'culsma_supply_v1'),'/api/v1/console/views/read':(self.server.view_reads,self.view_read_request,'culsma_view_interaction_v1'),
+            endpoints = {'/api/v1/files':(self.server.file_reads,self.file_request,'culsma_files_v1'),'/api/v1/consumables':(self.server.supplies,self.supply_request,'culsma_supply_v1'),'/api/v1/console/views/read':(self.server.view_reads,self.view_read_request,'culsma_view_interaction_v1'),
                          '/api/v1/console/views/request':(self.server.view_requests,self.view_request,'culsma_view_interaction_v1'),
                          '/api/v1/console/renderer':(self.server.renderer_sessions,self.renderer_request,'culsma_view_interaction_v1'),
                          '/api/v1/configuration/labware':(self.server.labware,self.labware_request,'culsma_configuration_v1'),'/api/v1/setup':(self.server.setup_commands,self.setup_request,'culsma_setup_console_v1'),
@@ -254,7 +260,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             interactor, parse_request, schema = endpoints[url.path]
             result = interactor.execute(self.headers.get('Authorization'),parse_request(payload))
             self.respond(200,json.dumps({'schema':schema,'data':result}).encode())
-        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError) as error:
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError,FileReadError) as error:
             status = {'forbidden':403,'unauthenticated':401,'conflict':409,'not_found':404,'invalid_request':400,'unavailable':503,'bad_response':502}[error.kind]
             self.respond(status,json.dumps({'ok':False,'error':{'code':error.code,
                 'diagnostics':getattr(error,'diagnostics',())}}).encode())

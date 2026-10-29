@@ -11,7 +11,7 @@ import 'setup_panel.dart';
 import 'supply_panel.dart';
 import 'run_control_panel.dart';
 import 'system_information_view.dart';
-import 'protocol_tree_view.dart';
+import 'file_browser_view.dart';
 
 class ConsoleViews extends StatelessWidget {
   final NativeConsoleInteractor console;
@@ -40,76 +40,7 @@ class ConsoleViews extends StatelessWidget {
       const SizedBox(height: 20),
     ],
   );
-  Widget files(BuildContext context) {
-    final c = console, items = c.library?['programs'] as List? ?? [];
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        heading(
-          'Files',
-          c.library?['source_root']?.toString() ??
-              'Reading the local program directory…',
-        ),
-        Row(
-          children: [
-            OutlinedButton.icon(
-              onPressed: c.busy ? null : c.refreshFiles,
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Refresh files'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (c.pendingStart != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'An unresolved run request is retained. No automatic repeat.',
-                  ),
-                  TextButton(
-                    onPressed: c.busy ? null : c.checkPendingStart,
-                    child: const Text('Check retained run request'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        if (items.isEmpty)
-          const Text('Add .culs files to the program directory, then refresh.'),
-        NativeProtocolTree(
-          programs: items,
-          selected: c.selectedFile,
-          busy: c.busy || c.pendingStart != null,
-          inspect: c.inspectFile,
-          run: c.launch,
-        ),
-        if (c.inspection != null) ...[
-          const Divider(height: 32),
-          heading(c.selectedFile ?? 'Protocol'),
-          Text(
-            c.inspection!['valid'] == true
-                ? 'Source validated'
-                : 'Source validation failed',
-          ),
-          ExpansionTile(
-            title: const Text('Protocol source'),
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: SelectableText(
-                  c.inspection!['source']?.toString() ?? 'Source unavailable',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
+  Widget files(BuildContext context) => NativeFileBrowserView(console: console);
 
   Widget experiment() {
     final run = console.runs[window.entityId];

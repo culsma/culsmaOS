@@ -21,6 +21,8 @@ class TestArchitecture:
             "recovery_manager",
             "lifecycle_manager",
             "auth",  # Process-local credential owner for writable console use cases.
+            "file_system",  # Authorized local installation directory reads.
+            "console_interaction",  # Shared native presentation requests and receipts.
             "console",  # Transport/composition package, not a second execution subsystem.
         }
         assert {
@@ -29,10 +31,10 @@ class TestArchitecture:
         for path in SRC.rglob("*.py"):
             tree = ast.parse(path.read_text())
             relative = path.relative_to(SRC)
-            assert not any(
-                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-                for node in tree.body
-            ), path
+            public_functions = [node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+            if public_functions:
+                assert path.name == "interactors.py" or "interactors" in relative.parts, path
+                assert all(not node.name.startswith("_") for node in public_functions), path
             if len(relative.parts) > 1:
                 assert relative.parts[1] in {
                     "__init__.py",

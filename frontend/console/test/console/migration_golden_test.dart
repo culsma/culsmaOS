@@ -30,14 +30,37 @@ void main() {
             mutations: MemoryConsoleMutationRepository(),
             initialView: view == 'experiment' ? 'files' : view,
           );
-      c.library = {
-        'source_root': '/Culsma/projects',
-        'programs': [
-          {'program_id': 'standards/three_point.culs'},
-          {'program_id': 'standards/validation/check.culs'},
-          {'program_id': 'transfer.culs'},
-        ],
-      };
+      await c.files.initialize();
+      c.files.entries = [
+        for (final name in ['docs', 'examples', 'src'])
+          {
+            'name': name,
+            'path': name,
+            'kind': 'directory',
+            'openable': true,
+            'extension': '',
+          },
+        {
+          'name': 'LICENSE',
+          'path': 'LICENSE',
+          'kind': 'file',
+          'size': 11357,
+          'extension': '',
+          'openable': true,
+        },
+        {
+          'name': 'README.md',
+          'path': 'README.md',
+          'kind': 'file',
+          'size': 5400,
+          'extension': '.md',
+          'openable': true,
+        },
+      ];
+      c.files.total = c.files.entries.length;
+      c.files.folders[c.files.key('installation', '')] = c.files.entries
+          .where((r) => r['kind'] == 'directory')
+          .toList();
       c.station = {
         'host': {'status': 'ready'},
         'layout': {

@@ -14,6 +14,7 @@ from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from tests.support.integration.shared_setup import SharedSetupHarness
+from culsma_os.console.providers import ConsoleApplicationFactory
 from tests.support.integration.hamilton import HamiltonOperationTestBackend
 
 
@@ -44,7 +45,10 @@ def run():
         shared.context.config_path.write_text(json.dumps(configuration))
         nested=shared.program_root/'examples';nested.mkdir()
         (shared.program_root/'transfer.culs').rename(nested/'transfer.culs')
+        (shared.program_root/'README.txt').write_text('Native file preview fixture')
         shared.__enter__()
+        shared.http.server.settings=dataclasses.replace(shared.http.server.settings,file_root=shared.program_root)
+        shared.http.server.file_reads=ConsoleApplicationFactory().build_files(shared.http.server.settings,shared.http.server.sessions.tokens,shared.http.server.programs.source)
         try:
             execute_native(shared,flutter_command,output)
         finally:

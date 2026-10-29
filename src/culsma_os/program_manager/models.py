@@ -325,6 +325,7 @@ class ConsoleProgramRequest:
     run_id: str | None = None
 
     configuration_fingerprint: str | None = None
+    source_scope: str = "programs"
 
 class ConsoleProgramError(ValueError):
     def __init__(self, code, kind='invalid_request', diagnostics=()):
@@ -340,6 +341,8 @@ class ProgramSourceSnapshot:
 
 
 class ProgramSourceRepository(Protocol):
+    def read_live_source(self, program_id: str) -> str: ...
+    def store_snapshot(self, sources: dict[str,str]) -> ProgramSourceSnapshot: ...
     def enabled(self) -> bool: ...
     def list(self) -> dict: ...
     def capture(self) -> ProgramSourceSnapshot: ...

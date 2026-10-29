@@ -73,3 +73,17 @@ def test_supply_tools_delegate_to_the_shared_authorized_entry(method,args,action
     raw,request=supplies.calls[0]
     assert raw==adapter.raw_credential and request.action==action
     assert len(supplies.calls)==1 and 'origin' not in asdict(request)
+
+
+@pytest.mark.parametrize('method,arguments,action',[
+    ('file_roots',{},'roots'),
+    ('list_directory',{'root':'installation','path':'examples','offset':200},'list'),
+    ('preview_file',{'root':'programs','path':'notes.txt'},'preview'),
+])
+def test_filesystem_tools_delegate_with_unchanged_credential(method,arguments,action):
+    owner=RecordingUseCase()
+    adapter=MCPServerAdapter(RecordingUseCase(),RecordingUseCase(),RecordingUseCase(),file_reads=owner)
+    adapter.raw_credential='Bearer test-files'
+    assert getattr(adapter,method)(**arguments)=={'result':'delegated'}
+    raw,request=owner.calls[0]
+    assert raw==adapter.raw_credential and request.action==action

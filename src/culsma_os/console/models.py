@@ -22,6 +22,7 @@ class ConsoleSettings:
     home_path: Path | None = None
     view_store_path: Path | None = None
     serve_frontend: bool = True
+    file_root: Path | None = None
 
     def __post_init__(self):
         if type(self.serve_frontend) is not bool:

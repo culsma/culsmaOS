@@ -12,12 +12,14 @@ import 'setup_interactor.dart';
 import 'supply_interactor.dart';
 import 'run_control_interactor.dart';
 import 'system_information_interactor.dart';
+import 'file_browser_interactor.dart';
 
 /// Native presentation coordinator. Backend Interactors own every experiment decision.
 class NativeConsoleInteractor extends ChangeNotifier {
   final ConsoleApi api;
   final LayoutController layout;
   final PendingRequestRepository? requests;
+  late final NativeFileBrowserInteractor files;
   late final NativeLabwareInteractor labware;
   late final NativeSetupInteractor setup;
   late final NativeSupplyInteractor supplies;
@@ -25,10 +27,9 @@ class NativeConsoleInteractor extends ChangeNotifier {
   late final NativeSystemInformationInteractor information;
   final windows = <ConsoleWindowModel>[];
   final runs = <String, Map<String, dynamic>>{};
-  Map<String, dynamic>? station, library, inspection, pendingStart;
+  Map<String, dynamic>? station, inspection, pendingStart;
   String? activeId, selectedFile, selectedEntity, message;
   bool busy = false, disposed = false;
-  int selectionVersion = 0;
   Timer? timer;
   Future<bool> Function(String)? revealTarget;
   NativeConsoleInteractor(
@@ -38,6 +39,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
     ConsoleMutationRepository? mutations,
     String initialView = 'files',
   }) {
+    files = NativeFileBrowserInteractor(api)..addListener(notifyViewChanged);
     labware = NativeLabwareInteractor(api, mutations)
       ..addListener(notifyViewChanged);
     information = NativeSystemInformationInteractor(api)
@@ -248,7 +250,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
         layout.draft = null;
         await layout.load();
       }
-      if (library == null) library = await api.read('/api/v1/programs');
+      if (!files.initialized) await files.initialize();
       final observed = {
         for (final w in windows)
           if (w.entityId != null) w.entityId!,
@@ -292,37 +294,11 @@ class NativeConsoleInteractor extends ChangeNotifier {
     };
   }
 
-  Future<void> refreshFiles() async {
-    if (busy) return;
-    library = null;
-    await refresh();
-  }
-
-  Future<void> inspectFile(String id) async {
-    if (pendingStart != null || busy) return;
-    final version = ++selectionVersion;
-    selectedFile = id;
-    busy = true;
-    notifyListeners();
-    try {
-      final result = await api.command('/api/v1/programs', {
-        'action': 'inspect',
-        'program_id': id,
-      });
-      if (version == selectionVersion) inspection = result;
-    } catch (error) {
-      message = error.toString();
-    } finally {
-      busy = false;
-      if (!disposed) notifyListeners();
-    }
-  }
-
   String requestId() => List.generate(
     16,
     (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
   ).join();
-  Future<void> launch(String id) async {
+  Future<void> launch(String id, {String sourceScope = 'programs'}) async {
     if (working || pendingStart != null) return;
     if (dirty) {
       message =
@@ -339,6 +315,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
       final result = await api.command('/api/v1/programs', {
         'action': 'inspect',
         'program_id': id,
+        if (sourceScope != 'programs') 'source_scope': sourceScope,
       });
       inspection = result;
       if (result['valid'] != true) {
@@ -348,6 +325,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
       final payload = {
         'action': 'start',
         'program_id': id,
+        if (sourceScope != 'programs') 'source_scope': sourceScope,
         'snapshot_id': result['snapshot_id'],
         'request_id': requestId(),
       };
@@ -420,6 +398,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   void dispose() {
     disposed = true;
     timer?.cancel();
+    files.dispose();
     information.dispose();
     controls.dispose();
     supplies.dispose();

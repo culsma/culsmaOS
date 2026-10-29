@@ -1,14 +1,16 @@
 """MCP stdio adapter: DTO mapping only; all actions enter authorized Interactors."""
 from typing import Any, Literal
 from culsma_os.resource_manager.models import SupplyReplacementRequest
+from culsma_os.file_system.models import FileReadRequest
 from culsma_os.console_interaction.models import ViewStateReadRequest, ViewRequest
 from culsma_os.program_manager.models import SetupInteractionRequest, ConsoleProgramRequest, ConsoleReadRequest
 
 
 class MCPServerAdapter:
-    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None):
+    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None):
         self.setup, self.programs, self.observation = setup, programs, observation
         self.view_reads, self.view_requests = view_reads, view_requests
+        self.file_reads=file_reads
         self.supplies = supplies
 
     def make_server(self, raw_credential):
@@ -53,6 +55,9 @@ class MCPServerAdapter:
             for method,readonly in [(self.tip_supply,True),(self.replace_simulated_tip_box,False),(self.tip_replacement_status,True)]:
                 server.tool(name=method.__name__,structured_output=True,
                     annotations=ToolAnnotations(readOnlyHint=readonly,destructiveHint=not readonly,idempotentHint=True,openWorldHint=False))(method)
+        if self.file_reads is not None:
+            for method in [self.file_roots,self.list_directory,self.preview_file]:
+                server.tool(name=method.__name__,structured_output=True,annotations=ToolAnnotations(readOnlyHint=True,destructiveHint=False,idempotentHint=True,openWorldHint=False))(method)
         return server
 
     def serve(self, raw_credential):
@@ -85,21 +90,21 @@ class MCPServerAdapter:
     def list_programs(self) -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest('list'))
 
-    def inspect_program(self, program_id: str) -> dict[str, Any]:
-        return self.programs.execute(self.raw_credential, ConsoleProgramRequest('inspect', program_id))
+    def inspect_program(self, program_id: str, source_scope: str = 'programs') -> dict[str, Any]:
+        return self.programs.execute(self.raw_credential, ConsoleProgramRequest('inspect', program_id, source_scope=source_scope))
 
-    def preview_program(self, program_id: str) -> dict[str, Any]:
-        return self.programs.execute(self.raw_credential, ConsoleProgramRequest('preview', program_id))
+    def preview_program(self, program_id: str, source_scope: str = 'programs') -> dict[str, Any]:
+        return self.programs.execute(self.raw_credential, ConsoleProgramRequest('preview', program_id, source_scope=source_scope))
 
     def submit_program(self, program_id: str, snapshot_id: str, request_id: str,
-                       configuration_fingerprint: str | None = None) -> dict[str, Any]:
+                       configuration_fingerprint: str | None = None, source_scope: str = 'programs') -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest('submit', program_id, snapshot_id,
-            request_id, configuration_fingerprint=configuration_fingerprint))
+            request_id, configuration_fingerprint=configuration_fingerprint,source_scope=source_scope))
 
     def start_program(self, program_id: str, snapshot_id: str, request_id: str,
-                      configuration_fingerprint: str | None = None) -> dict[str, Any]:
+                      configuration_fingerprint: str | None = None, source_scope: str = 'programs') -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest('start', program_id, snapshot_id,
-            request_id, configuration_fingerprint=configuration_fingerprint))
+            request_id, configuration_fingerprint=configuration_fingerprint,source_scope=source_scope))
 
     def control_run(self, run_id: str, action: Literal['pause','resume','cancel'], request_id: str) -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest(action, request_id=request_id, run_id=run_id))
@@ -137,3 +142,15 @@ class MCPServerAdapter:
     def tip_replacement_status(self,request_id:str) -> dict[str,Any]:
         """Reconcile the original receipt without reissuing inventory changes."""
         return self.supplies.execute(self.raw_credential,SupplyReplacementRequest('status',request_id))
+
+    def file_roots(self) -> dict[str,Any]:
+        """Read the server-selected installation and experiment directory roots."""
+        return self.file_reads.execute(self.raw_credential,FileReadRequest('roots'))
+
+    def list_directory(self,root:str='installation',path:str='',offset:int=0) -> dict[str,Any]:
+        """Read a directory page. Paths are relative to the selected product root."""
+        return self.file_reads.execute(self.raw_credential,FileReadRequest('list',root,path,offset))
+
+    def preview_file(self,root:str,path:str) -> dict[str,Any]:
+        """Read a bounded text preview or binary-file metadata; never execute the file."""
+        return self.file_reads.execute(self.raw_credential,FileReadRequest('preview',root,path))

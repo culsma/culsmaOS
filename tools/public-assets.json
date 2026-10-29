@@ -95,7 +95,7 @@
       "path": "frontend/console/test/goldens/native-files-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/migration_golden_test.dart",
-      "sha256": "d1ffa0f31aaad7868e9b62442184eaa0efc9404eb8cabddefaa508d3cced45ed"
+      "sha256": "5f5bdf150ec45cedc834bcd068beada08e6e399476c65bf4d833974811a148cd"
     },
     {
       "path": "frontend/console/test/goldens/native-position-1100.png",
