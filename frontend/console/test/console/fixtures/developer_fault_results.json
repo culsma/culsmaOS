@@ -27,7 +27,7 @@
       ],
       "device_activity": "none_recorded",
       "title": "Tips need attention",
-      "message": "The local simulation reported this condition. No physical inspection was performed.",
+      "message": "The simulation reported this condition. It is not a physical inspection.",
       "faults": [
         {
           "code": "TIP_UNAVAILABLE",
@@ -41,8 +41,17 @@
           }
         }
       ],
+      "context": {
+        "execution": "The driver reports this attempt was rejected before device execution.",
+        "device_stop": "No physical instrument was operated by this simulation.",
+        "operation": "developer-step",
+        "location": "Not supplied by the driver; no position is inferred.",
+        "recovery": "Correct the setup, then start a new attempt. This attempt has no device execution to resume."
+      },
       "next_steps": [
-        "Review the declared loading plan and device settings."
+        "This is a simulation condition; no physical handling is required.",
+        "Check the declared tip rack and available tip positions.",
+        "Refresh status reloads recorded information only; it does not inspect hardware or verify an operator correction."
       ]
     },
     "flow": [
@@ -82,7 +91,7 @@
       ],
       "device_activity": "none_recorded",
       "title": "The liquid supply needs attention",
-      "message": "The local simulation reported this condition. No physical inspection was performed.",
+      "message": "The simulation reported this condition. It is not a physical inspection.",
       "faults": [
         {
           "code": "LIQUID_INSUFFICIENT",
@@ -96,8 +105,17 @@
           }
         }
       ],
+      "context": {
+        "execution": "The driver reports this attempt was rejected before device execution.",
+        "device_stop": "No physical instrument was operated by this simulation.",
+        "operation": "developer-step",
+        "location": "Not supplied by the driver; no position is inferred.",
+        "recovery": "Correct the setup, then start a new attempt. This attempt has no device execution to resume."
+      },
       "next_steps": [
-        "Review the declared loading plan and device settings."
+        "This is a simulation condition; no physical handling is required.",
+        "Compare the declared source amount, aspiration volume and pipette capacity.",
+        "Refresh status reloads recorded information only; it does not inspect hardware or verify an operator correction."
       ]
     },
     "flow": [
@@ -137,7 +155,7 @@
       ],
       "device_activity": "recorded",
       "title": "The device reported a problem",
-      "message": "The local simulation reported this condition. No physical inspection was performed.",
+      "message": "The simulation reported this condition. It is not a physical inspection.",
       "faults": [
         {
           "code": "DEVICE_ERROR",
@@ -151,9 +169,19 @@
           }
         }
       ],
+      "context": {
+        "execution": "Some actions may have completed; the final outcome is unknown.",
+        "device_stop": "No physical instrument was operated by this simulation.",
+        "operation": "developer-step",
+        "location": "Not supplied by the driver; no position is inferred.",
+        "recovery": "In-place resume is unavailable. The execution outcome requires review; acknowledgement does not authorize replay."
+      },
       "next_steps": [
-        "Review the declared loading plan and device settings.",
-        "Execution remains isolated. An acknowledgement does not authorize repeating an action or resuming the device."
+        "Keep the current simulation result for review; do not replay unknown actions.",
+        "This is a simulation condition; no physical handling is required.",
+        "Review the failing simulated operation and its original diagnostic.",
+        "Refresh status reloads recorded information only; it does not inspect hardware or verify an operator correction.",
+        "Execution remains isolated. No automatic retry or vendor resume is available here."
       ]
     },
     "flow": [

@@ -5,6 +5,7 @@ import 'setup_panel.dart';
 import 'run_control_panel.dart';
 import 'evidence_panel.dart';
 import 'run_report_panel.dart';
+import 'fault_context.dart';
 
 /// Renders backend guidance. Recovery eligibility is never inferred from raw errors.
 class NativeRunOutcomeView extends StatelessWidget {
@@ -115,6 +116,7 @@ class NativeRunOutcomeView extends StatelessWidget {
                   ? 'Review the recorded results below.'
                   : 'Review the workstation and run controls below.'),
         ),
+        NativeFaultContext(guidance: guidance),
         if (guidance['device_activity'] == 'none_recorded')
           const Padding(
             padding: EdgeInsets.only(top: 8),
@@ -148,10 +150,17 @@ class NativeRunOutcomeView extends StatelessWidget {
                         'Current tip quantity is not available. Review the workstation loading.',
                       ),
                     ),
-                  for (final step in guidance['next_steps'] as List? ?? [])
+                  for (final entry
+                      in (guidance['next_steps'] as List? ?? [])
+                          .asMap()
+                          .entries)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: Text(step),
+                      child: Text(
+                        guidance['context'] == null
+                            ? entry.value
+                            : '${entry.key + 1}. ${entry.value}',
+                      ),
                     ),
                   Wrap(
                     spacing: 12,

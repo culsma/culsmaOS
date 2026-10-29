@@ -190,7 +190,8 @@ void main() {
             expect(c.developer.error, isNull);
             expect(c.developer.result?['supported'], isTrue);
             expect(find.text('INJECTED TEST RESULT'), findsOneWidget);
-            expect(find.text('Processing flow'), findsOneWidget);
+            expect(find.textContaining('Device stop status:'), findsOneWidget);
+            expect(find.textContaining('Affected location:'), findsOneWidget);
             expect(find.text('Register new box'), findsNothing);
             expect(c.developer.result?['station_changed'], isFalse);
             await tester.ensureVisible(find.text('Clear test result'));

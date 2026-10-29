@@ -87,17 +87,43 @@ class RunGuidanceInteractor:
         titles = {'TIP_UNAVAILABLE':'Tips need attention', 'LIQUID_INSUFFICIENT':'The liquid supply needs attention',
                   'LIQUID_NOT_DETECTED':'Liquid was not detected', 'DEVICE_NOT_READY':'The device is not ready',
                   'COMMUNICATION_LOST':'The device connection needs attention', 'DEVICE_ERROR':'The device reported a problem'}
-        steps = {'TIP_UNAVAILABLE':'Check the tip rack and pipette. Replace tips manually if needed.',
-                 'LIQUID_INSUFFICIENT':'Check the source amount and transfer volume before continuing.',
-                 'LIQUID_NOT_DETECTED':'Check the liquid, container position and liquid-detection settings.',
-                 'DEVICE_NOT_READY':'Check the indicated module, plate position and device status.',
-                 'COMMUNICATION_LOST':'Check the device and connection. A lost reply does not establish whether an action finished.',
-                 'DEVICE_ERROR':'Inspect the device and its original error record.'}
-        message = ('The local simulation reported this condition. No physical inspection was performed.' if simulated
-                   else 'The driver reported this condition. Inspect the device before deciding how to proceed.')
-        next_steps = (["Review the declared loading plan and device settings."] if simulated else [steps[fault['code']]])
+        checks = {
+            'TIP_UNAVAILABLE': ('Check the declared tip rack and available tip positions.',
+                                'Inspect the tip rack and pipette. Replace tips manually only after safe access and prior execution have been confirmed.'),
+            'LIQUID_INSUFFICIENT': ('Compare the declared source amount, aspiration volume and pipette capacity.',
+                                    'Check the source amount and requested aspiration volume. Add liquid only after safe access and prior execution have been confirmed.'),
+            'LIQUID_NOT_DETECTED': ('Check the declared container position and liquid-detection settings.',
+                                    'Inspect the liquid, container position and detection settings. A missing liquid signal does not by itself prove the container is empty.'),
+            'DEVICE_NOT_READY': ('Check the declared module, plate position and operation preconditions.',
+                                 'Inspect the indicated module, plate position and device status using the vendor controls.'),
+            'COMMUNICATION_LOST': ('Review the simulator or Agent connection and the original execution record.',
+                                   'Check the connection and original device record. A missing reply does not prove the action did not happen.'),
+            'DEVICE_ERROR': ('Review the failing simulated operation and its original diagnostic.',
+                             'Inspect the device display and original error record; do not infer a remedy from an unclassified error.'),
+        }
+        unknown = isolated or any(f['execution_state'] in {'unknown','partial'} for f in faults)
+        execution = ('Some actions may have completed; the final outcome is unknown.' if unknown
+                     else 'The driver reports this attempt was rejected before device execution.')
+        operation = fault['operation_id'] or 'Not supplied by the driver.'
+        location = fault['location'] or 'Not supplied by the driver; no position is inferred.'
+        stop = ('No physical instrument was operated by this simulation.' if simulated
+                else 'Not confirmed by the driver. Stopping OS dispatch does not confirm the instrument has stopped.')
+        recovery = ('In-place resume is unavailable. The execution outcome requires review; acknowledgement does not authorize replay.' if unknown
+                    else 'Correct the setup, then start a new attempt. This attempt has no device execution to resume.')
+        next_steps = []
+        if unknown:
+            next_steps.append('Keep the current simulation result for review; do not replay unknown actions.' if simulated
+                              else 'Keep affected materials and equipment unchanged while the execution outcome is reviewed.')
+        next_steps.append('This is a simulation condition; no physical handling is required.' if simulated
+                          else 'Before touching the instrument, confirm it is stopped and permits manual access using the vendor controls.')
+        next_steps.append(checks[fault['code']][0 if simulated else 1])
+        next_steps.append('Refresh status reloads recorded information only; it does not inspect hardware or verify an operator correction.')
         if isolated:
-            next_steps.append('Execution remains isolated. An acknowledgement does not authorize repeating an action or resuming the device.')
-        return {**summary, 'kind':'preparation' if before_execution else 'attention',
+            next_steps.append('Execution remains isolated. No automatic retry or vendor resume is available here.')
+        message = ('The simulation reported this condition. It is not a physical inspection.' if simulated
+                   else 'The driver reported this condition. Review the execution status before handling the instrument.')
+        return {**summary, 'kind':'preparation' if before_execution and not unknown else 'attention',
                 'title':titles[fault['code']], 'message':message, 'faults':list(faults),
+                'context':{'execution':execution,'device_stop':stop,'operation':operation,
+                           'location':location,'recovery':recovery},
                 'next_steps':next_steps, 'actions':['open_workstation','refresh']}

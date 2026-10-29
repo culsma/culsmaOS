@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../interactor/developer_interactor.dart';
+import 'fault_context.dart';
 
 class NativeDeveloperView extends StatelessWidget {
   final NativeDeveloperInteractor controller;
@@ -92,20 +93,25 @@ class NativeDeveloperView extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(guidance['message'] ?? ''),
                     const SizedBox(height: 12),
-                    Text(
-                      result!['outcome'] == 'rejected'
-                          ? 'Handling: rejected before execution.'
-                          : 'Handling: outcome unknown; automatic replay and resume are blocked.',
-                    ),
+                    if (guidance['context'] == null)
+                      Text(
+                        result!['outcome'] == 'rejected'
+                            ? 'Handling: rejected before execution.'
+                            : 'Handling: outcome unknown; automatic replay and resume are blocked.',
+                      ),
                     const SizedBox(height: 12),
+                    NativeFaultContext(guidance: guidance),
                     const Text(
                       'Operator guidance',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    for (final step in guidance['next_steps'] as List? ?? [])
+                    for (final entry
+                        in (guidance['next_steps'] as List? ?? [])
+                            .asMap()
+                            .entries)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: Text(step),
+                        child: Text('${entry.key + 1}. ${entry.value}'),
                       ),
                     const SizedBox(height: 12),
                     const Text(
@@ -120,7 +126,7 @@ class NativeDeveloperView extends StatelessWidget {
               'Processing flow',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            for (final entry in (result['flow'] as List).asMap().entries)
+            for (final entry in (result!['flow'] as List).asMap().entries)
               ListTile(
                 leading: CircleAvatar(
                   radius: 14,

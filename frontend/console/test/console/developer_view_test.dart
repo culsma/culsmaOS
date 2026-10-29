@@ -44,11 +44,21 @@ void main() {
       expect(find.text(result['guidance']['title']), findsOneWidget);
       expect(find.text('Register new box'), findsNothing);
       expect(find.text('Resume'), findsNothing);
+      expect(find.textContaining('Device stop status:'), findsOneWidget);
+      expect(find.textContaining('Affected location:'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'Not supplied by the driver; no position is inferred.',
+        ),
+        findsOneWidget,
+      );
       await expectLater(
         find.byType(Scaffold),
         matchesGoldenFile('goldens/developer-${result['scenario']}.png'),
       );
-      await tester.ensureVisible(find.text('Clear test result'));
+      await tester.scrollUntilVisible(find.text('Processing flow'), 250);
+      expect(find.text('Processing flow'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Clear test result'), -250);
       await tester.tap(find.text('Clear test result'));
       await tester.pump();
       expect(c.result, isNull);

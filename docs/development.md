@@ -508,3 +508,5 @@ Normal console simulations use a fresh declared load for each run. The OS select
 Device faults use the OS `DeviceFault` contract. Plugin-owned mappers convert native diagnostics; the core validates generic categories and preserves original details. Preparation faults persist with run records, execution faults with identity-checked receipts. Guidance is observational and does not authorize replenishment, replay or vendor resume.
 
 Developer → Exception tests uses a driver-owned detached model probe and the production fault normalizer/guidance. Tests are not submitted as experiment runs and do not modify the active station. The protected endpoint reuses `programs:execute`; authentication grants are unchanged. No vendor resume or physical-loading acknowledgement is exposed here.
+
+Fault guidance now separates execution certainty, device-stop observation, operation/location and recovery availability. Operator checks follow preservation and safe-access prerequisites. Status refresh reads recorded facts and is not hardware inspection or confirmation of a manual correction. Experiment and Developer views share this presentation.
