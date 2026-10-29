@@ -1,5 +1,6 @@
 """Read-only console use cases over the existing resident command boundary."""
 from datetime import datetime, timezone
+from .guidance import RunGuidanceInteractor
 import re
 
 from ..models import ConsoleReadError, ConsoleReadRequest, ConsoleReadResponse, ResidentReadPort
@@ -23,6 +24,7 @@ class ConsoleCommandInteractor:
                 if error.code != 'HOST_COMMAND_UNSUPPORTED':
                     raise
                 data['execution_evidence'] = None
+            data['user_guidance'] = RunGuidanceInteractor().describe(data)
         else:
             if request.run_id is not None:
                 raise ConsoleReadError("CONSOLE_REQUEST_INVALID", "invalid_request")

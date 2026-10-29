@@ -71,8 +71,32 @@ class ConsoleDesktop extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           child: Padding(
                             padding: const EdgeInsets.all(12),
-                            child: Text(
-                              console.message ?? console.stationProblem!,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  console.message ?? console.stationProblem!,
+                                ),
+                                if (console.messageDetails != null)
+                                  ExpansionTile(
+                                    title: const Text('Technical details'),
+                                    children: [
+                                      SizedBox(
+                                        height: 100,
+                                        child: SingleChildScrollView(
+                                          child: SelectableText(
+                                            console.messageDetails!.length >
+                                                    4000
+                                                ? console.messageDetails!
+                                                      .substring(0, 4000)
+                                                : console.messageDetails!,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
                             ),
                           ),
                         ),

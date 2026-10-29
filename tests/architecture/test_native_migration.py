@@ -19,3 +19,13 @@ def test_native_migration_has_no_vendor_or_worker_implementation_in_views():
     mcp=ast.parse((ROOT/'src/culsma_os/console/adapters/mcp.py').read_text())
     owner=next(n for n in ast.walk(mcp) if isinstance(n,ast.FunctionDef) and n.name=='control_request_status')
     assert len(owner.body)==1 and isinstance(owner.body[0],ast.Return)
+
+
+def test_run_outcome_reads_backend_guidance_instead_of_classifying_vendor_error_strings():
+    source=(ROOT/'frontend/console/lib/features/console/view/run_outcome_view.dart').read_text()
+    assert "run['user_guidance']" in source
+    assert 'BATCH_PREPARATION_REJECTED' not in source and 'No available tip positions' not in source
+    owner=ROOT/'src/culsma_os/program_manager/interactors/guidance.py'
+    tree=ast.parse(owner.read_text())
+    imports={n.module or '' for n in ast.walk(tree) if isinstance(n,ast.ImportFrom)}
+    assert not any('adapters' in n or 'repositories' in n for n in imports)

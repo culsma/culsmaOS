@@ -11,7 +11,7 @@ import pytest
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from tests.integration.test_console_labware import native_station
+from tests.support.integration.console_labware import native_station
 
 
 def run():

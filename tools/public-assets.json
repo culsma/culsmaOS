@@ -89,7 +89,7 @@
       "path": "frontend/console/test/goldens/native-experiment-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/migration_golden_test.dart",
-      "sha256": "53a53f14b245591019a33c85c1152b5c03ef0dd002fa7c95da525ebbe1563756"
+      "sha256": "c2f8ad7bf0cac20b79ece204fab346137312dbc7b9d7719606c8fc476fa8202f"
     },
     {
       "path": "frontend/console/test/goldens/native-files-1100.png",
@@ -246,6 +246,18 @@
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/view_interaction_browser.mjs",
       "sha256": "d969b016002383588f2170fab3ffc269953f24bc98dd82e97789351ff52866e3"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-preparation-1100.png",
+      "kind": "golden",
+      "source": "Reviewed actionable run preparation screen; source: frontend/console/test/console/run_outcome_golden_test.dart",
+      "sha256": "0e917595f6d8a1455b0f9bd8ff9d7160fd672f5797f677671a7ddb865dbaf9ec"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-preparation-390.png",
+      "kind": "golden",
+      "source": "Reviewed actionable run preparation screen; source: frontend/console/test/console/run_outcome_golden_test.dart",
+      "sha256": "bc8f10ad14f0c687ff3a50077c55659c74e062549846db036c826afdbd0c958b"
     }
   ]
 }

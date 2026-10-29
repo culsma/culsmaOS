@@ -90,6 +90,25 @@ void main() {
         reason: c.message,
       );
       expect(find.textContaining(RegExp(r'100(?:\.0)? µL')), findsWidgets);
+      final completedId = c.active!.entityId!;
+      await tester.tap(find.byKey(ValueKey('close-run:$completedId')));
+      await tester.pumpAndSettle();
+      await tester.tap(file);
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.tap(file);
+      for (var i = 0; i < 100; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        if (!c.busy) await c.refresh();
+        if (c.active?.entityId != completedId &&
+            c.runs[c.active?.entityId]?['status'] == 'failed')
+          break;
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('More tips are needed'), findsOneWidget);
+      expect(find.byKey(const Key('run-open-files')), findsOneWidget);
+      expect(find.textContaining('BATCH_PREPARATION_REJECTED'), findsNothing);
+      expect(find.textContaining('semantic steps'), findsNothing);
       expect(tester.takeException(), isNull);
       await mouse.removePointer();
       await tester.pumpWidget(const SizedBox());

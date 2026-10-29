@@ -78,9 +78,20 @@ void main() {
       c.open('experiment', 'loading-run');
       await tester.pumpWidget(CulsmaConsole(controller: layout, console: c));
       await tester.pumpAndSettle();
-      expect(find.text('Experiment $status'), findsOneWidget);
+      expect(
+        find.text(
+          status == 'completed'
+              ? 'Experiment complete'
+              : 'The experiment stopped',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('100 µL'), findsOneWidget);
       expect(find.text('Test track deck'), findsNothing);
+      expect(find.text('Recorded loading plan'), findsNothing);
+      await tester.ensureVisible(find.text('Technical details'));
+      await tester.tap(find.text('Technical details'));
+      await tester.pumpAndSettle();
       final history = find.text('Recorded loading plan');
       await tester.ensureVisible(history);
       await tester.pumpAndSettle();

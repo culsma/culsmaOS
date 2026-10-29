@@ -37,7 +37,7 @@ void main() {
       await tester.pumpWidget(CulsmaConsole(controller: layout, console: c));
       await tester.pumpAndSettle();
       await tester.tap(find.text('HT_L_0003'));
-      await until(tester, () => !c.labware.busy);
+      await until(tester, c, () => !c.labware.busy);
       expect(c.labware.error, isNull);
       expect(c.labware.target?['reason'], isNull);
       await tester.pumpAndSettle();
@@ -57,6 +57,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
       await until(
         tester,
+        c,
         () =>
             !c.labware.editing &&
             c.labware.pending == null &&
@@ -67,7 +68,7 @@ void main() {
       await tester.tap(
         find.byKey(const ValueKey('layout-site:CAR_5TIP_0001/2')),
       );
-      await until(tester, () => !c.labware.busy);
+      await until(tester, c, () => !c.labware.busy);
       expect(c.labware.error, isNull);
       await tester.pumpAndSettle();
       await tester.tap(category);
@@ -94,6 +95,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
       await until(
         tester,
+        c,
         () =>
             !c.labware.editing &&
             c.labware.pending == null &&
@@ -114,6 +116,7 @@ void main() {
       c.open('experiment', id);
       await until(
         tester,
+        c,
         () =>
             c.setup.plans[id]?['phase'] == 'planned' ||
             {'failed', 'rejected'}.contains(c.runs[id]?['status']),
@@ -131,6 +134,7 @@ void main() {
       await tester.tap(begin);
       await until(
         tester,
+        c,
         () =>
             c.setup.plans[id]?['phase'] == 'loading' &&
             c.setup.pending[id] == null,
@@ -150,6 +154,7 @@ void main() {
       await tester.tap(confirm);
       await until(
         tester,
+        c,
         () =>
             {'completed', 'failed', 'rejected'}.contains(c.runs[id]?['status']),
       );

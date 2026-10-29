@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import '../../layout/model/layout_model.dart';
 import '../../layout/view/layout_page.dart';
 import 'settings_view.dart';
-import 'evidence_panel.dart';
 import '../interactor/console_interactor.dart';
 import '../model/console_model.dart';
 import 'labware_dialog.dart';
 import 'recorded_deck.dart';
-import 'setup_panel.dart';
 import 'supply_panel.dart';
-import 'run_control_panel.dart';
 import 'system_information_view.dart';
 import 'file_browser_view.dart';
+import 'run_outcome_view.dart';
 
 class ConsoleViews extends StatelessWidget {
   final NativeConsoleInteractor console;
@@ -26,78 +24,13 @@ class ConsoleViews extends StatelessWidget {
     'experiment' => experiment(),
     _ => const Center(child: Text('Unsupported view')),
   };
-  Widget heading(String title, [String? subtitle]) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        title,
-        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
-      ),
-      if (subtitle != null) ...[
-        const SizedBox(height: 8),
-        Text(subtitle, style: const TextStyle(color: Color(0xff62798c))),
-      ],
-      const SizedBox(height: 20),
-    ],
-  );
   Widget files(BuildContext context) => NativeFileBrowserView(console: console);
 
   Widget experiment() {
     final run = console.runs[window.entityId];
     if (run == null)
       return const Center(child: Text('Reading the experiment record…'));
-    final result = run['result'] as Map? ?? {},
-        record = result['os']?['registered_material'];
-    final containers = record?['state']?['containers'] as Map? ?? {};
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        heading('Experiment ${run['status']}', window.entityId),
-        if (run['error'] != null)
-          Text(run['error'], style: const TextStyle(color: Color(0xff924e25))),
-        NativeRunControlPanel(controller: console.controls, run: run),
-        if (run['status'] == 'awaiting_setup')
-          NativeSetupPanel(controller: console.setup, run: run),
-        if (result['execution'] != null)
-          Text(
-            '${result['execution']['completed_steps']} / ${result['execution']['total_steps']} semantic steps completed',
-          ),
-        const SizedBox(height: 24),
-        const Text(
-          'OS-registered material',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        if (containers.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Text('No registered material snapshot is available.'),
-          ),
-        for (final row in containers.entries)
-          ListTile(
-            title: Text(row.value['metadata']?['allocation_name'] ?? row.key),
-            subtitle: Text(
-              '${row.value['metadata']?['kind'] ?? 'Container'} · model state',
-            ),
-            trailing: Text('${row.value['volume_uL']} µL'),
-          ),
-        const Text(
-          'Registered quantities are OS model state, not physical measurements.',
-          style: TextStyle(color: Color(0xff62798c)),
-        ),
-        const SizedBox(height: 20),
-        NativeEvidencePanel(run: run),
-        if (run['status'] != 'awaiting_setup' &&
-            console.setup.plans[window.entityId] != null)
-          ExpansionTile(
-            key: ValueKey('loading-history-${window.entityId}'),
-            title: const Text('Recorded loading plan'),
-            subtitle: const Text(
-              'Preparation record; the execution outcome is shown above',
-            ),
-            children: [NativeSetupPanel(controller: console.setup, run: run)],
-          ),
-      ],
-    );
+    return NativeRunOutcomeView(console: console, run: run);
   }
 }
 

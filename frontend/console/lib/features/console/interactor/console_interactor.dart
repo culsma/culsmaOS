@@ -28,7 +28,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   final windows = <ConsoleWindowModel>[];
   final runs = <String, Map<String, dynamic>>{};
   Map<String, dynamic>? station, inspection, pendingStart;
-  String? activeId, selectedFile, selectedEntity, message;
+  String? activeId, selectedFile, selectedEntity, message, messageDetails;
   bool busy = false, disposed = false;
   Timer? timer;
   Future<bool> Function(String)? revealTarget;
@@ -57,9 +57,11 @@ class NativeConsoleInteractor extends ChangeNotifier {
   String? get stationProblem {
     final host = station?['host'];
     if (host?['worker_error'] != null)
-      return 'Station worker: ${host['worker_error']}';
+      return 'The station needs attention. Open Workstation or System Info to review its status.';
     if (host?['blocked_run'] != null)
-      return 'Run ${host['blocked_run']} holds the queue: ${host['blocked_reason'] ?? 'Inspect its record'}';
+      return host['blocked_reason'] == 'paused'
+          ? 'An experiment is paused. Resume or cancel it before starting another.'
+          : 'The workstation is waiting for a run to be reviewed. Open its record before starting another experiment.';
     return null;
   }
 
@@ -120,6 +122,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
     activeId = id;
     selectedEntity = null;
     message = null;
+    messageDetails = null;
     notifyListeners();
     return window;
   }
@@ -264,11 +267,15 @@ class NativeConsoleInteractor extends ChangeNotifier {
           await controls.observe(runs[run]!);
           if (active?.entityId == run) await setup.observe(runs[run]!);
         } catch (error) {
-          message = 'Experiment $run unavailable: $error';
+          message =
+              'An experiment record could not be loaded. Refresh the station to try again.';
+          messageDetails = error.toString();
         }
       }
     } catch (error) {
-      message = error.toString();
+      message =
+          'The operation could not be completed. Check the workstation and try again when it is ready.';
+      messageDetails = error.toString();
     } finally {
       busy = false;
       if (!disposed) notifyListeners();
@@ -310,6 +317,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
     busy = true;
     selectedFile = id;
     message = null;
+    messageDetails = null;
     notifyListeners();
     try {
       final result = await api.command('/api/v1/programs', {
@@ -319,7 +327,11 @@ class NativeConsoleInteractor extends ChangeNotifier {
       });
       inspection = result;
       if (result['valid'] != true) {
-        message = 'Protocol validation failed.';
+        message =
+            'The protocol needs changes before it can run. Review its diagnostics in Technical details.';
+        messageDetails =
+            result['diagnostics']?.toString() ??
+            'Protocol validation did not pass.';
         return;
       }
       final payload = {
@@ -337,7 +349,9 @@ class NativeConsoleInteractor extends ChangeNotifier {
       pendingStart = payload;
       await sendPendingStart();
     } catch (error) {
-      message = error.toString();
+      message =
+          'The operation could not be completed. Check the workstation and try again when it is ready.';
+      messageDetails = error.toString();
     } finally {
       busy = false;
       if (!disposed) notifyListeners();
@@ -373,9 +387,12 @@ class NativeConsoleInteractor extends ChangeNotifier {
       }
       message = error.responseUnknown
           ? 'Run response unknown. Check the retained request; no automatic retry.'
-          : error.code;
+          : 'The experiment could not be started. Check the workstation and open the protocol again when it is ready.';
+      messageDetails = error.code;
     } catch (error) {
-      message = error.toString();
+      message =
+          'The operation could not be completed. Check the workstation and try again when it is ready.';
+      messageDetails = error.toString();
     }
   }
 

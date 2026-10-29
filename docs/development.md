@@ -460,3 +460,11 @@ hover and view transitions (flutter/flutter#182444, #175041). The console-wide
 `NativeAccessibilityScope` suppresses hover tooltips while retaining explicit
 control labels and actions. Native file E2E includes pointer hover and rejects AX
 tree errors in the process log; revisit this guard after an SDK fix is verified.
+
+
+Run views use Program Manager's `RunGuidanceInteractor` through the existing HTTP
+and MCP observation paths. Verified preparation failures offer concrete next steps;
+unknown outcomes do not offer a simple restart. Tip replacement requires the existing
+acknowledged supply workflow and never restarts a protocol automatically. Historical
+run status and diagnostics are unchanged. Raw errors, run identifiers, semantic step
+counts and execution evidence remain available under Technical details.

@@ -328,6 +328,10 @@
         {
           "component": "BatchProjectionEffectInteractor",
           "path": "src/culsma_os/program_manager/interactors/batch.py"
+        },
+        {
+          "component": "RunGuidanceInteractor",
+          "path": "src/culsma_os/program_manager/interactors/guidance.py"
         }
       ]
     },

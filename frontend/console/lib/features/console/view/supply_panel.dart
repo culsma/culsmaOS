@@ -130,10 +130,19 @@ class NativeSupplyDialog extends StatelessWidget {
                   'Register a new box at this tip source. The previous box and its consumption remain in the loading history. Liquid quantities and prior runs are unchanged.',
                 ),
                 if (c.busy) const LinearProgressIndicator(),
-                if (c.error != null)
-                  Text(
-                    c.error!,
-                    style: const TextStyle(color: Color(0xff924e25)),
+                if (c.error != null) ...[
+                  const Text(
+                    'The tip-box update needs attention. Review the supply status below before trying again.',
+                    style: TextStyle(color: Color(0xff924e25)),
+                  ),
+                  ExpansionTile(
+                    title: const Text('Technical details'),
+                    children: [SelectableText(c.error!)],
+                  ),
+                ],
+                if (c.supported && c.data?['stock']?['ready'] != true)
+                  const Text(
+                    'Tip stock is not verified. Review the workstation and resolve outstanding operations before registering another box.',
                   ),
                 if (!c.supported)
                   Text(c.data?['reason'] ?? 'This backend is unsupported.')
