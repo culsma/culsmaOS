@@ -10,6 +10,7 @@ import 'supply_panel.dart';
 import 'system_information_view.dart';
 import 'file_browser_view.dart';
 import 'run_outcome_view.dart';
+import 'run_review_view.dart';
 
 class ConsoleViews extends StatelessWidget {
   final NativeConsoleInteractor console;
@@ -22,6 +23,7 @@ class ConsoleViews extends StatelessWidget {
     'settings' => NativeSettingsView(console: console),
     'system_info' => NativeSystemInformationView(console: console),
     'experiment' => experiment(),
+    'preparation' => NativeRunReviewView(console: console),
     _ => const Center(child: Text('Unsupported view')),
   };
   Widget files(BuildContext context) => NativeFileBrowserView(console: console);

@@ -386,7 +386,7 @@ class NativeFileBrowserView extends StatelessWidget {
         child: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            '${browser.total} items · Double-click folders to open, .culs files to run',
+            '${browser.total} items · Double-click folders to open, .culs files to check before running',
             style: const TextStyle(fontSize: 11, color: Color(0xff62798c)),
           ),
         ),

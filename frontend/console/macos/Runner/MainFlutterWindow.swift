@@ -15,6 +15,23 @@ class MainFlutterWindow: NSWindow {
     super.awakeFromNib()
     self.title = "CulsmaOS"
     accessibilityAdapter.attach(to: self)
+#if DEBUG
+    // Native integration tests exercise real engine detach/attach notifications.
+    // This channel is absent from release builds and requires an explicit test flag.
+    if ProcessInfo.processInfo.environment["CULSMA_NATIVE_ACCESSIBILITY_TEST"] == "1" {
+      let probe = FlutterMethodChannel(name: "culsma/test/accessibility",
+        binaryMessenger: flutterViewController.engine.binaryMessenger)
+      probe.setMethodCallHandler { call, result in
+        guard call.method == "setEnabled", let enabled = call.arguments as? Bool else {
+          result(FlutterMethodNotImplemented); return
+        }
+        NotificationCenter.default.post(
+          name: NSNotification.Name("NSApplicationDidChangeAccessibilityEnhancedUserInterfaceNotification"),
+          object: NSApp, userInfo: ["AXEnhancedUserInterface": enabled])
+        result(nil)
+      }
+    }
+#endif
   }
 }
 

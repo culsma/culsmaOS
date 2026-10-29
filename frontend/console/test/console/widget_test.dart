@@ -36,7 +36,7 @@ void main() {
     },
   );
   testWidgets(
-    'double click starts once and shows an independent result window',
+    'double click checks and confirmation starts once in a result window',
     (tester) async {
       final layout = LayoutFixture.controller(),
           api = NativeConsoleFixtureApi(),
@@ -52,6 +52,9 @@ void main() {
       await tester.tap(file);
       await tester.pump(const Duration(milliseconds: 60));
       await tester.tap(file);
+      await tester.pumpAndSettle();
+      expect(api.startCount, 0);
+      await tester.tap(find.byKey(const Key('confirm-run')));
       await tester.pumpAndSettle();
       expect(api.startCount, 1);
       expect(c.active?.entityId, 'run-one');

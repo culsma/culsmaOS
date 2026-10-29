@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:culsma_console/api/console_api.dart';
@@ -49,7 +50,17 @@ void main() {
         await tester.pumpAndSettle();
       }
 
+      Future<void> reconnectAccessibility() async {
+        const bridge = MethodChannel('culsma/test/accessibility');
+        await bridge.invokeMethod('setEnabled', false);
+        await tester.pumpAndSettle();
+        await bridge.invokeMethod('setEnabled', true);
+        await tester.pumpAndSettle();
+      }
+
+      var cancellationChecked = false;
       Future<void> run(String expected) async {
+        await reconnectAccessibility();
         c.open('files');
         await c.files.navigate('programs', '');
         await tester.pumpAndSettle();
@@ -59,6 +70,26 @@ void main() {
         await tester.tap(entry);
         await tester.pump(const Duration(milliseconds: 60));
         await tester.tap(entry);
+        for (var i = 0; i < 100 && c.busy; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        }
+        await tester.pumpAndSettle();
+        final before = (await api.read('/api/v1/station'))['runs'];
+        expect(c.launchReview, isNotNull, reason: c.message);
+        expect(c.pendingStart, isNull);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        expect((await api.read('/api/v1/station'))['runs'], before);
+        if (!cancellationChecked) {
+          c.closeWindow(c.active!);
+          await c.confirmLaunch();
+          expect((await api.read('/api/v1/station'))['runs'], before);
+          expect(c.launchReview, isNull);
+          cancellationChecked = true;
+          await c.launch('standard_dilution.culs');
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.byKey(const Key('confirm-run')).hitTestable());
         await settle();
         expect(
           c.runs[c.active?.entityId]?['status'],
@@ -76,6 +107,7 @@ void main() {
           await Future<void>.delayed(const Duration(milliseconds: 30));
         }
         await tester.pumpAndSettle();
+        await reconnectAccessibility();
         await tester.tap(find.byType(CheckboxListTile));
         await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(FilledButton, 'Register new box'));
@@ -113,5 +145,6 @@ void main() {
         await directory.delete(recursive: true);
       }
     },
+    semanticsEnabled: false, // Let the real native bridge drive the lifecycle.
   );
 }

@@ -27,7 +27,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   late final NativeSystemInformationInteractor information;
   final windows = <ConsoleWindowModel>[];
   final runs = <String, Map<String, dynamic>>{};
-  Map<String, dynamic>? station, inspection, pendingStart;
+  Map<String, dynamic>? station, inspection, pendingStart, launchReview;
   String? activeId, selectedFile, selectedEntity, message, messageDetails;
   bool busy = false, disposed = false;
   Timer? timer;
@@ -95,7 +95,9 @@ class NativeConsoleInteractor extends ChangeNotifier {
     }
     if (view == 'experiment' && (entityId == null || entityId.isEmpty))
       throw const FormatException('RUN_ID_REQUIRED');
-    final title = view == 'experiment'
+    final title = view == 'preparation'
+        ? 'Check experiment'
+        : view == 'experiment'
         ? 'Experiment · ${entityId!.substring(0, min(8, entityId.length))}'
         : ConsoleWindowDescriptor.applications
               .firstWhere((a) => a.view == view)
@@ -162,6 +164,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   void closeWindow(ConsoleWindowModel w) {
     if (protect(w)) return;
     windows.remove(w);
+    if (w.view == 'preparation') launchReview = null;
     selectRemaining(w);
   }
 
@@ -256,7 +259,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
       if (!files.initialized) await files.initialize();
       final observed = {
         for (final w in windows)
-          if (w.entityId != null) w.entityId!,
+          if (w.view == 'experiment' && w.entityId != null) w.entityId!,
         ...controls.pending.keys,
       };
       for (final run in observed) {
@@ -305,52 +308,81 @@ class NativeConsoleInteractor extends ChangeNotifier {
     16,
     (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
   ).join();
+
+  /// Double-click checks an immutable source snapshot; it never dispatches work.
   Future<void> launch(String id, {String sourceScope = 'programs'}) async {
     if (working || pendingStart != null) return;
     if (dirty) {
       message =
-          'Finish or discard the current edit before starting another experiment.';
+          'Finish or discard the current edit before checking another experiment.';
       notifyListeners();
       return;
     }
-
     busy = true;
     selectedFile = id;
-    message = null;
-    messageDetails = null;
-    notifyListeners();
+    launchReview = null;
+    inspection = null;
+    open('preparation');
     try {
       final result = await api.command('/api/v1/programs', {
-        'action': 'inspect',
+        'action': 'preview',
         'program_id': id,
         if (sourceScope != 'programs') 'source_scope': sourceScope,
       });
       inspection = result;
-      if (result['valid'] != true) {
-        message =
-            'The protocol needs changes before it can run. Review its diagnostics in Technical details.';
+      if (result['valid'] != true ||
+          result['preparation']?['status'] == 'blocked') {
+        message = 'The experiment needs attention before it can run.';
         messageDetails =
-            result['diagnostics']?.toString() ??
-            'Protocol validation did not pass.';
+            result['preparation']?['diagnostic']?.toString() ??
+            result['diagnostics']?.toString();
         return;
       }
-      final payload = {
+      if (result['snapshot_id'] is! String)
+        throw const FormatException('Missing checked source snapshot');
+      launchReview = {
         'action': 'start',
         'program_id': id,
         if (sourceScope != 'programs') 'source_scope': sourceScope,
         'snapshot_id': result['snapshot_id'],
-        'request_id': requestId(),
+        if (result['preparation']?['configuration_fingerprint'] != null)
+          'configuration_fingerprint':
+              result['preparation']['configuration_fingerprint'],
       };
-      if (requests == null) {
-        message = 'Durable run request storage is unavailable.';
-        return;
-      }
-      await requests!.save(payload);
-      pendingStart = payload;
-      await sendPendingStart();
     } catch (error) {
       message =
-          'The operation could not be completed. Check the workstation and try again when it is ready.';
+          'The experiment could not be checked. Review the workstation and try again.';
+      messageDetails = error.toString();
+    } finally {
+      busy = false;
+      if (!disposed) notifyListeners();
+    }
+  }
+
+  /// Confirmation is bound to the checked snapshot and station configuration.
+  Future<void> confirmLaunch() async {
+    if (working || dirty || pendingStart != null || launchReview == null)
+      return;
+    if (requests == null) {
+      message = 'Durable run request storage is unavailable.';
+      notifyListeners();
+      return;
+    }
+    busy = true;
+    message = null;
+    messageDetails = null;
+    notifyListeners();
+    try {
+      final payload = {...launchReview!, 'request_id': requestId()};
+      await requests!.save(payload);
+      pendingStart = payload;
+      launchReview = null;
+      await sendPendingStart();
+      if (pendingStart == null && active?.view == 'experiment')
+        windows.removeWhere((w) => w.view == 'preparation');
+    } catch (error) {
+      message =
+          'The run request needs attention. Check its status before trying again.';
       messageDetails = error.toString();
     } finally {
       busy = false;

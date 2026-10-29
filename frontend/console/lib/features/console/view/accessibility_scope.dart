@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 /// during folder/window transitions (flutter/flutter#182444 and #175041).
 /// Modal barriers can replace the entire exposed subtree. Keep their children
 /// below an explicit boundary so they cannot merge into the engine root.
-/// Do not disable ensureSemantics or the native accessibility bridge.
+/// Native accessibility remains enabled by the embedder; do not retain a Dart
+/// semantics handle across native bridge reconnections.
 class NativeAccessibilityScope extends StatelessWidget {
   final Widget child;
   const NativeAccessibilityScope({super.key, required this.child});

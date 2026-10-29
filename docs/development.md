@@ -408,7 +408,10 @@ hidden files, links, special files and execution snapshot storage cannot be open
 Browsing is read-only. HTTP `/api/v1/files` and MCP `file_roots`, `list_directory`,
 `preview_file` delegate to the same authorized File System Interactor.
 
-Single-click previews a file; double-click opens a folder or runs a `.culs` program.
+Single-click previews a file; double-click opens a folder or checks a `.culs` program.
+The native review shows language/loading checks, then requires **Confirm run**.
+Confirmation uses the checked source snapshot and configuration fingerprint. Stock
+and device checks still run before dispatch; preview does not reserve inventory.
 Execution still belongs to Program Manager. Programs opened through the workspace root use
 `source_scope="installation"`; the default `"programs"` retains existing API
 behavior. Workspace-root snapshots include only the selected program and its transitive
@@ -476,3 +479,12 @@ Keep native semantics enabled. `tools/test_native_accessibility.py` exercises 12
 supply-dialog cancellations and an acknowledged replacement against in-memory
 supplies, rejects AX-tree errors in native logs, and asserts that no run starts.
 This is a regression check, not a guarantee against every upstream engine defect.
+
+The native embedder owns the semantics lifecycle. Do not retain an independent
+Dart `ensureSemantics()` handle: after native accessibility detach/attach, the
+engine creates an empty bridge while that handle retains an incremental Dart tree.
+The real native inventory E2E now reconnects the bridge between runs and during
+tip replacement. Its test binding also uses platform-owned semantics. A debug-only,
+explicitly opted-in native notification probe is absent from release builds.
+The original App reproduced the crash under this regression; the corrected App
+passed the same sequence. This does not disable accessibility or clear run state.

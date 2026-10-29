@@ -140,6 +140,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 60));
       await tester.tap(file);
       await tester.pumpAndSettle();
+      expect(api.startCount, 0);
+      await c.confirmLaunch();
       expect(api.startCount, 1);
       final start = api.calls.singleWhere((r) => r['action'] == 'start');
       expect(start['source_scope'], 'installation');

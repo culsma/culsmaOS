@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'features/layout/interactor/layout_controller.dart';
 import 'features/console/interactor/console_interactor.dart';
 import 'features/console/view/desktop_shell.dart';
@@ -24,13 +23,14 @@ class CulsmaConsole extends StatefulWidget {
 
 class CulsmaConsoleState extends State<CulsmaConsole>
     with WidgetsBindingObserver {
-  late final SemanticsHandle semantics;
   late final NativeConsoleInteractor console;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    semantics = SemanticsBinding.instance.ensureSemantics();
+    // The native embedder owns accessibility activation. Holding a second Dart
+    // handle across native detach/attach would retain an incremental tree while
+    // the engine recreates an empty AX bridge. Let platform changes rebuild it.
     console =
         widget.console ??
         NativeConsoleInteractor(
@@ -52,7 +52,6 @@ class CulsmaConsoleState extends State<CulsmaConsole>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     widget.renderer?.close();
-    semantics.dispose();
     if (widget.console == null) console.dispose();
     super.dispose();
   }

@@ -116,7 +116,7 @@ class NativeConsoleFixtureApi extends FakeConsoleApi {
       return {'supported': false, 'reason': 'Test device has no stock port.'};
     if (path == '/api/v1/programs') {
       calls.add({'path': path, ...body});
-      if (body['action'] == 'inspect')
+      if (body['action'] == 'inspect' || body['action'] == 'preview')
         return {
           'valid': true,
           'snapshot_id': 'snapshot',

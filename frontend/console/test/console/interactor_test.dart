@@ -49,6 +49,7 @@ void main() {
           repo = MemoryPendingRequestRepository();
       var c = NativeConsoleInteractor(api, layout, requests: repo);
       await c.launch('transfer.culs');
+      await c.confirmLaunch();
       final request = Map.of(repo.value!);
       expect(api.startCount, 1);
       c.dispose();

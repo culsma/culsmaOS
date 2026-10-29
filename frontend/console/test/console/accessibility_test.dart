@@ -46,6 +46,7 @@ void main() {
       expect(find.bySemanticsLabel('Workstation'), findsOneWidget);
       expect(find.byType(RawTooltip), findsNothing);
       await c.launch('transfer.culs');
+      await c.confirmLaunch();
       await tester.pumpAndSettle();
       expect(find.text('100 µL'), findsOneWidget);
       expect(
