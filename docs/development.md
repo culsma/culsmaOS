@@ -502,3 +502,5 @@ tip replacement. Its test binding also uses platform-owned semantics. A debug-on
 explicitly opted-in native notification probe is absent from release builds.
 The original App reproduced the crash under this regression; the corrected App
 passed the same sequence. This does not disable accessibility or clear run state.
+
+Normal console simulations use a fresh declared load for each run. The OS selects the run scope and counts that run's consumable receipts; the local Hamilton simulator stores each run independently. Reopening the same run retains its state. Persistent inventory and interruption scenarios remain backend tests. Normal Workstation pages do not expose simulated replenishment controls.

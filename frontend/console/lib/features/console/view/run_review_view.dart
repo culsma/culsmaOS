@@ -72,7 +72,7 @@ class NativeRunReviewView extends StatelessWidget {
                 ),
                 Text(
                   simulation
-                      ? 'Simulation uses the current simulated inventory. It does not move hardware or confirm physical loading.'
+                      ? 'Each simulation starts with a fresh declared load. Previous simulations do not consume its tips or liquids.'
                       : 'No simulation workstation is available.',
                 ),
               ],

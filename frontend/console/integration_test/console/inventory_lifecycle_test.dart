@@ -172,6 +172,19 @@ void main() {
         await c.refresh();
         await tester.pumpWidget(CulsmaConsole(controller: layout, console: c));
         await tester.pumpAndSettle();
+        if (const bool.fromEnvironment('INDEPENDENT_SIMULATION')) {
+          c.open('workstation');
+          await tester.pumpAndSettle();
+          expect(find.text('Replace tip box…'), findsNothing);
+          for (var trial = 0; trial < 6; trial++) {
+            await run('completed');
+          }
+          expect(c.supplies.supported, isFalse);
+          expect(find.text('Replace tip box…'), findsNothing);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+          return;
+        }
         await run('completed');
         await run('completed');
         await run('failed');
@@ -182,7 +195,10 @@ void main() {
         await run('failed');
         await refill();
         await run('failed');
-        expect(find.text('The setup needs attention'), findsOneWidget);
+        expect(
+          find.text('The simulated liquid supply is insufficient'),
+          findsOneWidget,
+        );
         expect(find.textContaining('Checking the experiment'), findsNothing);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());

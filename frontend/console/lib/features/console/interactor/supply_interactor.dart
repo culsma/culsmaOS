@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../../../api/console_api.dart';
@@ -9,6 +10,8 @@ class NativeSupplyInteractor extends ChangeNotifier {
   Map<String, dynamic>? data, pending;
   String? error, message, editingRevision;
   final selected = <String>{};
+  Completer<void>? refreshCompletion;
+  bool get refreshing => refreshCompletion != null;
   bool busy = false,
       editing = false,
       acknowledged = false,
@@ -51,14 +54,17 @@ class NativeSupplyInteractor extends ChangeNotifier {
 
   Future<void> refresh() async {
     if (busy) return;
-    busy = true;
+    if (refreshCompletion != null) return refreshCompletion!.future;
+    final completion = Completer<void>();
+    refreshCompletion = completion;
     try {
       data = await api.command('/api/v1/consumables', {'action': 'show'});
       if (pending != null) await readStatus(pending!['request_id']);
     } catch (e) {
       error = 'Tip supply status unavailable: $e';
     } finally {
-      busy = false;
+      refreshCompletion = null;
+      completion.complete();
       emit();
     }
   }
@@ -100,6 +106,7 @@ class NativeSupplyInteractor extends ChangeNotifier {
   }
 
   Future<void> apply() async {
+    if (refreshCompletion != null) await refreshCompletion!.future;
     if (!canApply) return;
     busy = true;
     error = null;
@@ -167,6 +174,7 @@ class NativeSupplyInteractor extends ChangeNotifier {
   }
 
   Future<void> check([String? id]) async {
+    if (refreshCompletion != null) await refreshCompletion!.future;
     if (busy) return;
     final request = id ?? pending?['request_id'];
     if (request == null) return;

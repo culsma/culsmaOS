@@ -61,3 +61,16 @@ def test_unrecognized_preparation_diagnostic_does_not_claim_prior_device_work():
     assert value['title']=='The experiment could not start'
     assert value['device_activity']=='none_recorded'
     assert 'already' not in value['message'] and 'UNRECOGNIZED' not in value['message']
+
+
+@pytest.mark.parametrize('prefix',['','PRE_DISPATCH_REJECTED: ','BATCH_PREPARATION_REJECTED: ','GROUP_PRE_DISPATCH_REJECTED: '])
+def test_simulated_liquid_shortage_explains_persistent_consumption(prefix):
+    record=run(error=prefix+'HAM_LOCAL_INVENTORY_INSUFFICIENT')
+    view=RunGuidanceInteractor().describe(record)
+    assert view['title']=='The simulated liquid supply is insufficient'
+    assert 'Replacing a tip box does not replenish liquids' in ' '.join(view['next_steps'])
+    assert 'replace_tips' not in view['actions']
+    assert record['status']=='failed'
+    # The same diagnostic after dispatch is not permission to repeat an action.
+    record['execution_evidence']['attempts']=[{'attempt_id':'sent'}]
+    assert 'open_files' not in RunGuidanceInteractor().describe(record)['actions']

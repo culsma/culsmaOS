@@ -6,7 +6,6 @@ import '../interactor/console_interactor.dart';
 import '../model/console_model.dart';
 import 'labware_dialog.dart';
 import 'recorded_deck.dart';
-import 'supply_panel.dart';
 import 'system_information_view.dart';
 import 'file_browser_view.dart';
 import 'run_outcome_view.dart';
@@ -232,7 +231,7 @@ class WorkstationRecordsState extends State<WorkstationRecords> {
           'Station: ${c.station?['host']?['status'] ?? 'Reading…'} · declared geometry',
         ),
         const SizedBox(height: 20),
-        NativeSupplyPanel(console: c),
+
         board,
         outsideEquipment(context, envelope),
         const SizedBox(height: 16),

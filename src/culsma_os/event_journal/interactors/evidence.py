@@ -63,6 +63,14 @@ class EvidenceInteractor:
     def record_run_event(self, event):
         self.events.append_once(event)
 
+    def known_run_consumption(self, device_id, run_id):
+        totals = {}
+        for evidence in self.repository.for_device(device_id):
+            if evidence.mode == 'simulation' and evidence.run_id == run_id:
+                for resource, count in evidence.consumed_resources.items():
+                    totals[resource] = totals.get(resource, 0) + count
+        return totals
+
     def known_consumption(self, device_id):
         totals = {}
         local = self.repository.for_device(device_id)

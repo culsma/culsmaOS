@@ -29,6 +29,16 @@ class RunGuidanceInteractor:
                     'next_steps':['Replace or replenish the tip box at the workstation.',
                                   'Check supplies again, then open the protocol from Files to start a new run.'],
                     'actions':['replace_tips','refresh','open_files']}
+        if before_execution and error in {
+                'HAM_LOCAL_INVENTORY_INSUFFICIENT',
+                'BATCH_PREPARATION_REJECTED: HAM_LOCAL_INVENTORY_INSUFFICIENT',
+                'PRE_DISPATCH_REJECTED: HAM_LOCAL_INVENTORY_INSUFFICIENT',
+                'GROUP_PRE_DISPATCH_REJECTED: HAM_LOCAL_INVENTORY_INSUFFICIENT'}:
+            return {**summary,'kind':'preparation','title':'The simulated liquid supply is insufficient',
+                    'message':'The local simulator cannot prepare the requested aspiration with the current liquid inventory or tip capacity.',
+                    'next_steps':['Previous simulations retain their liquid consumption. Replacing a tip box does not replenish liquids.',
+                                  'Review source volumes and transfer capacity. Prepare a fresh simulated liquid load before trying again.'],
+                    'actions':['open_workstation','refresh','open_files']}
         if before_execution and error.startswith(('BATCH_PREPARATION_REJECTED','PREFLIGHT_','SETUP_')):
             return {**summary,'kind':'preparation','title':'The setup needs attention',
                     'message':'The station could not prepare this experiment. Check the layout, supplies and device configuration.',

@@ -61,3 +61,11 @@ class DeviceAccessPort(Protocol):
     def get(self, device_id: str) -> DeviceConfigurationSnapshot: ...
 
     def validate_ready(self, context) -> None: ...
+
+
+class RunScopedSimulationPort(Protocol):
+    """Optional simulator capability. Scope selection retains prior run records."""
+
+    simulation_scope: str
+
+    def begin_simulation_run(self, run_id: str) -> None: ...

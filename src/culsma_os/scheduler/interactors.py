@@ -82,6 +82,7 @@ class RunSchedulerInteractor:
                 if self.device is not None and run_id not in self.session_runs:
                     try:
                         self.device.admit_session(allow_reconfiguration=self.reservations.owned(run_id).generation == 1)
+                        self.device.select_simulation_run(run_id)
                         self.device.restore_consumables(self.reservations.device.device_id, self.evidence)
                     except ValueError as error:
                         return self.execution.state.mark_failed(run_id, f"SESSION_CONSUMPTION_STALE: {error}")

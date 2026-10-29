@@ -58,6 +58,15 @@ class DeviceInteractor:
             raise ValueError("DEVICE_CONFIGURATION_STALE")
         self.readiness.check_ready()
 
+    def select_simulation_run(self, run_id):
+        if getattr(self.readiness, 'simulation_scope', 'station') != 'run':
+            return
+        if self.configured_snapshot.mode != 'simulation':
+            raise ValueError('SIMULATION_SCOPE_REQUIRES_SIMULATION')
+        self.readiness.begin_simulation_run(run_id)
+        if self.consumables is not None:
+            self.consumables.simulation_run_id = run_id
+
     def restore_consumables(self, device_id, evidence):
         consumption = self.consumables.restore(self.readiness,device_id) if self.consumables else evidence.known_consumption(device_id)
         # A new load can have the same count as the previous restoration.

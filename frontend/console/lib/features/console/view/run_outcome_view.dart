@@ -104,7 +104,7 @@ class NativeRunOutcomeView extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.only(top: 12),
             child: Text(
-              'Simulation result · no hardware was operated',
+              'Execution mode: simulation · physical instruments were not used',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),

@@ -32,6 +32,7 @@ class RunSetupInteractor:
                 previous = self.get(run_id)
             except KeyError:
                 previous = {'revision': 0, 'phase': 'planned'}
+            self.device.select_simulation_run(run_id)
             if self.catalogue is not None and getattr(self.device,'consumables',None) is not None:
                 self.device.restore_consumables(self.snapshot.device_id,self.evidence)
                 self.catalogue=self.device.readiness.describe_workspace()

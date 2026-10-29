@@ -52,6 +52,7 @@ class ConsumableInteractor:
         self.device = device
         self.evidence = evidence
         self.loads = loads
+        self.simulation_run_id = None
 
     def require(self, device_id, requirements):
         capacities = self.capacities(device_id)
@@ -70,6 +71,8 @@ class ConsumableInteractor:
                 raise ValueError("OS_CONSUMABLES_INSUFFICIENT")
 
     def active_loads(self, device_id):
+        if getattr(getattr(self.device, 'readiness', None), 'simulation_scope', 'station') == 'run':
+            return {}
         values={}
         for row in self.loads.records(device_id) if self.loads else ():
             if row['status']=='applied':values[row['resource_id']]=row
@@ -82,6 +85,10 @@ class ConsumableInteractor:
         return values
 
     def current_consumption(self,device_id):
+        if getattr(getattr(self.device, 'readiness', None), 'simulation_scope', 'station') == 'run':
+            if self.simulation_run_id is None:
+                return {key:0 for key in self.device.get(device_id).consumable_capacities}
+            return self.evidence.known_run_consumption(device_id, self.simulation_run_id)
         totals=self.evidence.known_consumption(device_id);loads=self.active_loads(device_id)
         current={key:totals.get(key,0)-(loads[key]['baseline'] if key in loads else 0)
             for key in self.device.get(device_id).consumable_capacities}
