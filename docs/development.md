@@ -333,6 +333,10 @@ transport starts a second runtime or bypasses dispatch/resource gates.
 
 Progress and terminal outcomes appear at the top of the run pane, before the layout.
 Completion scrolls to the result once; subsequent polling preserves the user's scroll.
+The native outcome page renders `lab_report_v1` products, starting materials, reagent
+consumption, container/instrument requirements and process counts. OS execution evidence
+remains separate. Legacy material-only results prefer display labels and conceal internal
+allocation identifiers; incomplete runs label their reports as partial results.
 Registered material is displayed immediately below the outcome. Loading plans,
 execution receipts and technical state remain available below it.
 

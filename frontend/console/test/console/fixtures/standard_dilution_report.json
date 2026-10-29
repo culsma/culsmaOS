@@ -1,0 +1,123 @@
+{
+  "run_id": "07e32658-a43b-44ac-be54-ab71a8ee75e0",
+  "status": "completed",
+  "result": {
+    "alerts": [],
+    "execution": {
+      "completed_steps": 13,
+      "diagnostic_count": 0,
+      "failed_steps": 0,
+      "ok": true,
+      "skipped_steps": 0,
+      "total_steps": 13
+    },
+    "external_inventory": {
+      "checked": false,
+      "items": [],
+      "reason": "inventory_not_supplied",
+      "schema": "culsma_inventory_reconciliation_v1",
+      "shortages": [],
+      "sufficient": null
+    },
+    "headline": "Experiment completed successfully with no runtime errors.",
+    "materials": {
+      "final_products": [
+        {
+          "mass_mg": 100.0,
+          "name": "Dilution standards_A1",
+          "primary_component": "DILUENT",
+          "volume_mL": 0.1,
+          "volume_uL": 100.0
+        },
+        {
+          "mass_mg": 100.0,
+          "name": "Dilution standards_A2",
+          "primary_component": "DILUENT",
+          "volume_mL": 0.1,
+          "volume_uL": 100.0
+        },
+        {
+          "mass_mg": 100.0,
+          "name": "Dilution standards_A3",
+          "primary_component": "DILUENT",
+          "volume_mL": 0.1,
+          "volume_uL": 100.0
+        }
+      ],
+      "has_material_state": true,
+      "input_inventory": [
+        {
+          "initial_mL": 1.0,
+          "initial_mg": 0.0,
+          "initial_uL": 1000.0,
+          "name": "Diluent"
+        },
+        {
+          "initial_mL": 1.0,
+          "initial_mg": 0.0,
+          "initial_uL": 1000.0,
+          "name": "Standard stock"
+        }
+      ],
+      "intermediate_materials": [],
+      "reagent_consumption": [
+        {
+          "consumed_mL": 0.23,
+          "consumed_mg": null,
+          "consumed_uL": 230.0,
+          "name": "Diluent",
+          "roles": [
+            "source"
+          ]
+        },
+        {
+          "consumed_mL": 0.07,
+          "consumed_mg": null,
+          "consumed_uL": 70.0,
+          "name": "Standard stock",
+          "roles": [
+            "source"
+          ]
+        }
+      ]
+    },
+    "process_summary": {
+      "environment_steps": 0,
+      "mutation_steps": 3,
+      "readout_steps": 0,
+      "separation_steps": 0
+    },
+    "qc_results": [],
+    "resource_summary": {
+      "containers": {
+        "allocated_count": 5,
+        "container_kinds": [
+          {
+            "count": 2,
+            "kind": "tube"
+          },
+          {
+            "count": 3,
+            "kind": "well"
+          }
+        ],
+        "touched_count": 5,
+        "touched_names": [
+          "Diluent",
+          "Dilution standards_A1",
+          "Dilution standards_A2",
+          "Dilution standards_A3",
+          "Standard stock"
+        ]
+      },
+      "instruments": {
+        "devices": [],
+        "tools": []
+      }
+    },
+    "schema": "lab_report_v1",
+    "os": {
+      "mode": "simulation"
+    }
+  }
+}

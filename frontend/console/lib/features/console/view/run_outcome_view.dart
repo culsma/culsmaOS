@@ -4,6 +4,7 @@ import 'supply_panel.dart';
 import 'setup_panel.dart';
 import 'run_control_panel.dart';
 import 'evidence_panel.dart';
+import 'run_report_panel.dart';
 
 /// Renders backend guidance. Recovery eligibility is never inferred from raw errors.
 class NativeRunOutcomeView extends StatelessWidget {
@@ -49,6 +50,10 @@ class NativeRunOutcomeView extends StatelessWidget {
           ),
         ),
       NativeEvidencePanel(run: run),
+      NativeEvidencePanel(run: run).details('Complete language report', {
+        for (final entry in result.entries)
+          if (entry.key != 'os') entry.key: entry.value,
+      }),
       if (run['status'] != 'awaiting_setup' && console.setup.plans[id] != null)
         ExpansionTile(
           title: const Text('Recorded loading plan'),
@@ -62,9 +67,6 @@ class NativeRunOutcomeView extends StatelessWidget {
     final guidance = run['user_guidance'] as Map? ?? {};
     final actions = guidance['actions'] as List? ?? [];
     final result = run['result'] as Map? ?? {};
-    final containers =
-        result['os']?['registered_material']?['state']?['containers'] as Map? ??
-        {};
     final preparation = guidance['kind'] == 'preparation';
     final currentSupply = console.supplies.data;
     final available = currentSupply?['stock']?['available'] as List?;
@@ -89,7 +91,10 @@ class NativeRunOutcomeView extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                guidance['title'] ?? fallbackTitle(),
+                run['status'] == 'completed' &&
+                        result['os']?['mode'] == 'simulation'
+                    ? 'Simulation completed'
+                    : guidance['title'] ?? fallbackTitle(),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
@@ -210,26 +215,7 @@ class NativeRunOutcomeView extends StatelessWidget {
         NativeRunControlPanel(controller: console.controls, run: run),
         if (run['status'] == 'awaiting_setup')
           NativeSetupPanel(controller: console.setup, run: run),
-        if (containers.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          const Text(
-            'Recorded liquid amounts',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          for (final row in containers.entries)
-            ListTile(
-              title: Text(row.value['metadata']?['allocation_name'] ?? row.key),
-              trailing: Text('${row.value['volume_uL']} µL'),
-            ),
-          const Text(
-            'Calculated from recorded actions; these are not physical measurements.',
-            style: TextStyle(color: Color(0xff62798c)),
-          ),
-        ] else if (run['status'] == 'completed')
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text('This run has no recorded liquid amounts to display.'),
-          ),
+        NativeRunReportPanel(run: run),
         const SizedBox(height: 24),
         details(result, id),
       ],

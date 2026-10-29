@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:culsma_console/api/console_api.dart';
 import 'package:culsma_console/app.dart';
+import 'package:culsma_console/features/console/view/run_outcome_view.dart';
 import 'package:culsma_console/features/layout/interactor/layout_controller.dart';
 import 'package:culsma_console/features/console/interactor/console_interactor.dart';
 import 'package:culsma_console/features/console/repository/pending_request_repository.dart';
@@ -121,6 +122,27 @@ void main() {
           expected,
           reason: c.message,
         );
+        if (expected == 'completed') {
+          final activeResult = find.byWidgetPredicate(
+            (w) =>
+                w is NativeRunOutcomeView &&
+                w.run['run_id'] == c.active?.entityId,
+          );
+          Finder text(String value) =>
+              find.descendant(of: activeResult, matching: find.text(value));
+          expect(text('Simulation completed'), findsOneWidget);
+          expect(text('Final products'), findsOneWidget);
+          expect(text('Dilution standards_A1'), findsOneWidget);
+          expect(text('Reagents used'), findsOneWidget);
+          expect(text('230 µL'), findsOneWidget);
+          expect(
+            find.descendant(
+              of: activeResult,
+              matching: find.textContaining('__lw_plate'),
+            ),
+            findsNothing,
+          );
+        }
       }
 
       Future<void> refill() async {
