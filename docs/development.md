@@ -413,7 +413,10 @@ Browsing is read-only. HTTP `/api/v1/files` and MCP `file_roots`, `list_director
 `preview_file` delegate to the same authorized File System Interactor.
 
 Single-click previews a file; double-click opens a folder or checks a `.culs` program.
-The native review lists the proposed container models, track/site locations,
+The native review highlights the required positions on the declared deck, links numbered
+loading cards to those positions, and uses driver-supplied display labels and generic
+container/plate/reservoir/tip symbols. Track pitch is preserved while scrolling. It lists
+the proposed container models, track/site locations,
 initial liquid amounts, empty wells and configured tip positions. **Run simulation**
 is an explicit action using the current simulated inventory, not a side-effect-free
 static check. Simulation results are labelled. **Run on hardware** remains disabled:

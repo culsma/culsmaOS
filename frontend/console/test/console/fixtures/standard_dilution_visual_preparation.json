@@ -1,0 +1,1175 @@
+{
+  "snapshot_id": "standard-dilution-visual-fixture",
+  "preparation": {
+    "status": "available",
+    "plan": {
+      "bindings": {
+        "entry.s0::alloc": {
+          "labware": "STANDARD_T36_SITE2",
+          "well": "1"
+        },
+        "entry.s1::alloc": {
+          "labware": "WATER_T36_REAR_SITE1",
+          "well": "1"
+        },
+        "entry.s3::well::A1::alloc": {
+          "labware": "DWP96_E4",
+          "well": "A1"
+        },
+        "entry.s3::well::A2::alloc": {
+          "labware": "DWP96_E4",
+          "well": "A2"
+        },
+        "entry.s3::well::A3::alloc": {
+          "labware": "DWP96_E4",
+          "well": "A3"
+        }
+      },
+      "items": [
+        {
+          "allocation_id": "entry.s0::alloc",
+          "container_id": "container/entry/entry.s0%3A%3Aalloc/standard",
+          "kind": "tube",
+          "name": "standard",
+          "capacity_uL": 60000.0,
+          "initial_volume_uL": 1000.0,
+          "initial_contents": {
+            "STANDARD": {
+              "dimension": "volume",
+              "unit": "uL",
+              "value": 1000.0
+            }
+          },
+          "address": {
+            "labware": "STANDARD_T36_SITE2",
+            "well": "1"
+          },
+          "placement": {
+            "carrier": "PREVIEW_T36_5R60_SUBSTITUTE",
+            "track": "36",
+            "site": "2",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              831.25,
+              368.15,
+              163.2
+            ],
+            "native_angle_deg": 0.0
+          },
+          "model": "RGT_CONT_60ML_BC_A00",
+          "display": {
+            "label": "60 mL reagent vessel \u00b7 8 aspiration positions",
+            "kind": "reservoir"
+          },
+          "selection": "automatic",
+          "preferred_satisfied": true
+        },
+        {
+          "allocation_id": "entry.s1::alloc",
+          "container_id": "container/entry/entry.s1%3A%3Aalloc/diluent",
+          "kind": "tube",
+          "name": "diluent",
+          "capacity_uL": 60000.0,
+          "initial_volume_uL": 1000.0,
+          "initial_contents": {
+            "DILUENT": {
+              "dimension": "volume",
+              "unit": "uL",
+              "value": 1000.0
+            }
+          },
+          "address": {
+            "labware": "WATER_T36_REAR_SITE1",
+            "well": "1"
+          },
+          "placement": {
+            "carrier": "PREVIEW_T36_5R60_SUBSTITUTE",
+            "track": "36",
+            "site": "1",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              831.25,
+              532.75,
+              163.2
+            ],
+            "native_angle_deg": 0.0
+          },
+          "model": "RGT_CONT_60ML_BC_A00",
+          "display": {
+            "label": "60 mL reagent vessel \u00b7 8 aspiration positions",
+            "kind": "reservoir"
+          },
+          "selection": "automatic",
+          "preferred_satisfied": true
+        },
+        {
+          "allocation_id": "entry.s3::well::A1::alloc",
+          "container_id": "container/entry/entry.s3%3A%3Awell%3A%3AA1%3A%3Aalloc/__lw_plate_assay_A1",
+          "kind": "well",
+          "name": "__lw_plate_assay_A1",
+          "capacity_uL": 2000.0,
+          "initial_volume_uL": 0.0,
+          "initial_contents": {},
+          "carrier": "entry:assay",
+          "well": "A1",
+          "geometry": [
+            8,
+            12
+          ],
+          "address": {
+            "labware": "DWP96_E4",
+            "well": "A1"
+          },
+          "placement": {
+            "carrier": "CAR_HHS_3DWP_0001",
+            "track": "29",
+            "site": "4",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              691.7,
+              152.5,
+              182.7
+            ],
+            "native_angle_deg": 0.0
+          },
+          "model": "ABg_96_VB_DWP_2200ul",
+          "display": {
+            "label": "ABgene 96-position 2.2 mL deep-well plate",
+            "kind": "plate"
+          },
+          "selection": "automatic",
+          "preferred_satisfied": true
+        },
+        {
+          "allocation_id": "entry.s3::well::A2::alloc",
+          "container_id": "container/entry/entry.s3%3A%3Awell%3A%3AA2%3A%3Aalloc/__lw_plate_assay_A2",
+          "kind": "well",
+          "name": "__lw_plate_assay_A2",
+          "capacity_uL": 2000.0,
+          "initial_volume_uL": 0.0,
+          "initial_contents": {},
+          "carrier": "entry:assay",
+          "well": "A2",
+          "geometry": [
+            8,
+            12
+          ],
+          "address": {
+            "labware": "DWP96_E4",
+            "well": "A2"
+          },
+          "placement": {
+            "carrier": "CAR_HHS_3DWP_0001",
+            "track": "29",
+            "site": "4",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              691.7,
+              152.5,
+              182.7
+            ],
+            "native_angle_deg": 0.0
+          },
+          "model": "ABg_96_VB_DWP_2200ul",
+          "display": {
+            "label": "ABgene 96-position 2.2 mL deep-well plate",
+            "kind": "plate"
+          },
+          "selection": "automatic",
+          "preferred_satisfied": true
+        },
+        {
+          "allocation_id": "entry.s3::well::A3::alloc",
+          "container_id": "container/entry/entry.s3%3A%3Awell%3A%3AA3%3A%3Aalloc/__lw_plate_assay_A3",
+          "kind": "well",
+          "name": "__lw_plate_assay_A3",
+          "capacity_uL": 2000.0,
+          "initial_volume_uL": 0.0,
+          "initial_contents": {},
+          "carrier": "entry:assay",
+          "well": "A3",
+          "geometry": [
+            8,
+            12
+          ],
+          "address": {
+            "labware": "DWP96_E4",
+            "well": "A3"
+          },
+          "placement": {
+            "carrier": "CAR_HHS_3DWP_0001",
+            "track": "29",
+            "site": "4",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              691.7,
+              152.5,
+              182.7
+            ],
+            "native_angle_deg": 0.0
+          },
+          "model": "ABg_96_VB_DWP_2200ul",
+          "display": {
+            "label": "ABgene 96-position 2.2 mL deep-well plate",
+            "kind": "plate"
+          },
+          "selection": "automatic",
+          "preferred_satisfied": true
+        }
+      ],
+      "candidates": [],
+      "loadout": [
+        {
+          "labware": "STANDARD_T36_SITE2",
+          "model": "RGT_CONT_60ML_BC_A00",
+          "placement": {
+            "carrier": "PREVIEW_T36_5R60_SUBSTITUTE",
+            "track": "36",
+            "site": "2",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              831.25,
+              368.15,
+              163.2
+            ],
+            "native_angle_deg": 0.0
+          },
+          "display": {
+            "label": "60 mL reagent vessel \u00b7 8 aspiration positions",
+            "kind": "reservoir"
+          },
+          "containers": [
+            {
+              "name": "standard",
+              "well": "1",
+              "volume_uL": 1000.0,
+              "contents": {
+                "STANDARD": {
+                  "dimension": "volume",
+                  "unit": "uL",
+                  "value": 1000.0
+                }
+              }
+            }
+          ],
+          "instruction": "Place or confirm this labware, then load the listed initial contents"
+        },
+        {
+          "labware": "WATER_T36_REAR_SITE1",
+          "model": "RGT_CONT_60ML_BC_A00",
+          "placement": {
+            "carrier": "PREVIEW_T36_5R60_SUBSTITUTE",
+            "track": "36",
+            "site": "1",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              831.25,
+              532.75,
+              163.2
+            ],
+            "native_angle_deg": 0.0
+          },
+          "display": {
+            "label": "60 mL reagent vessel \u00b7 8 aspiration positions",
+            "kind": "reservoir"
+          },
+          "containers": [
+            {
+              "name": "diluent",
+              "well": "1",
+              "volume_uL": 1000.0,
+              "contents": {
+                "DILUENT": {
+                  "dimension": "volume",
+                  "unit": "uL",
+                  "value": 1000.0
+                }
+              }
+            }
+          ],
+          "instruction": "Place or confirm this labware, then load the listed initial contents"
+        },
+        {
+          "labware": "DWP96_E4",
+          "model": "ABg_96_VB_DWP_2200ul",
+          "placement": {
+            "carrier": "CAR_HHS_3DWP_0001",
+            "track": "29",
+            "site": "4",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              691.7,
+              152.5,
+              182.7
+            ],
+            "native_angle_deg": 0.0
+          },
+          "display": {
+            "label": "ABgene 96-position 2.2 mL deep-well plate",
+            "kind": "plate"
+          },
+          "containers": [
+            {
+              "name": "__lw_plate_assay_A1",
+              "well": "A1",
+              "volume_uL": 0.0,
+              "contents": {}
+            },
+            {
+              "name": "__lw_plate_assay_A2",
+              "well": "A2",
+              "volume_uL": 0.0,
+              "contents": {}
+            },
+            {
+              "name": "__lw_plate_assay_A3",
+              "well": "A3",
+              "volume_uL": 0.0,
+              "contents": {}
+            }
+          ],
+          "instruction": "Place or confirm this labware, then load the listed initial contents"
+        }
+      ],
+      "layout": {
+        "definition": {
+          "diagram": {
+            "scene": {
+              "label": "STAR-54 track deck",
+              "positions": [
+                {
+                  "id": "1",
+                  "label": "1"
+                },
+                {
+                  "id": "2",
+                  "label": "2"
+                },
+                {
+                  "id": "3",
+                  "label": "3"
+                },
+                {
+                  "id": "4",
+                  "label": "4"
+                },
+                {
+                  "id": "5",
+                  "label": "5"
+                },
+                {
+                  "id": "6",
+                  "label": "6"
+                },
+                {
+                  "id": "7",
+                  "label": "7"
+                },
+                {
+                  "id": "8",
+                  "label": "8"
+                },
+                {
+                  "id": "9",
+                  "label": "9"
+                },
+                {
+                  "id": "10",
+                  "label": "10"
+                },
+                {
+                  "id": "11",
+                  "label": "11"
+                },
+                {
+                  "id": "12",
+                  "label": "12"
+                },
+                {
+                  "id": "13",
+                  "label": "13"
+                },
+                {
+                  "id": "14",
+                  "label": "14"
+                },
+                {
+                  "id": "15",
+                  "label": "15"
+                },
+                {
+                  "id": "16",
+                  "label": "16"
+                },
+                {
+                  "id": "17",
+                  "label": "17"
+                },
+                {
+                  "id": "18",
+                  "label": "18"
+                },
+                {
+                  "id": "19",
+                  "label": "19"
+                },
+                {
+                  "id": "20",
+                  "label": "20"
+                },
+                {
+                  "id": "21",
+                  "label": "21"
+                },
+                {
+                  "id": "22",
+                  "label": "22"
+                },
+                {
+                  "id": "23",
+                  "label": "23"
+                },
+                {
+                  "id": "24",
+                  "label": "24"
+                },
+                {
+                  "id": "25",
+                  "label": "25"
+                },
+                {
+                  "id": "26",
+                  "label": "26"
+                },
+                {
+                  "id": "27",
+                  "label": "27"
+                },
+                {
+                  "id": "28",
+                  "label": "28"
+                },
+                {
+                  "id": "29",
+                  "label": "29"
+                },
+                {
+                  "id": "30",
+                  "label": "30"
+                },
+                {
+                  "id": "31",
+                  "label": "31"
+                },
+                {
+                  "id": "32",
+                  "label": "32"
+                },
+                {
+                  "id": "33",
+                  "label": "33"
+                },
+                {
+                  "id": "34",
+                  "label": "34"
+                },
+                {
+                  "id": "35",
+                  "label": "35"
+                },
+                {
+                  "id": "36",
+                  "label": "36"
+                },
+                {
+                  "id": "37",
+                  "label": "37"
+                },
+                {
+                  "id": "38",
+                  "label": "38"
+                },
+                {
+                  "id": "39",
+                  "label": "39"
+                },
+                {
+                  "id": "40",
+                  "label": "40"
+                },
+                {
+                  "id": "41",
+                  "label": "41"
+                },
+                {
+                  "id": "42",
+                  "label": "42"
+                },
+                {
+                  "id": "43",
+                  "label": "43"
+                },
+                {
+                  "id": "44",
+                  "label": "44"
+                },
+                {
+                  "id": "45",
+                  "label": "45"
+                },
+                {
+                  "id": "46",
+                  "label": "46"
+                },
+                {
+                  "id": "47",
+                  "label": "47"
+                },
+                {
+                  "id": "48",
+                  "label": "48"
+                },
+                {
+                  "id": "49",
+                  "label": "49"
+                },
+                {
+                  "id": "50",
+                  "label": "50"
+                },
+                {
+                  "id": "51",
+                  "label": "51"
+                },
+                {
+                  "id": "52",
+                  "label": "52"
+                },
+                {
+                  "id": "53",
+                  "label": "53"
+                },
+                {
+                  "id": "54",
+                  "label": "54"
+                }
+              ],
+              "carriers": [
+                {
+                  "id": "CAR_5TIP_0001",
+                  "model": "CAR_5TIP",
+                  "start": 3,
+                  "span": 6,
+                  "first": "4",
+                  "last": "9",
+                  "sites": [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5"
+                  ],
+                  "placements": [
+                    {
+                      "id": "TIP_50ul_L_0001",
+                      "site": "1",
+                      "model": "TIP_50ul_L.rck",
+                      "association": "native"
+                    },
+                    {
+                      "id": "HT_L_0003",
+                      "site": "2",
+                      "model": "HT_L.rck",
+                      "association": "native"
+                    },
+                    {
+                      "id": "TIP_50ul_L_0004",
+                      "site": "5",
+                      "model": "TIP_50ul_L.rck",
+                      "association": "native"
+                    }
+                  ]
+                },
+                {
+                  "id": "CAR_5TIP_0002",
+                  "model": "CAR_5TIP",
+                  "start": 9,
+                  "span": 6,
+                  "first": "10",
+                  "last": "15",
+                  "sites": [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5"
+                  ],
+                  "placements": [
+                    {
+                      "id": "HTF_L_0001",
+                      "site": "1",
+                      "model": "HTF_L",
+                      "association": "native"
+                    },
+                    {
+                      "id": "HTF_B4_TEST",
+                      "site": "4",
+                      "model": "HTF_L",
+                      "association": "native"
+                    },
+                    {
+                      "id": "STF_L_0001",
+                      "site": "2",
+                      "model": "STF_L.rck",
+                      "association": "native"
+                    },
+                    {
+                      "id": "ST_L_0001",
+                      "site": "3",
+                      "model": "ST_L.rck",
+                      "association": "native"
+                    },
+                    {
+                      "id": "TIP300_B5_TEST",
+                      "site": "5",
+                      "model": "ST_L.rck",
+                      "association": "native"
+                    },
+                    {
+                      "id": "HT_L_0001",
+                      "site": "4",
+                      "model": "HTF_L",
+                      "association": "coordinate"
+                    }
+                  ]
+                },
+                {
+                  "id": "CAR_5DWP_0001",
+                  "model": "CAR_5DWP",
+                  "start": 15,
+                  "span": 6,
+                  "first": "16",
+                  "last": "21",
+                  "sites": [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5"
+                  ],
+                  "placements": [
+                    {
+                      "id": "Trough_C3",
+                      "site": "3",
+                      "model": "Ham_DW_Rgt_96_L",
+                      "association": "native"
+                    },
+                    {
+                      "id": "Trough_C5",
+                      "site": "5",
+                      "model": "Ham_DW_Rgt_96_L",
+                      "association": "native"
+                    },
+                    {
+                      "id": "Trough_C1",
+                      "site": "1",
+                      "model": "Ham_DW_Rgt_96_L",
+                      "association": "native"
+                    },
+                    {
+                      "id": "Trough_C2",
+                      "site": "2",
+                      "model": "Ham_DW_Rgt_96_L",
+                      "association": "native"
+                    },
+                    {
+                      "id": "Trough_C4",
+                      "site": "4",
+                      "model": "Ham_DW_Rgt_96_L",
+                      "association": "native"
+                    }
+                  ]
+                },
+                {
+                  "id": "CAR_4HHS_0001",
+                  "model": "CAR_4HHS.tml",
+                  "start": 21,
+                  "span": 7,
+                  "first": "22",
+                  "last": "28",
+                  "sites": [
+                    "1",
+                    "2",
+                    "3",
+                    "4"
+                  ],
+                  "placements": [
+                    {
+                      "id": "DWP96_Lid_D3",
+                      "site": "3",
+                      "model": "Lid.lid",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_Lid_D4",
+                      "site": "4",
+                      "model": "Lid.lid",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_Lid_D1",
+                      "site": "1",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "DWP96_Lid_D2",
+                      "site": "2",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "DWP96_D1",
+                      "site": "1",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "DWP96_D2",
+                      "site": "2",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "DWP96_D3",
+                      "site": "3",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "DWP96_D4",
+                      "site": "4",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "coordinate"
+                    }
+                  ]
+                },
+                {
+                  "id": "CAR_HHS_3DWP_0001",
+                  "model": "CAR_HHS_3DWP",
+                  "start": 28,
+                  "span": 7,
+                  "first": "29",
+                  "last": "35",
+                  "sites": [
+                    "1",
+                    "2",
+                    "3",
+                    "4"
+                  ],
+                  "placements": [
+                    {
+                      "id": "DWP96_E4",
+                      "site": "4",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_E2",
+                      "site": "2",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_Lid_E1",
+                      "site": "1",
+                      "model": "Lid.lid",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_Lid_E2",
+                      "site": "2",
+                      "model": "Lid.lid",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_E1",
+                      "site": "1",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_Lid_E3",
+                      "site": "3",
+                      "model": "Lid.lid",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_E3",
+                      "site": "3",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "coordinate"
+                    }
+                  ]
+                },
+                {
+                  "id": "PREVIEW_T36_5R60_SUBSTITUTE",
+                  "model": "RGT_CAR_5R60_A00",
+                  "start": 35,
+                  "span": 1,
+                  "first": "36",
+                  "last": "36",
+                  "sites": [
+                    "3",
+                    "4",
+                    "5",
+                    "1",
+                    "2"
+                  ],
+                  "placements": [
+                    {
+                      "id": "WATER_T36_REAR_SITE1",
+                      "site": "1",
+                      "model": "RGT_CONT_60ML_BC_A00",
+                      "association": "native"
+                    },
+                    {
+                      "id": "STANDARD_T36_SITE2",
+                      "site": "2",
+                      "model": "RGT_CONT_60ML_BC_A00",
+                      "association": "native"
+                    }
+                  ]
+                },
+                {
+                  "id": "PREVIEW_T37_38_4R200",
+                  "model": "RGT_CAR_4R200_A00",
+                  "start": 36,
+                  "span": 2,
+                  "first": "37",
+                  "last": "38",
+                  "sites": [
+                    "3",
+                    "4",
+                    "1",
+                    "2"
+                  ],
+                  "placements": []
+                },
+                {
+                  "id": "PREVIEW_T39_SMP32_EMPTY",
+                  "model": "SMP_CAR_32_A00.rck",
+                  "start": 38,
+                  "span": 1,
+                  "first": "39",
+                  "last": "39",
+                  "sites": [
+                    "1"
+                  ],
+                  "placements": [
+                    {
+                      "id": "PREVIEW_T39_SMP32_EMPTY",
+                      "site": "1",
+                      "model": "SMP_CAR_32_A00.rck",
+                      "association": "native"
+                    }
+                  ]
+                },
+                {
+                  "id": "T40_EPI2ML_BLUE",
+                  "model": "SMP_CAR_32_EPIL_A01_2.0mLTubes.rck",
+                  "start": 39,
+                  "span": 1,
+                  "first": "40",
+                  "last": "40",
+                  "sites": [
+                    "1"
+                  ],
+                  "placements": [
+                    {
+                      "id": "T40_EPI2ML_BLUE",
+                      "site": "1",
+                      "model": "SMP_CAR_32_EPIL_A01_2.0mLTubes.rck",
+                      "association": "native"
+                    }
+                  ]
+                },
+                {
+                  "id": "T41_FALCON15ML",
+                  "model": "SMP_CAR_24_Falcon_15000ul.rck",
+                  "start": 40,
+                  "span": 1,
+                  "first": "41",
+                  "last": "41",
+                  "sites": [
+                    "1"
+                  ],
+                  "placements": [
+                    {
+                      "id": "T41_FALCON15ML",
+                      "site": "1",
+                      "model": "SMP_CAR_24_Falcon_15000ul.rck",
+                      "association": "native"
+                    }
+                  ]
+                },
+                {
+                  "id": "CAR_5STACK_0002",
+                  "model": "CAR_5STACK.tml",
+                  "start": 41,
+                  "span": 6,
+                  "first": "42",
+                  "last": "47",
+                  "sites": [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5"
+                  ],
+                  "placements": [
+                    {
+                      "id": "DWP96_G1_0001",
+                      "site": "1",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_G1_0002",
+                      "site": "1",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_G2_0001",
+                      "site": "2",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_G2_0002",
+                      "site": "2",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_G4_0001",
+                      "site": "4",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_G4_0002",
+                      "site": "4",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_G5_0001",
+                      "site": "5",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_G5_0002",
+                      "site": "5",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_G3_0001",
+                      "site": "3",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_G3_0002",
+                      "site": "3",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "LidPark_G1_0001",
+                      "site": "1",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_G1_0002",
+                      "site": "1",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_G2_0001",
+                      "site": "2",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_G2_0002",
+                      "site": "2",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_G3_0001",
+                      "site": "3",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_G3_0002",
+                      "site": "3",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_G4_0001",
+                      "site": "4",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_G4_0002",
+                      "site": "4",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_G5_0001",
+                      "site": "5",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_G5_0002",
+                      "site": "5",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    }
+                  ]
+                },
+                {
+                  "id": "CAR_5STACK_0003",
+                  "model": "CAR_5STACK.tml",
+                  "start": 47,
+                  "span": 6,
+                  "first": "48",
+                  "last": "53",
+                  "sites": [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5"
+                  ],
+                  "placements": [
+                    {
+                      "id": "DWP96_H1_0001",
+                      "site": "1",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_H1_0002",
+                      "site": "1",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_H2_0001",
+                      "site": "2",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "DWP96_H2_0002",
+                      "site": "2",
+                      "model": "ABg_96_VB_DWP_2200ul",
+                      "association": "native"
+                    },
+                    {
+                      "id": "LidPark_H5",
+                      "site": "5",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_H4",
+                      "site": "4",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_H3",
+                      "site": "3",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_H1_0001",
+                      "site": "1",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_H1_0002",
+                      "site": "1",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_H2_0001",
+                      "site": "2",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    },
+                    {
+                      "id": "LidPark_H2_0002",
+                      "site": "2",
+                      "model": "Lid.lid",
+                      "association": "coordinate"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "supplies": [
+        {
+          "id": "HTF_B4_TEST",
+          "kind": "tips",
+          "available": 12,
+          "required": null,
+          "requirement_status": "checked_during_driver_preparation",
+          "model": "HTF_L",
+          "carrier": "CAR_5TIP_0002",
+          "site": "4",
+          "track": "10",
+          "positions": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "display": {
+            "label": "Filter tip rack",
+            "kind": "tips"
+          }
+        }
+      ],
+      "scope": "Declared layout and initial material only; not sensed inventory, calibration or collision proof"
+    }
+  }
+}

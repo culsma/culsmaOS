@@ -764,7 +764,7 @@ class WorkspacePlanningInteractor:
             address = {'labware': location['labware'], 'well': location['well']}
             bindings[demand['allocation_id']] = address
             items.append({**deepcopy(demand), 'address': address, 'placement': deepcopy(location.get('placement', {})),
-                          'model': location.get('model'), 'selection': 'fixed' if demand['allocation_id'] in fixed else 'automatic',
+                          'model': location.get('model'), 'display': deepcopy(location.get('display', {})), 'selection': 'fixed' if demand['allocation_id'] in fixed else 'automatic',
                           'preferred_satisfied': demand['allocation_id'] not in preferred or preferred[demand['allocation_id']] == address})
         return {'bindings': bindings, 'items': items, 'candidates': deepcopy(locations),
                 'loadout': self.loading_checklist(items),
@@ -777,7 +777,7 @@ class WorkspacePlanningInteractor:
         for item in items:
             name = item['address']['labware']
             row = labware.setdefault(name, {'labware': name, 'model': item.get('model'),
-                'placement': deepcopy(item.get('placement', {})), 'containers': [],
+                'placement': deepcopy(item.get('placement', {})), 'display': deepcopy(item.get('display', {})), 'containers': [],
                 'instruction': 'Place or confirm this labware, then load the listed initial contents'})
             row['containers'].append({'name': item.get('name'), 'well': item['address']['well'],
                 'volume_uL': item.get('initial_volume_uL', 0), 'contents': deepcopy(item.get('initial_contents', {}))})

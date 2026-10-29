@@ -42,6 +42,56 @@ class NativeRunReviewInteractor {
         : '$label — load ${volume(vessel['volume_uL'])}';
   }
 
+  /// Driver labels describe models; semantic names describe what to load.
+  List<Map<String, dynamic>> loadingItems(Map plan) {
+    final result = <Map<String, dynamic>>[];
+    for (final item in plan['loadout'] as List? ?? []) {
+      final vessels = item['containers'] as List? ?? [];
+      final kind =
+          item['display']?['kind'] ??
+          ((plan['items'] as List? ?? []).any(
+                (v) =>
+                    v['address']?['labware'] == item['labware'] &&
+                    v['kind'] == 'well',
+              )
+              ? 'plate'
+              : 'container');
+      final names = vessels
+          .map((v) => v['name']?.toString() ?? '')
+          .where((v) => v.isNotEmpty && !v.startsWith('__'))
+          .toList();
+      result.add({
+        ...Map<String, dynamic>.from(item),
+        'id': item['labware'],
+        'kind': kind,
+        'title': names.isNotEmpty
+            ? names.join(', ')
+            : kind == 'plate'
+            ? 'Destination plate'
+            : 'Liquid container',
+        'model_label':
+            item['display']?['label'] ?? 'Container model not described',
+        'supply': false,
+        'number': '${result.length + 1}',
+      });
+    }
+    for (final supply in plan['supplies'] as List? ?? []) {
+      result.add({
+        ...Map<String, dynamic>.from(supply),
+        'kind': supply['display']?['kind'] ?? supply['kind'] ?? 'container',
+        'title':
+            supply['display']?['label'] ??
+            (supply['kind'] == 'tips' ? 'Tip rack' : 'Supply'),
+        'model_label':
+            supply['display']?['label'] ?? 'Supply model not described',
+        'supply': true,
+        'placement': supply,
+        'number': '${result.length + 1}',
+      });
+    }
+    return result;
+  }
+
   String tipInstruction(Map supply) {
     final required = supply['required'];
     final count = supply['positions'] is List
