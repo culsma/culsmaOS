@@ -39,6 +39,10 @@ class RunReportInteractor:
         self.tasks, self.execution, self.material = tasks, execution, material
         self.setup = setup
 
+    def execution_mode(self, mode):
+        """Only a persisted run mode identifies simulation versus hardware."""
+        return mode if mode in ('simulation', 'physical') else 'unknown'
+
     def result(self, run_id):
         record = self.tasks.get(run_id)
         plan = self.execution.plan(run_id)
@@ -64,7 +68,7 @@ class RunReportInteractor:
             "body_outcome": record.body_outcome,
             "body_error": record.body_error,
             "faults": list(record.faults),
-            "mode": "simulation",
+            "mode": "unknown",
             "unresolved_material_effects": self.material.uncertainties(run_id),
         }
         report["os"]["preflight"] = self.execution.preflight_report(run_id)
@@ -76,6 +80,7 @@ class RunReportInteractor:
                     report['os']['setup'] = {'phase': 'planning_failed', 'error': record.error}
         try:
             mode, registered_state, version = self.material.get(run_id)
+            report["os"]["mode"] = self.execution_mode(mode)
             report["os"]["registered_material"] = {"mode": mode, "version": version, "state": registered_state}
         except KeyError:
             pass
