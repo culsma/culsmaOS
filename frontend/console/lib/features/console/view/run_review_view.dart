@@ -17,7 +17,9 @@ class NativeRunReviewView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            c.working
+            c.submittingRun
+                ? 'Starting the experiment…'
+                : c.checkingRun
                 ? 'Checking the experiment…'
                 : checked
                 ? 'Ready to confirm'
@@ -27,7 +29,7 @@ class NativeRunReviewView extends StatelessWidget {
           const SizedBox(height: 12),
           Text(c.selectedFile ?? ''),
           const SizedBox(height: 16),
-          if (c.working) const LinearProgressIndicator(),
+          if (c.reviewBusy) const LinearProgressIndicator(),
           if (checked) ...[
             const Text('Protocol checked. No experiment has started.'),
             if (preparation?['status'] == 'available')
@@ -62,17 +64,17 @@ class NativeRunReviewView extends StatelessWidget {
               children: [
                 FilledButton.icon(
                   key: const Key('confirm-run'),
-                  onPressed: c.working || c.dirty ? null : c.confirmLaunch,
+                  onPressed: c.reviewBusy || c.dirty ? null : c.confirmLaunch,
                   icon: const Icon(Icons.play_arrow),
                   label: const Text('Confirm run'),
                 ),
                 TextButton(
-                  onPressed: c.working ? null : () => c.closeWindow(c.active!),
+                  onPressed: c.reviewBusy ? null : c.cancelLaunch,
                   child: const Text('Cancel'),
                 ),
               ],
             ),
-          ] else if (!c.working) ...[
+          ] else if (!c.reviewBusy) ...[
             Text(c.message ?? 'Open the protocol again to repeat the checks.'),
             if (c.messageDetails != null)
               ExpansionTile(

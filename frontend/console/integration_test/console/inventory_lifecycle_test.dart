@@ -89,7 +89,24 @@ void main() {
           await c.launch('standard_dilution.culs');
           await tester.pumpAndSettle();
         }
-        await tester.tap(find.byKey(const Key('confirm-run')).hitTestable());
+        final button = find.byKey(const Key('confirm-run')).hitTestable();
+        final beforePolling = tester.getRect(button);
+        for (var poll = 0; poll < 3; poll++) {
+          final refresh = c.refresh();
+          expect(c.reviewBusy, isFalse);
+          await tester.pump();
+          expect(find.text('Ready to confirm'), findsOneWidget);
+          expect(find.text('Checking the experiment…'), findsNothing);
+          expect(find.byType(LinearProgressIndicator), findsNothing);
+          expect(tester.getRect(button), beforePolling);
+          expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+          await refresh;
+          await tester.pumpAndSettle();
+        }
+        // Click while a real station read is pending, rather than dropping it.
+        final refresh = c.refresh();
+        await tester.tap(button);
+        await refresh;
         await settle();
         expect(
           c.runs[c.active?.entityId]?['status'],

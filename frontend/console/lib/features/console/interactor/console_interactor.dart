@@ -30,6 +30,9 @@ class NativeConsoleInteractor extends ChangeNotifier {
   Map<String, dynamic>? station, inspection, pendingStart, launchReview;
   String? activeId, selectedFile, selectedEntity, message, messageDetails;
   bool busy = false, disposed = false;
+  bool checkingRun = false, submittingRun = false;
+  Completer<void>? refreshCompletion;
+  bool get reviewBusy => checkingRun || submittingRun;
   Timer? timer;
   Future<bool> Function(String)? revealTarget;
   NativeConsoleInteractor(
@@ -238,6 +241,8 @@ class NativeConsoleInteractor extends ChangeNotifier {
 
   Future<void> refresh() async {
     if (busy || disposed) return;
+    final completion = Completer<void>();
+    refreshCompletion = completion;
     busy = true;
     notifyListeners();
     try {
@@ -281,6 +286,8 @@ class NativeConsoleInteractor extends ChangeNotifier {
       messageDetails = error.toString();
     } finally {
       busy = false;
+      refreshCompletion = null;
+      completion.complete();
       if (!disposed) notifyListeners();
     }
   }
@@ -319,6 +326,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
       return;
     }
     busy = true;
+    checkingRun = true;
     selectedFile = id;
     launchReview = null;
     inspection = null;
@@ -355,12 +363,18 @@ class NativeConsoleInteractor extends ChangeNotifier {
       messageDetails = error.toString();
     } finally {
       busy = false;
+      checkingRun = false;
       if (!disposed) notifyListeners();
     }
   }
 
   /// Confirmation is bound to the checked snapshot and station configuration.
   Future<void> confirmLaunch() async {
+    final reviewed = launchReview;
+    // A background read must neither flicker controls nor discard a user click.
+    await refreshCompletion?.future;
+    if (disposed || reviewed == null || !identical(reviewed, launchReview))
+      return;
     if (working || dirty || pendingStart != null || launchReview == null)
       return;
     if (requests == null) {
@@ -369,6 +383,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
       return;
     }
     busy = true;
+    submittingRun = true;
     message = null;
     messageDetails = null;
     notifyListeners();
@@ -386,7 +401,18 @@ class NativeConsoleInteractor extends ChangeNotifier {
       messageDetails = error.toString();
     } finally {
       busy = false;
+      submittingRun = false;
       if (!disposed) notifyListeners();
+    }
+  }
+
+  Future<void> cancelLaunch() async {
+    final reviewWindow = active;
+    await refreshCompletion?.future;
+    if (!disposed &&
+        reviewWindow?.view == 'preparation' &&
+        active == reviewWindow) {
+      closeWindow(reviewWindow!);
     }
   }
 
