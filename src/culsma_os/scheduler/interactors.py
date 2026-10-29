@@ -207,7 +207,7 @@ class OperationSchedulerInteractor:
         except Exception as error:
             if self.evidence.find_attempt(pending.effect_id) is None:
                 self.resource.abandon_preparation(permit)
-                self.state.mark_failed(run_id, f"PRE_DISPATCH_REJECTED: {error}")
+                self.state.mark_preparation_failed(run_id, error, 'PRE_DISPATCH_REJECTED')
             else:
                 self.state.mark_reconciliation_required(
                     run_id, f"DISPATCH_UNCERTAIN: {type(error).__name__}: {error}"
@@ -317,7 +317,7 @@ class GroupOperationInteractor:
         except Exception as error:
             if self.evidence.find_attempt(pending.effect_id) is None:
                 self.resource.abandon_preparation(permit)
-                self.state.mark_failed(run_id, f"GROUP_PRE_DISPATCH_REJECTED: {error}")
+                self.state.mark_preparation_failed(run_id, error, 'GROUP_PRE_DISPATCH_REJECTED')
             else:
                 self.state.mark_reconciliation_required(run_id, f"GROUP_DISPATCH_UNCERTAIN: {type(error).__name__}: {error}")
 
@@ -433,7 +433,7 @@ class MotionSchedulerInteractor:
                 intents, _ = self.motion.route_intents(pending, self.execution.allocations(run_id), positions, revision, start=ordinal)
                 layout = self.motion.space.bind(run_id, pending.before_material_state, self.execution.allocations(run_id))
             except Exception as error:
-                self.state.mark_failed(run_id, f"MOTION_PRE_DISPATCH_REJECTED: {error}")
+                self.state.mark_preparation_failed(run_id, error, 'MOTION_PRE_DISPATCH_REJECTED')
                 return False
             if not self.dispatch_move(run_id, effect_id, intents[0], layout):
                 return False
@@ -503,7 +503,7 @@ class MotionSchedulerInteractor:
             if self.evidence.find_attempt(effect_id) is None:
                 if permit is not None:
                     self.resource.abandon_preparation(permit)
-                self.state.mark_failed(run_id, f"MOTION_PRE_DISPATCH_REJECTED: {error}")
+                self.state.mark_preparation_failed(run_id, error, 'MOTION_PRE_DISPATCH_REJECTED')
             else:
                 self.state.mark_reconciliation_required(run_id, f"MOTION_DISPATCH_UNCERTAIN: {error}")
             return False
@@ -650,7 +650,7 @@ class BatchRunExecutionInteractor:
                 return self.state.mark_reconciliation_required(run_id, f'BATCH_EXECUTION_UNCERTAIN: {type(error).__name__}: {error}')
             if permit is not None:
                 self.resource.abandon_preparation(permit)
-            return self.state.mark_failed(run_id, f'BATCH_PREPARATION_REJECTED: {error}')
+            return self.state.mark_preparation_failed(run_id, error, 'BATCH_PREPARATION_REJECTED')
 
     def reconcile(self, run_id):
         from culsma_os.recovery_manager.models import RecoveryDecision

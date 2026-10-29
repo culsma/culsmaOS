@@ -85,6 +85,21 @@ class CompilationPort(Protocol):
 
 
 @dataclass(frozen=True)
+class DeviceFault:
+    code: str
+    source: str
+    execution_state: str
+    operation_id: str | None = None
+    location: str | None = None
+    native_details: dict[str, Any] = field(default_factory=dict)
+
+
+class DeviceFaultMappingPort(Protocol):
+    def normalize(self, payload: dict) -> list[dict]: ...
+    def preparation(self, error: Exception, operation_id: str) -> list[dict]: ...
+
+
+@dataclass(frozen=True)
 class DeviceReceipt:
     outcome: str
     mode: str
@@ -92,6 +107,10 @@ class DeviceReceipt:
     configuration_revision: str
     payload: dict[str, Any]
     consumed_resources: dict[str, int]
+
+    @property
+    def faults(self) -> tuple[DeviceFault, ...]:
+        return tuple(DeviceFault(**value) for value in self.payload.get('faults', ()))
 
 
 class DeviceReceiptMapper(Protocol):
@@ -135,7 +154,8 @@ class DriverLoadError(ValueError):
 class DevicePreparationError(ValueError):
     """Transport-neutral preparation rejection with the plugin diagnostic code."""
 
-    def __init__(self, code: str, message: str):
+    def __init__(self, code: str, message: str, faults=()):
+        self.faults = tuple(faults)
         self.code = code
         self.message = message
         super().__init__(f"{code}: {message}")

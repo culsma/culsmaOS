@@ -79,7 +79,7 @@ class OpentronsSessionFactory:
                 snapshot,
                 description.positions,
                 description.capacities,
-                NormalizedReceiptInteractor(),
+                NormalizedReceiptInteractor(getattr(session, "fault_mapper", None)),
             )
         except BaseException:
             session.close()

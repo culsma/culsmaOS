@@ -95,6 +95,14 @@ class RunStateInteractor:
             return self.repository.save(replace(record, status="waiting", error=None))
         return record
 
+    def mark_preparation_failed(self, run_id, error, prefix):
+        from culsma_os.driver_framework.interactors import DeviceFaultInteractor
+        faults = DeviceFaultInteractor().validate(getattr(error, 'faults', ()))
+        if faults:
+            record = self.get(run_id)
+            self.repository.save(replace(record, faults=faults))
+        return self.mark_failed(run_id, f'{prefix}: {error}')
+
     def mark_failed(self, run_id, reason):
         return self.begin_finalization(run_id, outcome="failed", error=reason)
 

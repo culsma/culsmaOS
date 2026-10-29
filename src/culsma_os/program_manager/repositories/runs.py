@@ -1,4 +1,5 @@
 from dataclasses import replace
+import json
 from typing import Protocol
 from ..models import RunRecord, RunConflict, RunStateEvent
 
@@ -29,6 +30,8 @@ class SqliteTaskRepository:
                 connection.execute("ALTER TABLE os_runs ADD COLUMN body_outcome TEXT")
             if "body_error" not in columns:
                 connection.execute("ALTER TABLE os_runs ADD COLUMN body_error TEXT")
+            if "faults" not in columns:
+                connection.execute("ALTER TABLE os_runs ADD COLUMN faults TEXT NOT NULL DEFAULT '[]'")
             connection.execute(
                 "CREATE TABLE IF NOT EXISTS os_run_outbox(event_id TEXT PRIMARY KEY,run_id TEXT,status TEXT,revision INTEGER,published INTEGER DEFAULT 0)"
             )
@@ -42,8 +45,8 @@ class SqliteTaskRepository:
                 if record.revision != 0:
                     raise RunConflict("RUN_REVISION_CONFLICT")
                 self.connection.execute(
-                    "INSERT INTO os_runs(run_id,status,checkpoint,revision,error,body_outcome,body_error) VALUES (?,?,?,?,?,?,?)",
-                    (record.run_id, record.status, record.checkpoint, 1, record.error, record.body_outcome, record.body_error),
+                    "INSERT INTO os_runs(run_id,status,checkpoint,revision,error,body_outcome,body_error,faults) VALUES (?,?,?,?,?,?,?,?)",
+                    (record.run_id, record.status, record.checkpoint, 1, record.error, record.body_outcome, record.body_error, json.dumps(record.faults)),
                 )
                 self.connection.execute(
                     "INSERT INTO os_run_outbox(event_id,run_id,status,revision) VALUES(?,?,?,?)",
@@ -55,13 +58,14 @@ class SqliteTaskRepository:
                         (record.run_id, queue_submission.source, queue_submission.request_id, queue_submission.fingerprint, queue_submission.startup))
                 return replace(record, revision=1)
             changed = self.connection.execute(
-                "UPDATE os_runs SET status=?,checkpoint=?,revision=revision+1,error=?,body_outcome=?,body_error=? WHERE run_id=? AND revision=?",
+                "UPDATE os_runs SET status=?,checkpoint=?,revision=revision+1,error=?,body_outcome=?,body_error=?,faults=? WHERE run_id=? AND revision=?",
                 (
                     record.status,
                     record.checkpoint,
                     record.error,
                     record.body_outcome,
                     record.body_error,
+                    json.dumps(record.faults),
                     record.run_id,
                     record.revision,
                 ),
@@ -81,19 +85,19 @@ class SqliteTaskRepository:
 
     def get(self, run_id):
         row = self.connection.execute(
-            "SELECT run_id,status,checkpoint,revision,error,body_outcome,body_error FROM os_runs WHERE run_id=?",
+            "SELECT run_id,status,checkpoint,revision,error,body_outcome,body_error,faults FROM os_runs WHERE run_id=?",
             (run_id,),
         ).fetchone()
         if row is None:
             raise KeyError(run_id)
-        return RunRecord(*row)
+        return RunRecord(*row[:-1], faults=tuple(json.loads(row[-1])))
 
     def unfinished(self):
         return tuple(
             (
-                RunRecord(*row)
+                RunRecord(*row[:-1], faults=tuple(json.loads(row[-1])))
                 for row in self.connection.execute(
-                    "SELECT run_id,status,checkpoint,revision,error,body_outcome,body_error FROM os_runs WHERE status NOT IN ('completed','failed','cancelled') OR body_outcome IS NULL"
+                    "SELECT run_id,status,checkpoint,revision,error,body_outcome,body_error,faults FROM os_runs WHERE status NOT IN ('completed','failed','cancelled') OR body_outcome IS NULL"
                 )
             )
         )

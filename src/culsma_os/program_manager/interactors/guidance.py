@@ -15,6 +15,9 @@ class RunGuidanceInteractor:
         error=run.get('error') if isinstance(run.get('error'),str) else ''
         summary={'schema':'culsma_run_guidance_v1','kind':'information','actions':[],
                  'device_activity':'none_recorded' if before_execution else 'recorded' if attempts else 'unverified'}
+        faults = self.faults(run, attempts)
+        if status != 'completed' and faults:
+            return self.fault_guidance(summary, faults, before_execution, status in {'needs_reconciliation','reconciliation_required','quarantined'} or bool(unresolved))
         if status=='completed':
             return {**summary,'title':'Experiment complete','message':'The experiment finished. Review the recorded results below.',
                     'next_steps':[]}
@@ -29,16 +32,6 @@ class RunGuidanceInteractor:
                     'next_steps':['Replace or replenish the tip box at the workstation.',
                                   'Check supplies again, then open the protocol from Files to start a new run.'],
                     'actions':['replace_tips','refresh','open_files']}
-        if before_execution and error in {
-                'HAM_LOCAL_INVENTORY_INSUFFICIENT',
-                'BATCH_PREPARATION_REJECTED: HAM_LOCAL_INVENTORY_INSUFFICIENT',
-                'PRE_DISPATCH_REJECTED: HAM_LOCAL_INVENTORY_INSUFFICIENT',
-                'GROUP_PRE_DISPATCH_REJECTED: HAM_LOCAL_INVENTORY_INSUFFICIENT'}:
-            return {**summary,'kind':'preparation','title':'The simulated liquid supply is insufficient',
-                    'message':'The local simulator cannot prepare the requested aspiration with the current liquid inventory or tip capacity.',
-                    'next_steps':['Previous simulations retain their liquid consumption. Replacing a tip box does not replenish liquids.',
-                                  'Review source volumes and transfer capacity. Prepare a fresh simulated liquid load before trying again.'],
-                    'actions':['open_workstation','refresh','open_files']}
         if before_execution and error.startswith(('BATCH_PREPARATION_REJECTED','PREFLIGHT_','SETUP_')):
             return {**summary,'kind':'preparation','title':'The setup needs attention',
                     'message':'The station could not prepare this experiment. Check the layout, supplies and device configuration.',
@@ -71,6 +64,40 @@ class RunGuidanceInteractor:
             if detail.startswith(prefix):
                 detail=detail.removeprefix(prefix)
                 break
-        return (detail in {'HAM_TIPS_EXHAUSTED','HAM_TIPS_INSUFFICIENT','TRANSFER_TIPS_EXHAUSTED','RESOURCE_CONSUMABLES_INSUFFICIENT'}
+        return (detail in {'TRANSFER_TIPS_EXHAUSTED','RESOURCE_CONSUMABLES_INSUFFICIENT'}
                 or detail.startswith('No available tip positions are declared for this run.')
                 or detail.startswith('Insufficient tips') or detail.startswith('Not enough tips'))
+
+
+    def faults(self, run, attempts):
+        from culsma_os.driver_framework.interactors import DeviceFaultInteractor
+        result_data = run.get('result') if isinstance(run.get('result'), dict) else {}
+        result = list(result_data.get('os', {}).get('faults', ()))
+        for attempt in attempts or ():
+            receipt = attempt.get('evidence') or {}
+            result.extend(receipt.get('payload', {}).get('faults', ()))
+        try:
+            return DeviceFaultInteractor().validate(result)
+        except (ValueError, TypeError, KeyError):
+            return ()
+
+    def fault_guidance(self, summary, faults, before_execution, isolated):
+        fault = faults[-1]
+        simulated = fault['source'] == 'simulation'
+        titles = {'TIP_UNAVAILABLE':'Tips need attention', 'LIQUID_INSUFFICIENT':'The liquid supply needs attention',
+                  'LIQUID_NOT_DETECTED':'Liquid was not detected', 'DEVICE_NOT_READY':'The device is not ready',
+                  'COMMUNICATION_LOST':'The device connection needs attention', 'DEVICE_ERROR':'The device reported a problem'}
+        steps = {'TIP_UNAVAILABLE':'Check the tip rack and pipette. Replace tips manually if needed.',
+                 'LIQUID_INSUFFICIENT':'Check the source amount and transfer volume before continuing.',
+                 'LIQUID_NOT_DETECTED':'Check the liquid, container position and liquid-detection settings.',
+                 'DEVICE_NOT_READY':'Check the indicated module, plate position and device status.',
+                 'COMMUNICATION_LOST':'Check the device and connection. A lost reply does not establish whether an action finished.',
+                 'DEVICE_ERROR':'Inspect the device and its original error record.'}
+        message = ('The local simulation reported this condition. No physical inspection was performed.' if simulated
+                   else 'The driver reported this condition. Inspect the device before deciding how to proceed.')
+        next_steps = (["Review the declared loading plan and device settings."] if simulated else [steps[fault['code']]])
+        if isolated:
+            next_steps.append('Execution remains isolated. An acknowledgement does not authorize repeating an action or resuming the device.')
+        return {**summary, 'kind':'preparation' if before_execution else 'attention',
+                'title':titles[fault['code']], 'message':message, 'faults':list(faults),
+                'next_steps':next_steps, 'actions':['open_workstation','refresh']}

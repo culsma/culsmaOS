@@ -27,6 +27,7 @@ class RunRecord:
     error: str | None = None
     body_outcome: str | None = None
     body_error: str | None = None
+    faults: tuple[dict, ...] = ()
 
 
 class SemanticHostPort(Protocol):

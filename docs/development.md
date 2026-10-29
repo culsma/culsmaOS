@@ -504,3 +504,5 @@ The original App reproduced the crash under this regression; the corrected App
 passed the same sequence. This does not disable accessibility or clear run state.
 
 Normal console simulations use a fresh declared load for each run. The OS selects the run scope and counts that run's consumable receipts; the local Hamilton simulator stores each run independently. Reopening the same run retains its state. Persistent inventory and interruption scenarios remain backend tests. Normal Workstation pages do not expose simulated replenishment controls.
+
+Device faults use the OS `DeviceFault` contract. Plugin-owned mappers convert native diagnostics; the core validates generic categories and preserves original details. Preparation faults persist with run records, execution faults with identity-checked receipts. Guidance is observational and does not authorize replenishment, replay or vendor resume.

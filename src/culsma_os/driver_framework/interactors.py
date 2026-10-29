@@ -29,12 +29,21 @@ class DriverGatewayInteractor:
         self.reservations = reservations
         self.feedback = FeedbackContractInteractor(device)
 
+    def prepare_vendor(self, operation, operation_id, *arguments):
+        try:
+            return operation(*arguments)
+        except Exception as error:
+            mapped = getattr(self.receipt_mapper, 'preparation', lambda error, identity: error)(error, operation_id)
+            if mapped is error:
+                raise
+            raise mapped from error
+
     def prepare(self, effect_id, intent, context, bindings, completion_unit="operation"):
         self.device.validate_ready(context)
         self.feedback.require_unit(context, completion_unit)
         self.require_selection(intent, context)
         self.validate_material(context, bindings)
-        vendor_plan = self.port.prepare(intent, bindings)
+        vendor_plan = self.prepare_vendor(self.port.prepare, intent.step_id, intent, bindings)
         return PreparedDevicePlan(
             effect_id, intent, context, vendor_plan,
             self.feedback.freeze(self.port.describe(vendor_plan), context, completion_unit, (intent.step_id,))
@@ -43,7 +52,7 @@ class DriverGatewayInteractor:
     def prepare_processing(self, effect_id, intent, context, bindings):
         self.device.validate_ready(context)
         self.feedback.require_unit(context, "operation")
-        vendor_plan = self.port.prepare_processing(intent, bindings)
+        vendor_plan = self.prepare_vendor(self.port.prepare_processing, intent.step_id, intent, bindings)
         return PreparedDevicePlan(effect_id, intent, context, vendor_plan,
             self.feedback.freeze(self.port.describe_processing(vendor_plan), context, "operation", (intent.step_id,)))
 
@@ -51,7 +60,7 @@ class DriverGatewayInteractor:
         self.device.validate_ready(context)
         self.feedback.require_unit(context, "operation")
         motion = cast(MotionDevicePort, self.port)
-        vendor_plan = motion.prepare_labware_move(intent)
+        vendor_plan = self.prepare_vendor(motion.prepare_labware_move, intent.step_id, intent)
         description = motion.describe_labware_move(vendor_plan)
         from dataclasses import asdict
         description = {**description, "operation_kind": "labware_move", "motion_intent": asdict(intent)}
@@ -77,7 +86,7 @@ class DriverGatewayInteractor:
         for op in intent.operations:
             if hasattr(op.intent, 'aliquots'):
                 self.require_selection(op.intent, context)
-        vendor = port.prepare_batch(intent.step_id, intent.operations)
+        vendor = self.prepare_vendor(port.prepare_batch, intent.step_id, intent.step_id, intent.operations)
         description = port.describe_batch(vendor)
         if description.get('member_step_ids') != list(identities):
             raise ValueError('BATCH_OPERATION_COVERAGE_INVALID')
@@ -120,7 +129,7 @@ class DriverGatewayInteractor:
         self.feedback.require_unit(context, "batch")
         for intent in intents:
             self.require_selection(intent, context)
-        vendor_plan = self.port.prepare_group(step_id, intents, bindings)
+        vendor_plan = self.prepare_vendor(self.port.prepare_group, step_id, step_id, intents, bindings)
         description = self.port.describe_group(vendor_plan)
         if (description.get("member_step_ids") != [i.step_id for i in intents]
                 or len(description.get("member_descriptions", [])) != len(intents)):
@@ -230,6 +239,16 @@ class HamiltonCompilationInteractor:
 class NormalizedReceiptInteractor:
     """Validate generic device feedback against the authorized plan identity."""
 
+    def __init__(self, fault_mapper=None):
+        self.fault_mapper = fault_mapper
+
+    def preparation(self, error, operation_id):
+        from .models import DevicePreparationError
+        if self.fault_mapper is None:
+            return error
+        faults = DeviceFaultInteractor().validate(self.fault_mapper.preparation(error, operation_id))
+        return DevicePreparationError(getattr(error, 'code', 'DEVICE_PREPARATION_REJECTED'), str(error), faults)
+
     def map(self, plan, payload):
         from copy import deepcopy
         from .models import DeviceReceipt
@@ -262,6 +281,19 @@ class NormalizedReceiptInteractor:
             details["execution_status"] = deepcopy(value["execution_status"])
         elif value.get("outcome") not in ("completed", "rejected", "unknown"):
             details["execution_status"] = deepcopy(value.get("outcome", "unknown"))
+        if matches:
+            try:
+                faults = DeviceFaultInteractor().validate(self.fault_mapper.normalize(value) if self.fault_mapper else details.get('faults', []))
+                if faults:
+                    if outcome == 'completed':
+                        outcome = 'unknown'
+                    details['faults'] = list(faults)
+            except Exception:
+                outcome = 'unknown'
+                details['fault_contract_error'] = 'DEVICE_FAULT_INVALID'
+                details.pop('faults', None)
+        elif not matches:
+            details.pop('faults', None)
         return DeviceReceipt(
             outcome,
             plan.context.mode,
@@ -441,3 +473,29 @@ class DriverProfileInteractor:
         for name in unavailable:
             profiles.pop(name,None)
         return profiles, tuple(unavailable)
+
+
+class DeviceFaultInteractor:
+    codes = frozenset({'TIP_UNAVAILABLE', 'LIQUID_INSUFFICIENT', 'LIQUID_NOT_DETECTED',
+                       'DEVICE_NOT_READY', 'COMMUNICATION_LOST', 'DEVICE_ERROR'})
+
+    def validate(self, values):
+        from dataclasses import asdict
+        from .models import DeviceFault
+        if not isinstance(values, (list, tuple)):
+            raise ValueError('DEVICE_FAULT_INVALID')
+        result = []
+        for value in values:
+            if not isinstance(value, dict):
+                raise ValueError('DEVICE_FAULT_INVALID')
+            try:
+                fault = DeviceFault(**value)
+            except TypeError as error:
+                raise ValueError('DEVICE_FAULT_INVALID') from error
+            if (fault.code not in self.codes or fault.source not in {'simulation', 'device', 'driver'}
+                    or fault.execution_state not in {'not_started', 'partial', 'unknown'}
+                    or any(v is not None and (not isinstance(v, str) or not v) for v in (fault.operation_id, fault.location))
+                    or not isinstance(fault.native_details, dict)):
+                raise ValueError('DEVICE_FAULT_INVALID')
+            result.append(asdict(fault))
+        return tuple(result)

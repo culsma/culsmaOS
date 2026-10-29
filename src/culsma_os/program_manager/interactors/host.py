@@ -63,6 +63,7 @@ class RunReportInteractor:
             "status": record.status,
             "body_outcome": record.body_outcome,
             "body_error": record.body_error,
+            "faults": list(record.faults),
             "mode": "simulation",
             "unresolved_material_effects": self.material.uncertainties(run_id),
         }
