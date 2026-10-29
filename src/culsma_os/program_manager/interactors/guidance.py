@@ -18,7 +18,7 @@ class RunGuidanceInteractor:
         if status=='completed':
             return {**summary,'title':'Experiment complete','message':'The experiment finished. Review the recorded results below.',
                     'next_steps':[]}
-        if status in {'reconciliation_required','quarantined'} or unresolved:
+        if status in {'needs_reconciliation','reconciliation_required','quarantined'} or unresolved:
             return {**summary,'kind':'attention','title':'Check the station before continuing',
                     'message':'The outcome of an operation is uncertain. Check the device and execution records before deciding what to do next.',
                     'next_steps':['Keep the affected equipment and materials unchanged until the outcome is reviewed.'],
