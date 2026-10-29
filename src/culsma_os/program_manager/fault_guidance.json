@@ -1,0 +1,90 @@
+{
+  "culsma.tip.stock_exhausted": {
+    "title": "No available tips remain",
+    "check": "Check the available positions in the indicated tip rack."
+  },
+  "culsma.tip.not_attached": {
+    "title": "No tip is attached",
+    "check": "Check the tip attachment and the preceding pickup operation."
+  },
+  "culsma.tip.already_attached": {
+    "title": "A tip is already attached",
+    "check": "Check the pipette tip state and the requested pickup operation."
+  },
+  "culsma.tip.pickup_failed": {
+    "title": "Tip pickup failed",
+    "check": "Check whether the indicated tip is present and seated correctly. This error does not establish that the rack is empty."
+  },
+  "culsma.tip.drop_failed": {
+    "title": "Tip release failed",
+    "check": "Check the attached tip and the indicated waste or return position."
+  },
+  "culsma.liquid.insufficient": {
+    "title": "The liquid supply needs attention",
+    "check": "Compare the source amount with the requested aspiration volume."
+  },
+  "culsma.liquid.not_detected": {
+    "title": "Liquid was not detected",
+    "check": "Check the indicated container, liquid level and detection settings. A missing signal does not prove the container is empty."
+  },
+  "culsma.device.not_ready": {
+    "title": "The device is not ready",
+    "check": "Check the indicated module and its operation preconditions."
+  },
+  "culsma.device.not_initialized": {
+    "title": "The device is not initialized",
+    "check": "Check initialization status in the device controls."
+  },
+  "culsma.device.busy": {
+    "title": "The device is busy",
+    "check": "Check the operation already using the device; do not start another operation until its outcome is known."
+  },
+  "culsma.module.latch_fault": {
+    "title": "The module lock needs attention",
+    "check": "Check the indicated plate lock and plate seating using the device controls."
+  },
+  "culsma.connection.failed": {
+    "title": "The device connection failed",
+    "check": "Check the connection and original operation record. A connection failure does not establish whether an action occurred."
+  },
+  "culsma.connection.response_missing": {
+    "title": "The device response is missing",
+    "check": "Check the connection and original operation record before deciding whether any action may be repeated."
+  },
+  "culsma.parameter.out_of_range": {
+    "title": "An operation setting is outside its supported range",
+    "check": "Check the requested setting against the device limits."
+  },
+  "culsma.transfer.capacity_exceeded": {
+    "title": "The requested volume exceeds transfer capacity",
+    "check": "Check the requested aspiration, current tip contents and pipette or tip capacity."
+  },
+  "culsma.location.invalid": {
+    "title": "The requested position is invalid",
+    "check": "Check the indicated labware position and its layout binding."
+  },
+  "culsma.location.occupied": {
+    "title": "The destination position is occupied",
+    "check": "Check the destination position and the labware already assigned there."
+  },
+  "culsma.motion.object_not_found": {
+    "title": "The expected labware was not found",
+    "check": "Check the indicated pickup position and labware seating."
+  },
+  "culsma.motion.unreachable": {
+    "title": "The requested position cannot be reached",
+    "check": "Check the position and configured transport path."
+  },
+  "culsma.temperature.timeout": {
+    "title": "The target temperature was not reached in time",
+    "check": "Check the module status and requested temperature in the device controls."
+  },
+  "culsma.temperature.sensor_fault": {
+    "title": "The temperature sensor reported a fault",
+    "check": "Review the module diagnostic and contact the device specialist if required."
+  },
+  "culsma.device.method_not_registered": {
+    "title": "The prepared method is not available on this Agent",
+    "check": "Ask the device specialist to commission the exact prepared method on the Agent. The method was not dispatched; changing a protocol may require new commissioning."
+  }
+}

@@ -13,6 +13,31 @@ class NativeFaultContext extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          for (final detail in (guidance['fault_details'] as List? ?? []))
+            if (detail is Map)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        detail['title']?.toString() ?? 'Device diagnostic',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (detail['operation'] != null)
+                        Text('Affected operation: ${detail['operation']}'),
+                      Text(
+                        'Information source: ${detail['basis_label'] ?? 'Not reported'}',
+                      ),
+                      for (final fact
+                          in (detail['facts'] as Map? ?? {}).entries)
+                        Text('${fact.key}: ${fact.value}'),
+                      Text(detail['check']?.toString() ?? ''),
+                    ],
+                  ),
+                ),
+              ),
           for (final entry in const {
             'execution': 'Execution status',
             'device_stop': 'Device stop status',

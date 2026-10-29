@@ -44,3 +44,5 @@ show_contexts = true
 
 [tool.setuptools.package-data]
 "culsma_os.console" = ["web/*.html", "web/*.js", "web/*.css", "web/assets/*.png"]
+
+"culsma_os.program_manager" = ["fault_guidance.json"]

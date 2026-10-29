@@ -239,8 +239,9 @@ class HamiltonCompilationInteractor:
 class NormalizedReceiptInteractor:
     """Validate generic device feedback against the authorized plan identity."""
 
-    def __init__(self, fault_mapper=None):
-        self.fault_mapper = fault_mapper
+    def __init__(self, fault_mapper=None, fault_schema=1):
+        negotiate = getattr(fault_mapper, 'with_fault_schema', None)
+        self.fault_mapper = negotiate(fault_schema) if callable(negotiate) else fault_mapper
 
     def preparation(self, error, operation_id):
         from .models import DevicePreparationError
@@ -285,6 +286,15 @@ class NormalizedReceiptInteractor:
             try:
                 faults = DeviceFaultInteractor().validate(self.fault_mapper.normalize(value) if self.fault_mapper else details.get('faults', []))
                 if faults:
+                    allowed = {plan.intent.step_id, plan.effect_id}
+                    allowed.update(operation.effect_id for operation in getattr(plan.intent,'operations',()))
+                    if any(fault.get('operation_id') is not None and fault['operation_id'] not in allowed for fault in faults):
+                        raise ValueError('DEVICE_FAULT_IDENTITY_INVALID')
+                    for fault in faults:
+                        if fault.get('schema') == 'culsma_device_fault_v2':
+                            if fault['context'].get('device',plan.context.device_id) != plan.context.device_id:
+                                raise ValueError('DEVICE_FAULT_IDENTITY_INVALID')
+                            fault['context']['device'] = plan.context.device_id
                     if outcome == 'completed':
                         outcome = 'unknown'
                     details['faults'] = list(faults)
@@ -497,5 +507,45 @@ class DeviceFaultInteractor:
                     or any(v is not None and (not isinstance(v, str) or not v) for v in (fault.operation_id, fault.location))
                     or not isinstance(fault.native_details, dict)):
                 raise ValueError('DEVICE_FAULT_INVALID')
-            result.append(asdict(fault))
+            self.validate_detail(fault)
+            record = asdict(fault)
+            if fault.schema == 'culsma_device_fault_v1':
+                for key in ('schema', 'reason', 'basis', 'context', 'stop_observation'):
+                    record.pop(key)
+            result.append(record)
         return tuple(result)
+
+
+    def validate_detail(self, fault):
+        import re
+        from math import isfinite
+        from .models import DeviceFaultContext, DeviceStopObservation
+        if fault.schema == 'culsma_device_fault_v1':
+            if fault.reason is not None or fault.basis is not None or fault.context or fault.stop_observation:
+                raise ValueError('DEVICE_FAULT_INVALID')
+            return
+        if (fault.schema != 'culsma_device_fault_v2'
+                or not isinstance(fault.reason, str)
+                or not re.fullmatch(r'[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*){2,7}', fault.reason)
+                or fault.basis not in {'declared_configuration','model_state','device_feedback','trace_replay','injected'}
+                or not isinstance(fault.context, dict) or not isinstance(fault.stop_observation, dict)):
+            raise ValueError('DEVICE_FAULT_INVALID')
+        try:
+            context = DeviceFaultContext(**fault.context)
+            stop = DeviceStopObservation(**fault.stop_observation)
+        except TypeError as error:
+            raise ValueError('DEVICE_FAULT_INVALID') from error
+        for key in ('device','module','channel','planned_location','reported_location','unit'):
+            value = getattr(context, key)
+            if value is not None and (not isinstance(value, str) or not value or len(value) > 256):
+                raise ValueError('DEVICE_FAULT_INVALID')
+        for value in (context.requested, context.available):
+            if value is not None and (type(value) not in (int,float) or not isfinite(value) or value < 0 or not context.unit):
+                raise ValueError('DEVICE_FAULT_INVALID')
+        if context.reported_location and fault.basis != 'device_feedback':
+            raise ValueError('DEVICE_FAULT_INVALID')
+        if (stop.state not in {'unknown','confirmed_stopped'}
+                or any(v is not None and (not isinstance(v,str) or not v or len(v)>256) for v in (stop.scope,stop.evidence_ref))
+                or (stop.state == 'confirmed_stopped' and (fault.source == 'simulation'
+                    or fault.basis != 'device_feedback' or not stop.scope or not stop.evidence_ref))):
+            raise ValueError('DEVICE_FAULT_INVALID')

@@ -2,6 +2,38 @@
 
 
 class RunGuidanceInteractor:
+    def __init__(self, catalog=None):
+        self.catalog = catalog if catalog is not None else self.load_catalog()
+
+    def load_catalog(self):
+        import json
+        from importlib.resources import files
+        from ..models import FaultGuidance, FaultGuidanceCatalog
+        values = json.loads(files('culsma_os.program_manager').joinpath('fault_guidance.json').read_text())
+        return FaultGuidanceCatalog(tuple(FaultGuidance(reason, **value) for reason,value in values.items()))
+
+    def lookup_reason(self, fault):
+        return next((entry for entry in self.catalog.entries if entry.reason == fault.get('reason')), None)
+
+    def describe_fault(self, fault):
+        entry = self.lookup_reason(fault)
+        context = fault.get('context', {})
+        stop = fault.get('stop_observation', {})
+        labels = {'device':'Device','module':'Module','channel':'Channel',
+                  'planned_location':'Planned position','reported_location':'Device-reported position',
+                  'requested':'Requested quantity','available':'Available quantity','unit':'Unit'}
+        return {'code':fault['code'], 'reason':fault.get('reason'),
+                'title':entry.title if entry else 'The device reported a problem',
+                'check':entry.check if entry else 'Review the original diagnostic with the device specialist; no specific remedy is established.',
+                'operation':fault.get('operation_id'), 'basis':fault.get('basis', 'not_reported'),
+                'basis_label':{'declared_configuration':'Declared setup', 'model_state':'Simulation model',
+                    'device_feedback':'Device feedback', 'trace_replay':'Recorded trace replay',
+                    'injected':'Developer test condition'}.get(fault.get('basis'),'Not reported'),
+                'facts':{**{labels[key]:value for key,value in context.items() if value is not None},
+                    **({'Confirmed stopped scope':stop['scope'], 'Stop evidence reference':stop['evidence_ref']}
+                       if stop.get('state')=='confirmed_stopped' else {})},
+                'stop_observation':fault.get('stop_observation', {'state':'unknown'})}
+
     def describe(self, run):
         status=run.get('status')
         evidence=run.get('execution_evidence')
@@ -82,8 +114,10 @@ class RunGuidanceInteractor:
             return ()
 
     def fault_guidance(self, summary, faults, before_execution, isolated):
-        fault = faults[-1]
-        simulated = fault['source'] == 'simulation'
+        fault = faults[0]
+        details = [self.describe_fault(item) for item in faults]
+        specific = self.lookup_reason(fault)
+        simulated = all(item['source'] == 'simulation' for item in faults)
         titles = {'TIP_UNAVAILABLE':'Tips need attention', 'LIQUID_INSUFFICIENT':'The liquid supply needs attention',
                   'LIQUID_NOT_DETECTED':'Liquid was not detected', 'DEVICE_NOT_READY':'The device is not ready',
                   'COMMUNICATION_LOST':'The device connection needs attention', 'DEVICE_ERROR':'The device reported a problem'}
@@ -104,10 +138,12 @@ class RunGuidanceInteractor:
         unknown = isolated or any(f['execution_state'] in {'unknown','partial'} for f in faults)
         execution = ('Some actions may have completed; the final outcome is unknown.' if unknown
                      else 'The driver reports this attempt was rejected before device execution.')
-        operation = fault['operation_id'] or 'Not supplied by the driver.'
-        location = fault['location'] or 'Not supplied by the driver; no position is inferred.'
+        operation = fault.get('operation_id') or 'Not supplied by the driver.'
+        location = fault.get('location') or 'Not supplied by the driver; no position is inferred.'
         stop = ('No physical instrument was operated by this simulation.' if simulated
                 else 'Not confirmed by the driver. Stopping OS dispatch does not confirm the instrument has stopped.')
+        if any(item.get('stop_observation',{}).get('state')=='confirmed_stopped' for item in faults):
+            stop = 'A scoped stop observation is recorded below. It does not establish that the whole workstation is stopped or safe for manual access.'
         recovery = ('In-place resume is unavailable. The execution outcome requires review; acknowledgement does not authorize replay.' if unknown
                     else 'Correct the setup, then start a new attempt. This attempt has no device execution to resume.')
         next_steps = []
@@ -116,14 +152,18 @@ class RunGuidanceInteractor:
                               else 'Keep affected materials and equipment unchanged while the execution outcome is reviewed.')
         next_steps.append('This is a simulation condition; no physical handling is required.' if simulated
                           else 'Before touching the instrument, confirm it is stopped and permits manual access using the vendor controls.')
-        next_steps.append(checks[fault['code']][0 if simulated else 1])
+        if specific:
+            next_steps.extend(dict.fromkeys(item['check'] for item in details))
+        else:
+            next_steps.append(checks[fault['code']][0 if simulated else 1])
         next_steps.append('Refresh status reloads recorded information only; it does not inspect hardware or verify an operator correction.')
         if isolated:
             next_steps.append('Execution remains isolated. No automatic retry or vendor resume is available here.')
         message = ('The simulation reported this condition. It is not a physical inspection.' if simulated
                    else 'The driver reported this condition. Review the execution status before handling the instrument.')
         return {**summary, 'kind':'preparation' if before_execution and not unknown else 'attention',
-                'title':titles[fault['code']], 'message':message, 'faults':list(faults),
+                'title':specific.title if specific else titles[fault['code']], 'message':message, 'faults':list(faults),
+                'fault_details':details,
                 'context':{'execution':execution,'device_stop':stop,'operation':operation,
                            'location':location,'recovery':recovery},
                 'next_steps':next_steps, 'actions':['open_workstation','refresh']}

@@ -85,6 +85,25 @@ class CompilationPort(Protocol):
 
 
 @dataclass(frozen=True)
+class DeviceFaultContext:
+    device: str | None = None
+    module: str | None = None
+    channel: str | None = None
+    planned_location: str | None = None
+    reported_location: str | None = None
+    requested: float | None = None
+    available: float | None = None
+    unit: str | None = None
+
+
+@dataclass(frozen=True)
+class DeviceStopObservation:
+    state: str = 'unknown'
+    scope: str | None = None
+    evidence_ref: str | None = None
+
+
+@dataclass(frozen=True)
 class DeviceFault:
     code: str
     source: str
@@ -92,6 +111,11 @@ class DeviceFault:
     operation_id: str | None = None
     location: str | None = None
     native_details: dict[str, Any] = field(default_factory=dict)
+    schema: str = 'culsma_device_fault_v1'
+    reason: str | None = None
+    basis: str | None = None
+    context: dict[str, Any] = field(default_factory=dict)
+    stop_observation: dict[str, Any] = field(default_factory=dict)
 
 
 class DeviceFaultMappingPort(Protocol):

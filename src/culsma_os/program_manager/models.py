@@ -374,3 +374,15 @@ class SetupInteractionRequest:
     fingerprint: str | None = None
     preferences: dict | None = None
     acknowledged: bool = False
+
+
+@dataclass(frozen=True)
+class FaultGuidance:
+    reason: str
+    title: str
+    check: str
+
+
+@dataclass(frozen=True)
+class FaultGuidanceCatalog:
+    entries: tuple[FaultGuidance, ...]
