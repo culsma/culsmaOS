@@ -13,10 +13,12 @@ import 'supply_interactor.dart';
 import 'run_control_interactor.dart';
 import 'system_information_interactor.dart';
 import 'file_browser_interactor.dart';
+import 'run_review_interactor.dart';
 
 /// Native presentation coordinator. Backend Interactors own every experiment decision.
 class NativeConsoleInteractor extends ChangeNotifier {
   final ConsoleApi api;
+  final review = NativeRunReviewInteractor();
   final LayoutController layout;
   final PendingRequestRepository? requests;
   late final NativeFileBrowserInteractor files;
@@ -366,6 +368,19 @@ class NativeConsoleInteractor extends ChangeNotifier {
       checkingRun = false;
       if (!disposed) notifyListeners();
     }
+  }
+
+  /// An explicit simulation action; never reinterpret a hardware station as simulated.
+  Future<void> runSimulation() async {
+    await refreshCompletion?.future;
+    if (disposed) return;
+    if (!review.simulationAvailable(station, inspection)) {
+      message =
+          'No simulation workstation is available. No experiment has started.';
+      notifyListeners();
+      return;
+    }
+    await confirmLaunch();
   }
 
   /// Confirmation is bound to the checked snapshot and station configuration.

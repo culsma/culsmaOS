@@ -17,6 +17,7 @@ def test_preview_matches_final_loading_without_admission_or_reservation(tmp_path
         view = preview(shared)
         assert view['valid'] and view['preparation']['status'] == 'available'
         assert view['preparation']['physical_observation'] is False
+        assert view['preparation']['execution_options'] == {'simulation':True, 'hardware':False}
         assert not shared.client.execute({'action':'runs'})['runs']
         after = shared.client.execute({'action':'device-status'})
         assert {k:v for k,v in after.items() if k!='observed_at'} == {k:v for k,v in observed.items() if k!='observed_at'}

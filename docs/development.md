@@ -120,7 +120,7 @@ credential bootstrap.
 
 | Window | Existing functionality |
 | --- | --- |
-| Files | Installation-root file browser, bounded preview, double-click start |
+| Files | User-workspace file browser, bounded preview, double-click review |
 | Experiment | Loading plan/preferences, operator confirmation, status, pause/resume/cancel, result and evidence |
 | Workstation | Current layout, container placement/replacement/removal, run history, supported simulated tip-box replacement |
 | System Settings | Rack replacement and advanced saved layout/configuration editor |
@@ -318,9 +318,9 @@ uses `ViewStateReadInteractor`, `ViewRequestInteractor` and `RendererSessionInte
 The protocol/browser acceptance is `tests/integration/test_console_view_interaction.py`;
 its isolated MCP subprocess and browser Golden check do not dispatch device actions.
 
-Single-clicking a protocol inspects its captured source. Double-clicking or choosing
-`Run protocol` performs the offline requirement check and sends one durable `start`
-request. The resident records automatic startup in the queue and owns final planning,
+Single-clicking a protocol previews its source. In the native console, double-clicking
+checks the protocol and opens its loading review. Choosing **Run simulation** then sends
+one durable `start` request. The resident records automatic startup in the queue and owns final planning,
 reservation and simulation loading. Failures settle through existing run finalization
 and are displayed as errors; unknown execution retains isolation. Retrying the same
 request returns the same run. `submit_program` remains available for explicit staged
@@ -409,7 +409,12 @@ Browsing is read-only. HTTP `/api/v1/files` and MCP `file_roots`, `list_director
 `preview_file` delegate to the same authorized File System Interactor.
 
 Single-click previews a file; double-click opens a folder or checks a `.culs` program.
-The native review shows language/loading checks, then requires **Confirm run**.
+The native review lists the proposed container models, track/site locations,
+initial liquid amounts, empty wells and configured tip positions. **Run simulation**
+is an explicit action using the current simulated inventory, not a side-effect-free
+static check. Simulation results are labelled. **Run on hardware** remains disabled:
+the current OS runtime accepts simulation devices only. The preview exposes this
+capability as `execution_options`; it does not claim a hardware connection.
 Confirmation uses the checked source snapshot and configuration fingerprint. Stock
 and device checks still run before dispatch; preview does not reserve inventory.
 Execution still belongs to Program Manager. Programs opened through the workspace root use

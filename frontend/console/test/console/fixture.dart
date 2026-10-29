@@ -27,6 +27,11 @@ class NativeConsoleFixtureApi extends FakeConsoleApi {
         'host': {'status': 'ready'},
         'runs': [],
         'layout': {'status': 'unavailable'},
+        'devices': {
+          'devices': [
+            {'device_id': 'test-station', 'mode': 'simulation'},
+          ],
+        },
       };
     if (path == '/api/v1/programs')
       return {

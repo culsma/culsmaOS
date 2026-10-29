@@ -89,6 +89,14 @@ void main() {
           await c.launch('standard_dilution.culs');
           await tester.pumpAndSettle();
         }
+        expect(find.text('Run simulation'), findsOneWidget);
+        expect(
+          tester
+              .widget<FilledButton>(find.byKey(const Key('hardware-run')))
+              .onPressed,
+          isNull,
+        );
+        expect(c.inspection?['preparation']?['plan']?['loadout'], isNotEmpty);
         final button = find.byKey(const Key('confirm-run')).hitTestable();
         final beforePolling = tester.getRect(button);
         for (var poll = 0; poll < 3; poll++) {

@@ -95,6 +95,14 @@ class NativeRunOutcomeView extends StatelessWidget {
             ),
           ],
         ),
+        if (result['os']?['mode'] == 'simulation')
+          const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text(
+              'Simulation result · no hardware was operated',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
         const SizedBox(height: 12),
         Text(
           guidance['message'] ??

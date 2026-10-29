@@ -1,0 +1,135 @@
+{
+  "preparation": {
+    "status": "available",
+    "plan": {
+      "loadout": [
+        {
+          "labware": "STANDARD_T36_SITE2",
+          "model": "RGT_CONT_60ML_BC_A00",
+          "placement": {
+            "carrier": "PREVIEW_T36_5R60_SUBSTITUTE",
+            "track": "36",
+            "site": "2",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              831.25,
+              368.15,
+              163.2
+            ],
+            "native_angle_deg": 0.0
+          },
+          "containers": [
+            {
+              "name": "standard",
+              "well": "1",
+              "volume_uL": 1000.0,
+              "contents": {
+                "STANDARD": {
+                  "dimension": "volume",
+                  "unit": "uL",
+                  "value": 1000.0
+                }
+              }
+            }
+          ],
+          "instruction": "Place or confirm this labware, then load the listed initial contents"
+        },
+        {
+          "labware": "WATER_T36_REAR_SITE1",
+          "model": "RGT_CONT_60ML_BC_A00",
+          "placement": {
+            "carrier": "PREVIEW_T36_5R60_SUBSTITUTE",
+            "track": "36",
+            "site": "1",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              831.25,
+              532.75,
+              163.2
+            ],
+            "native_angle_deg": 0.0
+          },
+          "containers": [
+            {
+              "name": "diluent",
+              "well": "1",
+              "volume_uL": 1000.0,
+              "contents": {
+                "DILUENT": {
+                  "dimension": "volume",
+                  "unit": "uL",
+                  "value": 1000.0
+                }
+              }
+            }
+          ],
+          "instruction": "Place or confirm this labware, then load the listed initial contents"
+        },
+        {
+          "labware": "DWP96_E4",
+          "model": "ABg_96_VB_DWP_2200ul",
+          "placement": {
+            "carrier": "CAR_HHS_3DWP_0001",
+            "track": "29",
+            "site": "4",
+            "orientation": "Use the commissioned native labware orientation",
+            "native_origin_mm": [
+              691.7,
+              152.5,
+              182.7
+            ],
+            "native_angle_deg": 0.0
+          },
+          "containers": [
+            {
+              "name": "__lw_plate_assay_A1",
+              "well": "A1",
+              "volume_uL": 0.0,
+              "contents": {}
+            },
+            {
+              "name": "__lw_plate_assay_A2",
+              "well": "A2",
+              "volume_uL": 0.0,
+              "contents": {}
+            },
+            {
+              "name": "__lw_plate_assay_A3",
+              "well": "A3",
+              "volume_uL": 0.0,
+              "contents": {}
+            }
+          ],
+          "instruction": "Place or confirm this labware, then load the listed initial contents"
+        }
+      ],
+      "supplies": [
+        {
+          "id": "HTF_B4_TEST",
+          "kind": "tips",
+          "available": 12,
+          "required": null,
+          "requirement_status": "checked_during_driver_preparation",
+          "model": "HTF_L",
+          "carrier": "CAR_5TIP_0002",
+          "site": "4",
+          "track": "10",
+          "positions": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        }
+      ]
+    }
+  }
+}

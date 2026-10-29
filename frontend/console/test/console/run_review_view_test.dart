@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:culsma_console/api/console_api.dart';
@@ -16,6 +18,18 @@ void main() {
       final layout = LayoutController(api);
       final c = NativeConsoleInteractor(api, layout);
       c.selectedFile = 'standard_dilution.culs';
+      c.station = {
+        'devices': {
+          'devices': [
+            {'mode': 'simulation'},
+          ],
+        },
+      };
+      c.inspection = jsonDecode(
+        File(
+          'test/console/fixtures/standard_dilution_review.json',
+        ).readAsStringSync(),
+      );
       c.launchReview = {'program_id': 'standard_dilution.culs'};
       await tester.pumpWidget(
         MaterialApp(
@@ -27,6 +41,15 @@ void main() {
           ),
         ),
       );
+      expect(find.text('Run simulation'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('hardware-run')))
+            .onPressed,
+        isNull,
+      );
+      expect(find.text('Track 36 · Position 2'), findsOneWidget);
+      expect(find.textContaining('__lw_plate'), findsNothing);
       final button = find.byKey(const Key('confirm-run'));
       final bounds = tester.getRect(button);
       for (final busy in [true, false, true, false]) {
@@ -47,7 +70,7 @@ void main() {
       c.submittingRun = true;
       c.notifyViewChanged();
       await tester.pump();
-      expect(find.text('Starting the experiment…'), findsOneWidget);
+      expect(find.text('Starting the simulation…'), findsOneWidget);
       expect(tester.widget<FilledButton>(button).onPressed, isNull);
       await tester.pumpWidget(const SizedBox());
       c.dispose();

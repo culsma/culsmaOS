@@ -200,7 +200,10 @@ class RunSetupPreviewInteractor:
     def preview(self, compiled):
         self.configuration.verify(self.context)
         identity = self.configuration.fingerprint
+        # The current resident runtime only admits simulation devices. This is an
+        # execution capability, not a claim that hardware was discovered or connected.
         base = {'configuration_fingerprint': identity, 'physical_observation': False,
+                'execution_options': {'simulation': True, 'hardware': False},
                 'scope': 'Proposed initial loading; execution preflight and stock checks still run before dispatch.'}
         if self.reader is None:
             return {**base, 'status': 'unsupported', 'plan': None}
