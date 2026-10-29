@@ -6,7 +6,7 @@ from culsma_os.auth.repository import SessionCredentialRepository
 from culsma_os.console_interaction.interactors import ViewStateReadInteractor, ViewRequestInteractor, RendererSessionInteractor
 from culsma_os.console_interaction.repository import SqliteViewInteractionRepository
 from tests.support.console.http import ConsoleHTTPHarness
-from tests.modules.console_interaction.test_interactors import Observation, STATE
+from tests.support.console.view_interaction import Observation, STATE
 
 
 def test_http_renderer_identity_and_transport_shape_are_checked(tmp_path):

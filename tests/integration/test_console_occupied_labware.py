@@ -1,5 +1,5 @@
 """An occupied native site stays editable; configuration activation is still explicit."""
-from tests.integration.test_console_labware import native_station,request
+from tests.support.integration.console_labware import native_station,request
 
 
 def apply(shared,proposal,fp,identity):

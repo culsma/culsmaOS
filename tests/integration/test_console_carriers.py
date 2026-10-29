@@ -4,7 +4,7 @@ import os
 import subprocess
 import pytest
 from tests.support.paths import ROOT
-from tests.integration.test_console_labware import native_station, request
+from tests.support.integration.console_labware import native_station, request
 
 
 def test_carrier_proposal_requires_explicit_activation_and_preserves_execution(tmp_path,monkeypatch):
