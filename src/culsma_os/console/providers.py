@@ -40,8 +40,8 @@ class ConsoleApplicationFactory:
             ResidentProcessAdapter(resident_command, log_path, Path(log_path).parent/'stations') if resident_command else None)
 
     def installation_root(self,settings):
-        from culsma_os.file_system.interactors import InstallationRootInteractor
-        return settings.file_root or InstallationRootInteractor().resolve(Path(__file__).parent.parent)
+        from culsma_os.file_system.interactors import UserWorkspaceRootInteractor
+        return settings.file_root or UserWorkspaceRootInteractor().resolve(settings.home_path)
 
     def installation_source(self,settings):
         return ProgramSourceInteractor(FileProgramSourceRepository(self.installation_root(settings),
@@ -52,7 +52,7 @@ class ConsoleApplicationFactory:
         from culsma_os.file_system.interactors import FileReadInteractor
         from culsma_os.file_system.repository import LocalFileReadRepository
         return FileReadInteractor(tokens,LocalFileReadRepository({'installation':self.installation_root(settings),
-            'programs':source.sources.root},(source.sources.store,)),source.sources.root)
+            'programs':source.sources.root},(source.sources.store,),home=self.installation_root(settings)),source.sources.root)
 
     def build(self, settings):
         tokens = TokenInteractor(SessionCredentialRepository())

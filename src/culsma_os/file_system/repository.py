@@ -17,11 +17,21 @@ class LocalFileReadRepository:
     page_size=200
     max_entries=50000
     preview_bytes=64000
-    def __init__(self,roots,excluded=()):
+    def __init__(self,roots,excluded=(),home=None):
         self.paths={key:Path(value).resolve() for key,value in roots.items() if value is not None}
+        self.home=Path(home).expanduser().resolve() if home is not None else None
         self.excluded=tuple(Path(value).resolve() for value in excluded)
 
+    def initialize_home(self):
+        if self.home is None:return
+        try:
+            for path in (self.home,self.home/'projects',self.home/'results'):
+                if path.is_symlink():raise FileReadError('FILE_LOCATION_UNAVAILABLE','unavailable')
+                path.mkdir(parents=True,exist_ok=True,mode=0o700)
+        except OSError as error:raise FileReadError('FILE_LOCATION_UNAVAILABLE','unavailable') from error
+
     def roots(self):
+        self.initialize_home()
         return [{'id':key,'path':str(path),'available':path.is_dir()} for key,path in self.paths.items()]
 
     def validate_path(self,path):
@@ -38,6 +48,7 @@ class LocalFileReadRepository:
 
     def directory_descriptor(self,root,path):
         self.selected_path(root,path)
+        self.initialize_home()
         descriptor=os.open(self.paths[root],os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
         try:
             for part in path.split('/') if path else ():

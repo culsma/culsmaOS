@@ -29,6 +29,16 @@ class NativeFileBrowserInteractor extends ChangeNotifier {
     return path.isEmpty ? base : '$base/$path';
   }
 
+  String breadcrumbLabel(int index) {
+    final parts = path.split('/');
+    final parent = parts.take(index).join('/');
+    final target = parts.take(index + 1).join('/');
+    return folders[key(root, parent)]
+            ?.where((row) => row['path'] == target)
+            .firstOrNull?['name'] ??
+        parts[index];
+  }
+
   void changed() {
     if (!disposed) notifyListeners();
   }

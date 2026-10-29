@@ -4,7 +4,7 @@ import pytest
 from culsma_os.auth.interactors import TokenInteractor, AuthorizedInteractor
 from culsma_os.auth.repository import SessionCredentialRepository
 from culsma_os.auth.models import ConsoleAccessError
-from culsma_os.file_system.interactors import FileReadInteractor, InstallationRootInteractor
+from culsma_os.file_system.interactors import FileReadInteractor, UserWorkspaceRootInteractor
 from culsma_os.file_system.repository import LocalFileReadRepository
 from culsma_os.file_system.models import FileReadRequest, FileReadError
 
@@ -78,7 +78,22 @@ def test_invalid_operations_rejected(browser,payload):
     with pytest.raises(FileReadError):browser[4].execute('Bearer '+browser[3].issue_console_session(),payload)
 
 
-def test_installation_root_uses_checkout_or_installed_package():
-    resolver=InstallationRootInteractor()
-    assert resolver.resolve('/application/src/culsma_os')==Path('/application')
-    assert resolver.resolve('/environment/site-packages/culsma_os')==Path('/environment/site-packages/culsma_os')
+def test_user_workspace_root_is_independent_of_code_installation(monkeypatch,tmp_path):
+    monkeypatch.setattr(Path,'home',lambda:tmp_path)
+    resolver=UserWorkspaceRootInteractor()
+    assert resolver.resolve()==tmp_path/'Culsma'
+    assert resolver.resolve(tmp_path/'user-installation')==tmp_path/'user-installation'
+
+
+def test_new_user_workspace_is_created_without_developer_content(tmp_path):
+    home=tmp_path/'Culsma';projects=home/'projects'
+    repo=LocalFileReadRepository({'installation':home,'programs':projects},home=home)
+    tokens=TokenInteractor(SessionCredentialRepository())
+    interactor=FileReadInteractor(tokens,repo,projects)
+    with pytest.raises(ConsoleAccessError):interactor.execute(None,FileReadRequest('list'))
+    assert not home.exists()
+    listing=interactor.execute('Bearer '+tokens.issue_console_session(),FileReadRequest('list'))
+    assert [row['name'] for row in listing['entries']]==['Experiments','Results']
+    assert [row['path'] for row in listing['entries']]==['projects','results']
+    assert set(p.name for p in home.iterdir())=={'projects','results'}
+    with pytest.raises(FileReadError):interactor.execute('Bearer '+tokens.issue_console_session(),FileReadRequest('preview',path='src/culsma_os/cli.py'))

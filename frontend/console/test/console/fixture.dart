@@ -73,7 +73,7 @@ class NativeConsoleFixtureApi extends FakeConsoleApi {
             {
               'id': 'installation',
               'label': 'culsmaOS',
-              'path': '/Culsma/culsmaOS',
+              'path': '/Culsma',
               'available': true,
             },
             {

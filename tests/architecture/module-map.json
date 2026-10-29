@@ -1154,7 +1154,7 @@
           "path": "src/culsma_os/file_system/interactors.py"
         },
         {
-          "component": "InstallationRootInteractor",
+          "component": "UserWorkspaceRootInteractor",
           "path": "src/culsma_os/file_system/interactors.py"
         },
         {

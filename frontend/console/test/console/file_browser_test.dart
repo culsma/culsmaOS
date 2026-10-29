@@ -60,7 +60,7 @@ void main() {
       final api = FolderApi(), c = NativeFileBrowserInteractor(api);
       await c.initialize();
       expect(c.root, 'installation');
-      expect(c.absolutePath, '/Culsma/culsmaOS');
+      expect(c.absolutePath, '/Culsma');
       await c.navigate('installation', 'folder');
       await c.refresh();
       expect(c.history.length, 2);

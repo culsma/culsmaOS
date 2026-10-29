@@ -32,29 +32,19 @@ void main() {
           );
       await c.files.initialize();
       c.files.entries = [
-        for (final name in ['docs', 'examples', 'src'])
-          {
-            'name': name,
-            'path': name,
-            'kind': 'directory',
-            'openable': true,
-            'extension': '',
-          },
         {
-          'name': 'LICENSE',
-          'path': 'LICENSE',
-          'kind': 'file',
-          'size': 11357,
-          'extension': '',
+          'name': 'Experiments',
+          'path': 'projects',
+          'kind': 'directory',
           'openable': true,
+          'extension': '',
         },
         {
-          'name': 'README.md',
-          'path': 'README.md',
-          'kind': 'file',
-          'size': 5400,
-          'extension': '.md',
+          'name': 'Results',
+          'path': 'results',
+          'kind': 'directory',
           'openable': true,
+          'extension': '',
         },
       ];
       c.files.total = c.files.entries.length;

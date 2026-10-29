@@ -394,11 +394,13 @@ with reasons. Physical installation and experiment loading remain operator check
 
 ### Home and protocol files
 
-Files opens the culsmaOS installation directory by default: the repository root in
-source checkouts, or the installed `culsma_os` package in packaged environments.
-`--file-root` explicitly selects a different installation location for deployment.
-The Experiments shortcut retains `--program-root`, or `~/Culsma/projects` by default
-(`--home` changes that Home). Existing files are never moved.
+Files opens the user workspace, `~/Culsma` by default (`--home` changes it).
+This is separate from application binaries, source code and internal runtime state.
+The workspace shows user content: Experiments and Results. Existing experiments
+remain in `projects/`, displayed as Experiments; no existing files are moved.
+`--program-root` retains an explicitly configured experiment directory, also available
+as an Experiments shortcut. `--file-root` can explicitly select a deployment's user
+workspace directory; it must not point at the application package or source checkout.
 
 The native browser provides folder navigation, back/forward/up, breadcrumbs,
 folder trees, file metadata and bounded UTF-8 previews. Directory reads are paged;
@@ -407,10 +409,10 @@ Browsing is read-only. HTTP `/api/v1/files` and MCP `file_roots`, `list_director
 `preview_file` delegate to the same authorized File System Interactor.
 
 Single-click previews a file; double-click opens a folder or runs a `.culs` program.
-Execution still belongs to Program Manager. Installation programs use
+Execution still belongs to Program Manager. Programs opened through the workspace root use
 `source_scope="installation"`; the default `"programs"` retains existing API
-behavior. Installation snapshots include only the selected program and its transitive
-Culsma imports. They do not scan the application tree. Launches retain the exact
+behavior. Workspace-root snapshots include only the selected program and its transitive
+Culsma imports. They do not scan application files. Launches retain the exact
 source scope, snapshot and request identity when a response is unknown.
 
 

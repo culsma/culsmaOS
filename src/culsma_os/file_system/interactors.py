@@ -4,11 +4,9 @@ from .models import FileReadRequest,FileReadError
 from .repository import FileReadRepository
 
 
-class InstallationRootInteractor:
-    def resolve(self,package):
-        package=Path(package).resolve()
-        checkout=package.parent.parent
-        return checkout if package.parent.name=='src' else package
+class UserWorkspaceRootInteractor:
+    def resolve(self,home=None):
+        return Path(home).expanduser().resolve() if home is not None else Path.home()/'Culsma'
 
 
 class FileReadInteractor(AuthorizedInteractor):
@@ -30,6 +28,14 @@ class FileReadInteractor(AuthorizedInteractor):
 
     def project_entry(self,root,entry,root_path=None):
         result=dict(entry)
+        if root=='installation' and entry['kind']=='directory':
+            if root_path is None:
+                root_path=next(row['path'] for row in self.repository.roots() if row['id']==root)
+            target=Path(root_path)/entry['path']
+            if self.program_root is not None and target==self.program_root:
+                result['name']='Experiments'
+            elif entry['path']=='results':
+                result['name']='Results'
         if entry['kind']!='file' or not entry['name'].endswith('.culs'):
             return result
         if root=='programs':

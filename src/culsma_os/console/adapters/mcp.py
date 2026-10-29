@@ -144,11 +144,11 @@ class MCPServerAdapter:
         return self.supplies.execute(self.raw_credential,SupplyReplacementRequest('status',request_id))
 
     def file_roots(self) -> dict[str,Any]:
-        """Read the server-selected installation and experiment directory roots."""
+        """Read the server-selected user workspace and experiment directory roots."""
         return self.file_reads.execute(self.raw_credential,FileReadRequest('roots'))
 
     def list_directory(self,root:str='installation',path:str='',offset:int=0) -> dict[str,Any]:
-        """Read a directory page. Paths are relative to the selected product root."""
+        """Read a directory page. Paths are relative to the selected user workspace root."""
         return self.file_reads.execute(self.raw_credential,FileReadRequest('list',root,path,offset))
 
     def preview_file(self,root:str,path:str) -> dict[str,Any]:

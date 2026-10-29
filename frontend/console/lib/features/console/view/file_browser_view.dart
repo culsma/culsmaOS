@@ -117,7 +117,7 @@ class NativeFileBrowserView extends StatelessWidget {
                   browser.root,
                   browser.path.split('/').take(i + 1).join('/'),
                 ),
-                child: Text(browser.path.split('/')[i]),
+                child: Text(browser.breadcrumbLabel(i)),
               ),
             ],
           ],
