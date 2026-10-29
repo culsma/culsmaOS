@@ -468,3 +468,11 @@ unknown outcomes do not offer a simple restart. Tip replacement requires the exi
 acknowledged supply workflow and never restarts a protocol automatically. Historical
 run status and diagnostics are unchanged. Raw errors, run identifiers, semantic step
 counts and execution evidence remain available under Technical details.
+
+The native accessibility scope also retains an explicit semantic container above
+Navigator. Modal barriers may remove the exposed desktop subtree; the container
+prevents its children from merging into the engine root during dialog transitions.
+Keep native semantics enabled. `tools/test_native_accessibility.py` exercises 12
+supply-dialog cancellations and an acknowledged replacement against in-memory
+supplies, rejects AX-tree errors in native logs, and asserts that no run starts.
+This is a regression check, not a guarantee against every upstream engine defect.

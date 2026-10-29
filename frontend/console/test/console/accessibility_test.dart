@@ -2,6 +2,7 @@ import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:culsma_console/app.dart';
+import 'package:culsma_console/features/console/view/accessibility_scope.dart';
 import 'package:culsma_console/features/console/interactor/console_interactor.dart';
 import 'fixture.dart';
 import '../layout/fixture.dart';
@@ -21,6 +22,16 @@ void main() {
       await c.refresh();
       await tester.pumpWidget(CulsmaConsole(controller: layout, console: c));
       await tester.pumpAndSettle();
+      final boundary = tester.widget<Semantics>(
+        find
+            .descendant(
+              of: find.byType(NativeAccessibilityScope),
+              matching: find.byType(Semantics),
+            )
+            .first,
+      );
+      expect(boundary.container, isTrue);
+      expect(boundary.explicitChildNodes, isTrue);
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await mouse.addPointer(
         location: tester.getCenter(find.byKey(const Key('files-refresh'))),
