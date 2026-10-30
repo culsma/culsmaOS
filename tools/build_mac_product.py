@@ -79,7 +79,6 @@ class MacProductBuilder:
         if self.digest(runtime_archive)!=lock['sha256'] or self.digest(licenses_archive)!=lock['licenses']['sha256']:
             raise ValueError('PYTHON_ARCHIVE_HASH_MISMATCH')
         if output.exists():raise ValueError('MAC_OUTPUT_MUST_BE_NEW')
-        self.validate_native_paths(native)
         if not (native/'Contents/MacOS/culsma_console').is_file():raise ValueError('NATIVE_BUILD_REQUIRED')
         output.mkdir(parents=True)
         image=output/'image';image.mkdir()
@@ -102,6 +101,9 @@ class MacProductBuilder:
         shutil.move(license_unpack/'python',resources/'PythonLicenses');shutil.rmtree(license_unpack)
         shutil.copytree(packages,resources/'packages',symlinks=True)
         shutil.copytree(native,resources/'Native/culsma_console.app',symlinks=True)
+        for name in ('Contents/MacOS/culsma_console','Contents/Frameworks/App.framework/Versions/A/App'):
+            subprocess.run(['/usr/bin/xcrun','strip','-S','-x',str(resources/'Native/culsma_console.app'/name)],check=True)
+        self.validate_native_paths(resources/'Native/culsma_console.app')
         shutil.copy2(root/'tools/desktop/launch.py',resources/'launch.py')
         defaults=resources/'defaults';defaults.mkdir()
         for name in ('deck.json','transfer.culs'):shutil.copy2(root/'examples/transfer'/name,defaults/name)
