@@ -17,7 +17,7 @@ do {
     try log.seekToEnd()
     let process = Process()
     process.executableURL = resources.appendingPathComponent("runtime/bin/python3.11")
-    process.arguments = ["-I", resources.appendingPathComponent("launch.py").path, "desktop"]
+    process.arguments = ["-I", "-B", resources.appendingPathComponent("launch.py").path, "desktop"]
     process.standardInput = FileHandle.nullDevice
     process.standardOutput = log
     process.standardError = log

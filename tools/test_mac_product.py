@@ -70,22 +70,24 @@ async def exercise(app, env):
 def main(app, output):
     app=app.resolve();output=output.resolve();output.mkdir(parents=True,exist_ok=True)
     # The SDK used by this test comes from the delivered product, not the developer environment.
+    sys.dont_write_bytecode=True
     sys.path.insert(0,str(app/'Contents/Resources/packages/mcp'))
     with tempfile.TemporaryDirectory(prefix='cm-',dir='/private/tmp') as temporary:
         home=Path(temporary)/'User';home.mkdir()
         env={**os.environ,'HOME':str(home),'PYTHONPATH':'/unavailable-developer-environment','PYTHONHOME':'/unavailable-python','PYTHONDONTWRITEBYTECODE':'1'}
         resources=app/'Contents/Resources';python=resources/'runtime/bin/python3.11';launch=resources/'launch.py'
         with (output/'native.log').open('w') as log:
-            native=subprocess.Popen([str(python),'-I',str(launch),'desktop'],env=env,stdout=log,stderr=subprocess.STDOUT)
+            native=subprocess.Popen([str(python),'-I','-B',str(launch),'desktop'],env=env,stdout=log,stderr=subprocess.STDOUT)
             try:
                 result=asyncio.run(exercise(app,env))
                 (output/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
                 text=(output/'native.log').read_text()
                 assert 'Failed to update ui::AXTree' not in text
                 assert native.poll() is None,'Native desktop unexpectedly exited'
+                subprocess.run(['/usr/bin/codesign','--verify','--deep','--strict',str(app)],check=True)
                 print(json.dumps(result,indent=2))
             finally:
-                subprocess.run([str(python),'-I',str(launch),'stop'],env=env,capture_output=True,timeout=15)
+                subprocess.run([str(python),'-I','-B',str(launch),'stop'],env=env,capture_output=True,timeout=15)
                 resident_log=home/'Library/Application Support/culsmaOS/preview/resident.log'
                 if resident_log.exists():shutil.copy2(resident_log,output/'resident.log')
                 # Terminate only this isolated test's native child, not any user's app.

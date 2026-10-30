@@ -86,6 +86,7 @@ class MacPreviewProduct:
                 os.environ.pop(name)
         os.environ.update(PYTHONPATH=str(site), PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1',
                           CULSMA_OS_STATION_ROOT=str(self.state / 'stations'))
+        sys.dont_write_bytecode = True
         sys.path.insert(0, str(site))
 
     def connection_settings(self):

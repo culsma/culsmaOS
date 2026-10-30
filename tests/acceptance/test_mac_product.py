@@ -97,3 +97,12 @@ def test_builder_cleans_build_paths_and_retains_license_metadata(tmp_path):
     inventory=subject.package_inventory(packages)
     assert inventory['mcp']==[{'name':'example','version':'1.2','license':'MIT','license_files':['example-1.2.dist-info/LICENSE']}]
     assert (packages/'mcp/example-1.2.dist-info/LICENSE').read_text()=='license text'
+
+
+def test_product_launchers_disable_bundle_bytecode_writes(tmp_path):
+    spec=importlib.util.spec_from_file_location('mac_builder',ROOT/'tools/build_mac_product.py')
+    builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
+    launcher=tmp_path/'culsma-mcp';builder.MacProductBuilder().write_shell(launcher,'mcp')
+    assert ' -I -B ' in launcher.read_text()
+    assert launcher.stat().st_mode & 0o111
+    assert '"-I", "-B"' in (ROOT/'tools/desktop/Launcher.swift').read_text()

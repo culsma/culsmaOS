@@ -62,3 +62,6 @@ isolated environment's exact package versions and license locations. NumPy's
 bundled numerical-library notices remain in its installed wheel metadata.
 Flutter's `NOTICES.Z` license registry and both font licenses are retained.
 No Hamilton binaries, labware definitions or site-specific layouts are included.
+
+Mac native binaries receive ad-hoc signatures during assembly; dependency source
+code is unchanged. Input-wheel hashes describe the upstream inputs before signing.

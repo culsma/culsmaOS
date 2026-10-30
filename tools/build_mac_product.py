@@ -40,7 +40,7 @@ class MacProductBuilder:
 
     def write_shell(self, path, mode):
         path.write_text('#!/bin/sh\nset -eu\nRESOURCES="$(CDPATH= cd -- "$(dirname -- "$0")/../Resources" && pwd)"\n'
-            'exec "$RESOURCES/runtime/bin/python3.11" -I "$RESOURCES/launch.py" '+mode+'\n')
+            'exec "$RESOURCES/runtime/bin/python3.11" -I -B "$RESOURCES/launch.py" '+mode+'\n')
         path.chmod(0o755)
 
     def create_icon(self, root, resources, output):
