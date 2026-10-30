@@ -6,7 +6,7 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None, fault_tests=None):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None, fault_tests=None, profile_queries=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
         self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
@@ -16,8 +16,12 @@ class ResidentCommandInteractor:
         self.setup_preview = setup_preview
         self.supplies = supplies
         self.fault_tests = fault_tests
+        self.profile_queries = profile_queries
 
     def execute(self, request):
+        if request.action == 'configuration-profile':
+            if self.profile_queries is None:raise ValueError('DEVICE_PROFILE_QUERY_UNAVAILABLE')
+            return self.profile_queries.execute(request.profile_request)
         if request.action == 'developer-test':
             if self.fault_tests is None:
                 raise ValueError('DEVELOPER_TEST_UNAVAILABLE')

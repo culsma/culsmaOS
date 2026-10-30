@@ -44,7 +44,7 @@ class TokenInteractor:
                 'files:read','files:write','consumables:simulate','programs:execute','setup:operate','setup:confirm','console:views:read','console:views:request'}))
         automation = self.repository.current_automation()
         if automation is not None and hmac.compare_digest(automation, digest):
-            return CallerContext('local-mcp-process', frozenset({'files:read','files:write','consumables:simulate','programs:execute','setup:operate','console:views:read','console:views:request'}))
+            return CallerContext('local-mcp-process', frozenset({'configuration:drafts','configuration:activate','files:read','files:write','consumables:simulate','programs:execute','setup:operate','console:views:read','console:views:request'}))
         renderer = self.repository.renderer(digest)
         if renderer is not None:
             return CallerContext(renderer, frozenset({'console:renderer'}))

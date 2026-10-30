@@ -273,7 +273,10 @@ python3.11 -m venv .venv-mcp
 ```
 
 Configure an external MCP client to launch that command; keep the snapshot store
-outside the program root. Both clients must point to the same resident socket.
+outside the program root. Both clients must point to the same resident socket. Pass `--drafts-db` to the
+bridge using the native console's configuration database (normally
+`<desktop-state-dir>/drafts.sqlite3`). This is a local composition setting, never
+a tool argument.
 No device plugin is needed in the bridge environment. The MCP SDK is optional;
 normal OS/console installation and simulator operation do not load it.
 
@@ -283,10 +286,9 @@ Home, experiment root and snapshot store used by `culsma-os desktop`. The native
 `.app` receives its private connection through the desktop launcher; opening the
 bare bundle is not a complete installed product startup.
 
-The current MCP surface covers experiment files, inspection/start, loading plans,
-run controls, observations and presentation. System Settings configuration writes
-and the Developer exception-test controls do not yet have MCP tools. Physical
-loading confirmation remains an operator action.
+The MCP surface covers experiment files, inspection/start, loading plans, run
+controls, observations, presentation, System Settings and detached Developer
+exception tests. Physical loading confirmation remains an operator action.
 
 | Tools | Responsibility |
 | --- | --- |
@@ -558,3 +560,35 @@ revision-conflict rejection, source inspection, a native editor display receipt 
 deferral while the human editor has unsaved changes. No resident or instruments
 are started by this acceptance. Known use-case failures retain their code in MCP
 error responses; unexpected exception details remain server-side.
+
+### Shared panel operations through MCP
+
+`configuration_profiles`, `list_configurations`, `read_configuration`,
+`create_configuration`, `save_configuration`, `validate_configuration`,
+`export_configuration`, `export_vendor_layout`, `import_vendor_layout` and
+`review_program_bindings` reuse the UI's configuration use cases. Read the driver
+profile/template before editing; saves require the current revision. Layout import
+accepts `{name, encoding: "base64", content}` and remains a detached conversion.
+
+For rack or container changes, call `configuration_status`, then
+`labware_catalogue(expected_fingerprint)`. Use its target/model IDs with
+`prepare_labware_change` (`replace-carrier`, `place`, `replace`, or `remove`). Read
+the returned impact, then explicitly call `apply_configuration` with that exact
+draft/revision, current station fingerprint and a stable request ID. Poll
+`configuration_status(request_id)`; do not retry unknown application with a new ID.
+These are declared configuration changes, never proof that a physical rack moved.
+The native panel follows applied changes and retains unsaved human layout edits.
+
+`test_device_fault` shares the Developer panel's detached diagnostic use case.
+`open_view` also supports `desktop` and `developer`. Physical setup confirmation
+and renderer credentials remain outside automation authority.
+`tests/acceptance/manifests/console-tools.json` maps every native API surface to
+its tools or its explicit authority boundary. `tools/test_native_settings.py`
+validates official MCP rack/slot changes against the live native panel in an
+isolated local station, with zero device execution calls.
+
+Driver capability queries, static validation and layout conversion execute in the
+resident's Device Manager through the bounded `configuration-profile` read port.
+The isolated MCP process uses `RemoteDeviceProfileInteractor`; it does not install,
+import or discover instrument plugins. An unavailable resident is an explicit query
+failure, with no fallback to a different local driver environment.

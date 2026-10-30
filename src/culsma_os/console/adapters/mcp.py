@@ -1,6 +1,9 @@
 """MCP stdio adapter: DTO mapping only; all actions enter authorized Interactors."""
 from typing import Any, Literal
 from functools import wraps
+from .settings_mcp import MCPSettingsTools
+from culsma_os.device_manager.models import DeviceProfileQueryError
+from culsma_os.workspace_manager.models import ConfigurationError
 from culsma_os.auth.models import ConsoleAccessError
 from culsma_os.file_system.models import FileReadError
 from culsma_os.console_interaction.models import ViewInteractionError
@@ -12,9 +15,11 @@ from culsma_os.console_interaction.models import ViewStateReadRequest, ViewReque
 from culsma_os.program_manager.models import SetupInteractionRequest, ConsoleProgramRequest, ConsoleReadRequest
 
 
-class MCPServerAdapter:
-    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None, file_workspace=None):
+class MCPServerAdapter(MCPSettingsTools):
+    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None, file_workspace=None, configuration=None, bindings=None, activation=None, labware=None, developer_tests=None):
         self.setup, self.programs, self.observation = setup, programs, observation
+        self.configuration, self.bindings, self.activation = configuration, bindings, activation
+        self.labware, self.developer_tests = labware, developer_tests
         self.view_reads, self.view_requests = view_reads, view_requests
         self.file_workspace=file_workspace
         self.file_reads=file_reads
@@ -71,6 +76,10 @@ class MCPServerAdapter:
         if self.file_reads is not None:
             for method in [self.file_roots,self.list_directory,self.preview_file]:
                 server.tool(name=method.__name__,structured_output=True,annotations=ToolAnnotations(readOnlyHint=True,destructiveHint=False,idempotentHint=True,openWorldHint=False))(self.tool_function(method))
+        for method, readonly in self.settings_tools():
+            server.tool(name=method.__name__, description=method.__doc__, structured_output=True,
+                annotations=ToolAnnotations(readOnlyHint=readonly, destructiveHint=not readonly,
+                    idempotentHint=readonly, openWorldHint=False))(self.tool_function(method))
         return server
 
     def tool_function(self, method):
@@ -81,7 +90,7 @@ class MCPServerAdapter:
             try:
                 return method(*args, **kwargs)
             except (ConsoleAccessError, FileReadError, ViewInteractionError,
-                    ConsoleReadError, ConsoleProgramError, SupplyReplacementError) as error:
+                    ConsoleReadError, ConsoleProgramError, SupplyReplacementError, ConfigurationError, DeviceProfileQueryError) as error:
                 raise ToolError(f'{error.code} ({error.kind})') from None
         return call
 
@@ -144,7 +153,7 @@ class MCPServerAdapter:
         return self.view_reads.execute(self.raw_credential, ViewStateReadRequest('receipt', request_id))
 
     def open_view(self, session_id: str, epoch: str, expected_revision: int, request_id: str,
-                  view: Literal['experiment','workstation','files','settings','system_info','editor'],
+                  view: Literal['desktop','experiment','workstation','files','settings','system_info','developer','editor'],
                   entity_id: str | None = None) -> dict[str, Any]:
         return self.view_requests.execute(self.raw_credential,
             ViewRequest('open', request_id, session_id, epoch, expected_revision, view, entity_id))

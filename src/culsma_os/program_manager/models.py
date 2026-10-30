@@ -283,6 +283,7 @@ class ResidentCommand:
     supply_change: dict | None = None
     supply_origin: str | None = None
     developer_scenario: str | None = None
+    profile_request: dict | None = None
 
 class ResidentAdmissionError(ValueError):
     def __init__(self, code, diagnostics=()):

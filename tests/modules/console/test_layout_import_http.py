@@ -32,8 +32,10 @@ def test_import_is_authorized_preview_and_never_changes_drafts_or_resident(impor
     assert console.request('POST','/api/v1/configuration/layout-import',forged,body)[0]==401
     assert len(profile.calls)==1
     automation={**headers,'Authorization':'Bearer '+fixture.tokens.issue_automation_session()}
-    assert console.request('POST','/api/v1/configuration/layout-import',automation,body)[0]==403
-    assert len(profile.calls)==1
+    assert console.request('POST','/api/v1/configuration/layout-import',automation,body)[0]==200
+    renderer={**headers,'Authorization':'Bearer '+fixture.tokens.issue_renderer_session()}
+    assert console.request('POST','/api/v1/configuration/layout-import',renderer,body)[0]==403
+    assert len(profile.calls)==2
 
 
 def test_native_upload_limit_does_not_expand_configuration_write_limit(importer):

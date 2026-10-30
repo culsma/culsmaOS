@@ -1,0 +1,155 @@
+{
+  "schema": "culsma_console_tools_v1",
+  "surfaces": [
+    {
+      "route": "/api/v1/station",
+      "tools": [
+        "station_status"
+      ]
+    },
+    {
+      "route": "/api/v1/runs",
+      "tools": [
+        "list_runs"
+      ]
+    },
+    {
+      "route": "/api/v1/runs/{run_id}",
+      "tools": [
+        "run_status"
+      ]
+    },
+    {
+      "route": "/api/v1/programs",
+      "tools": [
+        "list_programs",
+        "inspect_program",
+        "preview_program",
+        "start_program",
+        "submit_program",
+        "control_run",
+        "control_request_status"
+      ]
+    },
+    {
+      "route": "/api/v1/files",
+      "tools": [
+        "file_roots",
+        "list_directory",
+        "preview_file"
+      ]
+    },
+    {
+      "route": "/api/v1/files/workspace",
+      "tools": [
+        "read_document",
+        "create_document",
+        "save_document",
+        "receive_files"
+      ]
+    },
+    {
+      "route": "/api/v1/configuration/profiles",
+      "tools": [
+        "configuration_profiles"
+      ]
+    },
+    {
+      "route": "/api/v1/configuration/drafts",
+      "tools": [
+        "configuration_profiles",
+        "list_configurations",
+        "read_configuration",
+        "create_configuration",
+        "save_configuration",
+        "validate_configuration",
+        "export_configuration",
+        "export_vendor_layout"
+      ]
+    },
+    {
+      "route": "/api/v1/configuration/layout-import",
+      "tools": [
+        "import_vendor_layout"
+      ]
+    },
+    {
+      "route": "/api/v1/configuration/program-bindings",
+      "tools": [
+        "review_program_bindings"
+      ]
+    },
+    {
+      "route": "/api/v1/configuration/active",
+      "tools": [
+        "configuration_status"
+      ]
+    },
+    {
+      "route": "/api/v1/configuration/activation",
+      "tools": [
+        "configuration_status",
+        "apply_configuration"
+      ]
+    },
+    {
+      "route": "/api/v1/configuration/labware",
+      "tools": [
+        "labware_catalogue",
+        "prepare_labware_change"
+      ]
+    },
+    {
+      "route": "/api/v1/setup",
+      "tools": [
+        "loading_plan",
+        "revise_loading_plan",
+        "begin_loading",
+        "loading_request_status"
+      ]
+    },
+    {
+      "route": "/api/v1/consumables",
+      "tools": [
+        "tip_supply",
+        "replace_simulated_tip_box",
+        "tip_replacement_status"
+      ]
+    },
+    {
+      "route": "/api/v1/developer/fault-test",
+      "tools": [
+        "test_device_fault"
+      ]
+    },
+    {
+      "route": "/api/v1/console/views/read",
+      "tools": [
+        "view_state",
+        "view_request_status"
+      ]
+    },
+    {
+      "route": "/api/v1/console/views/request",
+      "tools": [
+        "open_view",
+        "reveal_entity"
+      ]
+    },
+    {
+      "route": "/api/v1/setup/confirmation",
+      "exception": "operator_only",
+      "reason": "A person confirms physical loading; automation cannot assert inspection."
+    },
+    {
+      "route": "/api/v1/console/renderer",
+      "exception": "renderer_only",
+      "reason": "Only the native renderer may report its own presentation state."
+    },
+    {
+      "route": "/api/v1/session",
+      "exception": "process_bootstrap",
+      "reason": "Session credentials are issued privately by the application lifecycle."
+    }
+  ]
+}

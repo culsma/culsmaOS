@@ -55,7 +55,10 @@ def test_preparation_requires_credential_and_hides_full_configuration(tmp_path):
     assert set(result['draft'])=={'draft_id','revision','title','driver','fingerprint'}
     assert 'private fixture' not in str(result) and result['activation']=='not_applied'
     assert repository.get(result['draft']['draft_id']).as_dict()['configuration']['selected']=='plate'
-    with pytest.raises(ConsoleAccessError): subject.execute('Bearer '+tokens.issue_automation_session(),request)
+    automated=subject.execute('Bearer '+tokens.issue_automation_session(),request)
+    assert automated['activation']=='not_applied'
+    assert automated['draft']['draft_id']!=result['draft']['draft_id']
+    with pytest.raises(ConsoleAccessError): subject.execute('Bearer '+tokens.issue_renderer_session(),request)
 
 
 @pytest.mark.parametrize('invalid_request',[

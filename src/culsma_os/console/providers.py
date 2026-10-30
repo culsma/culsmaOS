@@ -87,7 +87,7 @@ class ConsoleApplicationFactory:
             file_workspace=self.build_workspace(tokens,source),
             developer_tests=DeveloperTestInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)))
 
-    def build_mcp(self, settings):
+    def build_mcp(self, settings, profiles=None):
         from .adapters.mcp import MCPServerAdapter
         from .interactors import MCPHostInteractor
         tokens = TokenInteractor(SessionCredentialRepository())
@@ -96,7 +96,17 @@ class ConsoleApplicationFactory:
             settings.program_store or Path('run-artifacts/console/programs'), settings.home_path), CompilationInteractor(), HostedRuntimeInteractor())
         view_reads, view_requests, _ = self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(resident),self.build_document_query(source))
         from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
+        repository = SqliteStationConfigurationRepository(settings.drafts_path or Path('run-artifacts/console/drafts.sqlite3'))
+        from culsma_os.device_manager.interactors import RemoteDeviceProfileInteractor
+        profiles = profiles or RemoteDeviceProfileInteractor(resident)
+        from culsma_os.workspace_manager.interactors import LabwareConfigurationInteractor
+        from culsma_os.developer_tools.interactors import DeveloperTestInteractor
         bridge = MCPServerAdapter(SetupInteractionInteractor(tokens,resident),
             ConsoleProgramInteractor(tokens,source,resident,{"installation":self.installation_source(settings)}),
-            AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)),view_reads,view_requests,SupplyInteractionInteractor(tokens,resident),self.build_files(settings,tokens,source),file_workspace=self.build_workspace(tokens,source))
+            AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)),view_reads,view_requests,SupplyInteractionInteractor(tokens,resident),self.build_files(settings,tokens,source),file_workspace=self.build_workspace(tokens,source),
+            configuration=StationConfigurationInteractor(tokens,repository,profiles),
+            bindings=ProgramBindingInteractor(tokens,repository,profiles,source),
+            activation=ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),resident),
+            labware=LabwareConfigurationInteractor(tokens,repository,resident),
+            developer_tests=DeveloperTestInteractor(tokens,resident))
         return MCPHostInteractor(tokens,bridge)

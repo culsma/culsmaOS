@@ -838,6 +838,14 @@
         {
           "component": "DeviceProfileInteractor",
           "path": "src/culsma_os/device_manager/interactors.py"
+        },
+        {
+          "component": "ResidentDeviceProfileInteractor",
+          "path": "src/culsma_os/device_manager/interactors.py"
+        },
+        {
+          "component": "RemoteDeviceProfileInteractor",
+          "path": "src/culsma_os/device_manager/interactors.py"
         }
       ]
     },

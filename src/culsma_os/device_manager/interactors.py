@@ -239,3 +239,69 @@ class DeviceProfileInteractor:
         profile = profiles.get(driver)
         project = getattr(profile,'program_bindings',None)
         return project(configuration) if callable(project) else None
+
+
+from dataclasses import asdict
+import json
+import re
+from .models import DeviceProfileRequest, DeviceProfileQueryPort, DeviceProfileQueryError
+
+
+class ResidentDeviceProfileInteractor:
+    def __init__(self, profiles: DeviceProfileQueryPort):self.profiles=profiles
+
+    def execute(self, value):
+        if not isinstance(value,dict) or set(value)-{'action','driver','configuration','layout_source'}:
+            raise ValueError('DEVICE_PROFILE_REQUEST_INVALID')
+        try:request=DeviceProfileRequest(**value)
+        except TypeError as error:raise ValueError('DEVICE_PROFILE_REQUEST_INVALID') from error
+        if not isinstance(request.action,str) or request.action not in {'describe','validate','export_layout','import_layout','program_bindings'}:
+            raise ValueError('DEVICE_PROFILE_REQUEST_INVALID')
+        if request.action=='describe':
+            if any(v is not None for v in (request.driver,request.configuration,request.layout_source)):
+                raise ValueError('DEVICE_PROFILE_REQUEST_INVALID')
+            return self.validate_response('describe',self.profiles.describe())
+        if not isinstance(request.driver,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,100}',request.driver) is None:
+            raise ValueError('DEVICE_PROFILE_REQUEST_INVALID')
+        importing=request.action=='import_layout'
+        if (importing and (not isinstance(request.layout_source,dict) or request.configuration is not None)
+                or not importing and (not isinstance(request.configuration,dict) or request.layout_source is not None)):
+            raise ValueError('DEVICE_PROFILE_REQUEST_INVALID')
+        try:
+            if len(json.dumps(value,allow_nan=False).encode())>2*1024*1024:raise ValueError('too large')
+        except (TypeError,ValueError,RecursionError) as error:raise ValueError('DEVICE_PROFILE_REQUEST_INVALID') from error
+        try:
+            result = self.profiles.import_layout(request.driver,request.layout_source) if importing else getattr(self.profiles,request.action)(request.driver,request.configuration)
+            return self.validate_response(request.action,result)
+        except ValueError as error:
+            # Known driver diagnostics are codes, not native exception text or paths.
+            code=getattr(error,'code','DEVICE_PROFILE_QUERY_REJECTED')
+            raise ValueError(code if isinstance(code,str) and re.fullmatch(r'[A-Z][A-Z0-9_]{0,99}',code) else 'DEVICE_PROFILE_QUERY_REJECTED') from error
+
+
+    def validate_response(self,action,result):
+        if result is None and action not in {'describe','validate'}:return None
+        if not isinstance(result,dict):raise ValueError('DEVICE_PROFILE_RESPONSE_INVALID')
+        try:
+            if len(json.dumps(result,allow_nan=False).encode())>4*1024*1024-2048:
+                raise ValueError('DEVICE_PROFILE_RESPONSE_TOO_LARGE')
+        except (TypeError,ValueError,RecursionError) as error:
+            raise ValueError('DEVICE_PROFILE_RESPONSE_INVALID') from error
+        return result
+
+
+class RemoteDeviceProfileInteractor:
+    def __init__(self,resident):self.resident=resident
+
+    def query(self,request: DeviceProfileRequest):
+        try:return self.resident.execute({'action':'configuration-profile','profile_request':asdict(request)})
+        except OSError as error:raise DeviceProfileQueryError('CONFIGURATION_PROFILE_HOST_UNAVAILABLE','unavailable') from error
+        except ValueError as error:
+            code=str(error)
+            raise DeviceProfileQueryError(code if re.fullmatch(r'[A-Z][A-Z0-9_]{0,99}',code) else 'CONFIGURATION_PROFILE_QUERY_REJECTED','conflict') from error
+
+    def describe(self):return self.query(DeviceProfileRequest('describe'))
+    def validate(self,driver,configuration):return self.query(DeviceProfileRequest('validate',driver,configuration))
+    def export_layout(self,driver,configuration):return self.query(DeviceProfileRequest('export_layout',driver,configuration))
+    def import_layout(self,driver,source):return self.query(DeviceProfileRequest('import_layout',driver,layout_source=source))
+    def program_bindings(self,driver,configuration):return self.query(DeviceProfileRequest('program_bindings',driver,configuration))

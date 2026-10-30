@@ -273,6 +273,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
     try {
       station = await api.read('/api/v1/station');
       await information.observe(station);
+      await layout.observeActive(information.active);
       await supplies.refresh();
       final pendingLayout = labware.pending;
       await labware.observe(stationLayout());

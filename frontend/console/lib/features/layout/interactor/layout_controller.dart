@@ -15,6 +15,7 @@ class LayoutController extends ChangeNotifier {
   List<Map<String, dynamic>> profiles = [], drafts = [];
   String? selectedPosition, message, pendingRequest;
   bool busy = false, valid = false, confirmed = false, writeUncertain = false;
+  bool externalConfigurationChanged = false;
   final Duration pollInterval;
   LayoutController(
     this.api, {
@@ -38,6 +39,7 @@ class LayoutController extends ChangeNotifier {
       valid &&
       confirmed &&
       !writeUncertain &&
+      !externalConfigurationChanged &&
       pendingRequest == null &&
       active?['active']?['fingerprint'] != null &&
       ['ready', 'failed'].contains(active?['host']?['status']);
@@ -93,10 +95,41 @@ class LayoutController extends ChangeNotifier {
     }
   });
 
+  /// Follow externally applied configuration without discarding local edits.
+  Future<void> observeActive(Map<String, dynamic>? value) async {
+    if (value == null ||
+        active == null ||
+        busy ||
+        writeUncertain ||
+        pendingRequest != null)
+      return;
+    final changed =
+        active?['active']?['fingerprint'] != value['active']?['fingerprint'];
+    if (!changed && !externalConfigurationChanged) return;
+    if (dirty) {
+      active = LayoutData.copy(value);
+      if (!externalConfigurationChanged || changed) {
+        externalConfigurationChanged = true;
+        confirmed = false;
+        message =
+            'The station configuration changed externally. Your unsaved layout is retained. Discard or save it separately, then reload before applying.';
+        notifyListeners();
+      }
+      return;
+    }
+    proposal = null;
+    draft = null;
+    valid = false;
+    confirmed = false;
+    externalConfigurationChanged = false;
+    await load();
+  }
+
   void selectDraft(Map<String, dynamic> record) {
     if (dirty || writeUncertain || pendingRequest != null)
       throw const FormatException('LAYOUT_UNSAVED_CHANGES');
     exportedLayout = null;
+    externalConfigurationChanged = false;
     draft = LayoutData.copy(record);
     proposal = LayoutData.copy(record['configuration']);
     profile = profiles

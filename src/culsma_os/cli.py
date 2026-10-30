@@ -97,6 +97,7 @@ class CulsmaOSCLI:
         mcp.add_argument("--file-root", type=Path, help="User workspace shown by Files; defaults to --home (~/Culsma)")
         mcp.add_argument('--socket',type=Path,required=True)
         mcp.add_argument('--program-root',type=Path)
+        mcp.add_argument('--drafts-db',type=Path,help='Configuration store shared with the native console')
         mcp.add_argument("--home", type=Path, default=Path.home() / "Culsma", help="User Home directory; programs default to HOME/projects")
         mcp.add_argument('--program-store',type=Path,default=Path('run-artifacts/console/programs'))
         desktop = commands.add_parser("desktop", help="Start the local desktop console and resident as one product")
@@ -136,7 +137,7 @@ class CulsmaOSCLI:
             from culsma_os.console.models import ConsoleSettings
             from culsma_os.console.providers import ConsoleApplicationFactory
             try:
-                ConsoleApplicationFactory().build_mcp(ConsoleSettings(args.socket,program_root=args.program_root,
+                ConsoleApplicationFactory().build_mcp(ConsoleSettings(args.socket,drafts_path=args.drafts_db,program_root=args.program_root,
                     program_store=args.program_store,home_path=args.home,file_root=args.file_root)).execute()
             except (ImportError,ValueError,OSError) as error:
                 parser.exit(2,f'{error}\n')

@@ -69,3 +69,24 @@ class RunScopedSimulationPort(Protocol):
     simulation_scope: str
 
     def begin_simulation_run(self, run_id: str) -> None: ...
+
+
+@dataclass(frozen=True)
+class DeviceProfileRequest:
+    action: str
+    driver: str | None = None
+    configuration: dict | None = None
+    layout_source: dict | None = None
+
+
+class DeviceProfileQueryPort(Protocol):
+    def describe(self) -> dict: ...
+    def validate(self, driver: str, configuration: dict) -> dict: ...
+    def export_layout(self, driver: str, configuration: dict) -> dict | None: ...
+    def import_layout(self, driver: str, source: dict) -> dict | None: ...
+    def program_bindings(self, driver: str, configuration: dict) -> dict | None: ...
+
+
+class DeviceProfileQueryError(ValueError):
+    def __init__(self,code,kind='invalid_request'):
+        super().__init__(code);self.code,self.kind=code,kind

@@ -399,6 +399,10 @@ class ResidentCommandFactory:
         from .developer_tools.interactors import FaultTestInteractor
         test_port=getattr(factory,'build_fault_tests',lambda context:None)(context)
         fault_tests=FaultTestInteractor(test_port, NormalizedReceiptInteractor(getattr(test_port,'fault_mapper',None), fault_schema=2))
+        from .device_manager.interactors import ResidentDeviceProfileInteractor
+        from .device_manager.interactors import DeviceProfileInteractor
+        from .driver_framework.interactors import DriverProfileInteractor
+        profile_queries = ResidentDeviceProfileInteractor(DeviceProfileInteractor(DriverProfileInteractor()))
         return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
             HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
-            devices,configuration,setup_requests,layout,labware,preview,supplies,fault_tests)
+            devices,configuration,setup_requests,layout,labware,preview,supplies,fault_tests,profile_queries)
