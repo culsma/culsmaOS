@@ -39,7 +39,7 @@ def test_mcp_and_desktop_share_paths_and_configuration_database(tmp_path):
     assert mcp[mcp.index('--program-store')+1]==str(p.snapshots)
     config=json.loads((p.state/'mcp-config.json').read_text())
     assert config==p.connection_settings()
-    assert config['mcpServers']['culsmaOS']['command']==str(p.mcp)
+    assert config['mcpServers']['culsma_os']['command']==str(p.mcp)
     assert not any(word in json.dumps(config) for word in ['token','Bearer','access_token'])
     assert (p.state/'mcp-config.json').stat().st_mode & 0o777 == 0o600
 
@@ -70,7 +70,7 @@ def test_service_and_stop_use_the_product_endpoint(tmp_path):
 
 def test_endpoint_is_short_and_rejects_links_or_shared_permissions(tmp_path):
     p=product(tmp_path);p.initialize_endpoint()
-    normal=MacPreviewProduct(p.resources,p.user_home/('long-home-name-'*20))
+    normal=MacPreviewProduct(p.resources,p.user_home.joinpath(*(['long-home-name']*20)))
     assert len(str(normal.socket).encode()) < 104
     p.endpoint.chmod(0o755)
     with pytest.raises(ValueError,match='PREVIEW_ENDPOINT_NOT_PRIVATE'):p.initialize_endpoint()
@@ -117,3 +117,30 @@ def test_builder_rejects_personal_native_build_paths(tmp_path):
     subject=builder.MacProductBuilder();subject.validate_native_paths(tmp_path)
     (tmp_path/files[1]).write_bytes(('file://'+str(Path.home())+'/developer/project.dart').encode())
     with pytest.raises(ValueError,match='NATIVE_PERSONAL_BUILD_PATH'):subject.validate_native_paths(tmp_path)
+
+
+def test_hamilton_selection_is_explicit_and_retains_existing_opentrons_station(tmp_path):
+    p=product(tmp_path);p.initialize()
+    deck=p.state/'deck.json';deck.write_text('preserved user configuration')
+    with pytest.raises(ValueError,match='HAMILTON_LOCAL_ADDON_NOT_INSTALLED'):
+        p.select_profile('hamilton-local')
+    defaults=p.addon/'defaults';defaults.mkdir(parents=True)
+    (defaults/'deck.json').write_text('{"mode":"simulation"}')
+    (defaults/'transfer.culs').write_text('Hamilton private example')
+    p.select_profile('hamilton-local')
+    h=MacPreviewProduct(p.resources,p.user_home,tmp_path);h.initialize()
+    assert h.profile=='hamilton-local' and h.socket!=p.socket and h.state!=p.state
+    assert h.programs!=p.programs and deck.read_text()=='preserved user configuration'
+    assert h.command('desktop')[h.command('desktop').index('--driver')+1]=='hamilton-local'
+    assert (h.programs/'Transfer/transfer.culs').read_text()=='Hamilton private example'
+    h.select_profile('opentrons-simulator')
+    restored=MacPreviewProduct(p.resources,p.user_home,tmp_path)
+    assert restored.state==p.state and restored.socket==p.socket and deck.read_text()=='preserved user configuration'
+
+
+def test_hamilton_profile_cannot_be_selected_with_unrecognized_name_or_symlink(tmp_path):
+    p=product(tmp_path);p.initialize()
+    with pytest.raises(ValueError,match='PRODUCT_STATION_PROFILE_INVALID'):p.select_profile('hamilton-agent')
+    (p.base_state/'station.json').symlink_to(tmp_path/'outside')
+    with pytest.raises(ValueError,match='PRODUCT_STATION_SELECTION_IS_LINK'):p.select_profile('opentrons-simulator')
+    with pytest.raises(ValueError,match='PRODUCT_STATION_SELECTION_IS_LINK'):MacPreviewProduct(p.resources,p.user_home,tmp_path)

@@ -11,8 +11,19 @@ class MacPreviewProduct:
     def __init__(self, resources, home=None, endpoint_root=None):
         self.resources = Path(resources).resolve()
         self.user_home = Path(home) if home is not None else Path.home()
-        self.state = self.user_home / 'Library/Application Support/culsmaOS/preview'
-        self.workspace = self.user_home / 'Culsma Preview'
+        self.base_state = self.user_home / 'Library/Application Support/culsmaOS/preview'
+        selection = self.base_state / 'station.json'
+        if selection.is_symlink():
+            raise ValueError('PRODUCT_STATION_SELECTION_IS_LINK')
+        selected = json.loads(selection.read_text()) if selection.exists() else {'profile':'opentrons-simulator'}
+        if not isinstance(selected,dict) or set(selected)!={'profile'}:
+            raise ValueError('PRODUCT_STATION_PROFILE_INVALID')
+        self.profile = os.environ.get('CULSMA_OS_PROFILE', selected.get('profile'))
+        if self.profile not in {'opentrons-simulator','hamilton-local'}:
+            raise ValueError('PRODUCT_STATION_PROFILE_INVALID')
+        self.addon = self.user_home / 'Library/Application Support/culsmaOS/addons/hamilton'
+        self.state = self.base_state if self.profile=='opentrons-simulator' else self.base_state/'stations/hamilton-local'
+        self.workspace = self.user_home / ('Culsma Preview' if self.profile=='opentrons-simulator' else 'Culsma Hamilton')
         self.programs = self.workspace / 'projects'
         key = sha256(str(self.state.resolve()).encode()).hexdigest()[:16]
         self.endpoint = Path(endpoint_root or '/private/tmp') / f'culsma-preview-{os.getuid()}-{key}'
@@ -57,20 +68,21 @@ class MacPreviewProduct:
         for directory in (self.state, self.programs / 'Transfer', self.workspace / 'results'):
             self.private_directory(directory)
         # This preview owns a separate workspace; upgrades never replace user protocols/configuration.
-        self.seed_file(self.state / 'deck.json', self.resources / 'defaults/deck.json')
-        self.seed_file(self.programs / 'Transfer/transfer.culs', self.resources / 'defaults/transfer.culs')
+        defaults = self.resources/'defaults' if self.profile=='opentrons-simulator' else self.addon/'defaults'
+        self.seed_file(self.state / 'deck.json', defaults / 'deck.json')
+        self.seed_file(self.programs / 'Transfer/transfer.culs', defaults / 'transfer.culs')
 
     def command(self, mode):
         shared = ['--home', str(self.workspace), '--program-root', str(self.programs)]
         if mode == 'desktop':
-            return ['desktop', '--state-dir', str(self.state), '--resident-socket', str(self.socket), '--driver', 'opentrons-simulator',
+            return ['desktop', '--state-dir', str(self.state), '--resident-socket', str(self.socket), '--driver', self.profile,
                     '--driver-config', str(self.state / 'deck.json'), '--application', str(self.native), *shared]
         if mode == 'mcp':
             return ['mcp', '--socket', str(self.socket), '--drafts-db', str(self.drafts),
                     '--program-store', str(self.snapshots), *shared]
         if mode == 'service':
             return ['serve', '--socket', str(self.socket), '--host-db', str(self.state / 'os.sqlite3'),
-                    '--driver', 'opentrons-simulator', '--driver-config', str(self.state / 'deck.json'),
+                    '--driver', self.profile, '--driver-config', str(self.state / 'deck.json'),
                     '--station-id', 'desktop', '--artifacts-dir', str(self.state / 'runs')]
         if mode in {'status', 'stop'}:
             return ['host-status' if mode == 'status' else 'host-stop', '--socket', str(self.socket)]
@@ -84,13 +96,43 @@ class MacPreviewProduct:
         for name in tuple(os.environ):
             if name.startswith(('PYTHON', 'DYLD_')):
                 os.environ.pop(name)
-        os.environ.update(PYTHONPATH=str(site), PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1',
+        paths=[str(site)]
+        if self.profile=='hamilton-local':
+            if not (self.addon/'packages').is_dir() or not (self.addon/'LabWare').is_dir():
+                raise ValueError('HAMILTON_LOCAL_ADDON_NOT_INSTALLED')
+            paths.append(str(self.addon/'packages'))
+            os.environ.update(CULSMA_HAMILTON_LABWARE_ROOT=str(self.addon/'LabWare'),
+                CULSMA_HAMILTON_LOCAL_LOADOUT=str(self.addon/'defaults/loadout.json'),
+                CULSMA_HAMILTON_LOCAL_WORKSPACE=str(self.state/'local-model'))
+            sys.path.insert(0,str(self.addon/'packages'))
+        os.environ.update(PYTHONPATH=os.pathsep.join(paths), PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1',
                           CULSMA_OS_STATION_ROOT=str(self.state / 'stations'))
         sys.dont_write_bytecode = True
         sys.path.insert(0, str(site))
 
+    def select_profile(self, profile):
+        if profile not in {'opentrons-simulator','hamilton-local'}:
+            raise ValueError('PRODUCT_STATION_PROFILE_INVALID')
+        if profile=='hamilton-local' and not (self.addon/'defaults/deck.json').is_file():
+            raise ValueError('HAMILTON_LOCAL_ADDON_NOT_INSTALLED')
+        self.private_directory(self.base_state)
+        target=self.base_state/'station.json'
+        if target.is_symlink():
+            raise ValueError('PRODUCT_STATION_SELECTION_IS_LINK')
+        temporary=target.with_suffix('.pending')
+        descriptor=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+        try:
+            with os.fdopen(descriptor,'w') as stream:
+                json.dump({'profile':profile},stream)
+                stream.flush();os.fsync(stream.fileno())
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+        return {'profile':profile,'status':'selected_for_next_start',
+            'instruction':'Quit and reopen CulsmaOS, then reconnect its MCP server. Existing workstations and files are retained.'}
+
     def connection_settings(self):
-        return {'mcpServers': {'culsmaOS': {'command': str(self.mcp), 'args': []}}}
+        return {'mcpServers': {'culsma_os': {'command': str(self.mcp), 'args': []}}}
 
     def write_connection_settings(self):
         # Generated for the installed location; no identity or access token is stored here.
@@ -103,6 +145,9 @@ class MacPreviewProduct:
             stream.write('\n')
 
     def run(self, mode):
+        if mode.startswith('select-'):
+            print(json.dumps(self.select_profile(mode.removeprefix('select-'))))
+            return
         arguments = self.command(mode)
         self.initialize()
         self.configure_environment(mode)

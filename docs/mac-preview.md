@@ -33,7 +33,7 @@ For Codex, add this entry to the user MCP configuration, or use the equivalent
 MCP settings screen:
 
 ```toml
-[mcp_servers.culsma_os_preview]
+[mcp_servers.culsma_os]
 command = "/Applications/CulsmaOS Preview.app/Contents/MacOS/culsma-mcp"
 ```
 
