@@ -1,5 +1,11 @@
 """MCP stdio adapter: DTO mapping only; all actions enter authorized Interactors."""
 from typing import Any, Literal
+from functools import wraps
+from culsma_os.auth.models import ConsoleAccessError
+from culsma_os.file_system.models import FileReadError
+from culsma_os.console_interaction.models import ViewInteractionError
+from culsma_os.program_manager.models import ConsoleReadError, ConsoleProgramError
+from culsma_os.resource_manager.models import SupplyReplacementError
 from culsma_os.resource_manager.models import SupplyReplacementRequest
 from culsma_os.file_system.models import FileReadRequest
 from culsma_os.console_interaction.models import ViewStateReadRequest, ViewRequest
@@ -41,13 +47,13 @@ class MCPServerAdapter:
         ]:
             server.tool(name=method.__name__, description=description, structured_output=True,
                 annotations=ToolAnnotations(readOnlyHint=read_only, destructiveHint=not read_only,
-                                            idempotentHint=read_only, openWorldHint=False))(method)
+                                            idempotentHint=read_only, openWorldHint=False))(self.tool_function(method))
         if self.file_workspace is not None:
             for method in (self.read_document,self.create_document,self.save_document,self.receive_files):
                 server.tool(name=method.__name__,description=method.__doc__,structured_output=True,
                     annotations=ToolAnnotations(readOnlyHint=method==self.read_document,
                         destructiveHint=method!=self.read_document,idempotentHint=method==self.read_document,
-                        openWorldHint=False))(method)
+                        openWorldHint=False))(self.tool_function(method))
         if self.view_reads is not None and self.view_requests is not None:
             for method, read_only, description in [
                 (self.view_state, True, 'Read renderer-reported console sessions, view state, epochs and revisions; this is not physical evidence.'),
@@ -57,15 +63,27 @@ class MCPServerAdapter:
             ]:
                 server.tool(name=method.__name__, description=description, structured_output=True,
                     annotations=ToolAnnotations(readOnlyHint=read_only, destructiveHint=False,
-                        idempotentHint=True, openWorldHint=False))(method)
+                        idempotentHint=True, openWorldHint=False))(self.tool_function(method))
         if self.supplies is not None:
             for method,readonly in [(self.tip_supply,True),(self.replace_simulated_tip_box,False),(self.tip_replacement_status,True)]:
                 server.tool(name=method.__name__,structured_output=True,
-                    annotations=ToolAnnotations(readOnlyHint=readonly,destructiveHint=not readonly,idempotentHint=True,openWorldHint=False))(method)
+                    annotations=ToolAnnotations(readOnlyHint=readonly,destructiveHint=not readonly,idempotentHint=True,openWorldHint=False))(self.tool_function(method))
         if self.file_reads is not None:
             for method in [self.file_roots,self.list_directory,self.preview_file]:
-                server.tool(name=method.__name__,structured_output=True,annotations=ToolAnnotations(readOnlyHint=True,destructiveHint=False,idempotentHint=True,openWorldHint=False))(method)
+                server.tool(name=method.__name__,structured_output=True,annotations=ToolAnnotations(readOnlyHint=True,destructiveHint=False,idempotentHint=True,openWorldHint=False))(self.tool_function(method))
         return server
+
+    def tool_function(self, method):
+        """Map known use-case failures to deliberate MCP errors without exposing internals."""
+        from mcp.server.mcpserver.exceptions import ToolError
+        @wraps(method)
+        def call(*args, **kwargs):
+            try:
+                return method(*args, **kwargs)
+            except (ConsoleAccessError, FileReadError, ViewInteractionError,
+                    ConsoleReadError, ConsoleProgramError, SupplyReplacementError) as error:
+                raise ToolError(f'{error.code} ({error.kind})') from None
+        return call
 
     def serve(self, raw_credential):
         self.make_server(raw_credential).run(transport='stdio')

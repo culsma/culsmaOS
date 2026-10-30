@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'console/interactor/drop_interactor_cases.dart';
+import 'package:culsma_console/features/console/interactor/renderer_interactor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -477,6 +478,79 @@ void main() {
         api.close();
       }
     },
+  );
+  testWidgets(
+    'official external MCP edits source and presents native editor while preserving human edits',
+    (tester) async {
+      final origin = Uri.parse(
+        Platform.environment['CULSMA_EDITOR_TEST_ORIGIN']!,
+      );
+      final api = LocalConsoleApi(
+        DesktopConnection(
+          origin,
+          Platform.environment['CULSMA_EDITOR_TEST_TOKEN']!,
+        ),
+      );
+      final rendererApi = LocalConsoleApi(
+        DesktopConnection(
+          origin,
+          Platform.environment['CULSMA_EDITOR_RENDERER_TOKEN']!,
+        ),
+      );
+      final layout = LayoutController(api);
+      final console = NativeConsoleInteractor(api, layout);
+      final renderer = NativeRendererInteractor(rendererApi, console);
+      try {
+        await console.files.initialize();
+        await tester.pumpWidget(
+          CulsmaConsole(
+            controller: layout,
+            console: console,
+            renderer: renderer,
+          ),
+        );
+        renderer.start();
+        for (var i = 0; i < 400; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+          if (console.active?.view == 'editor' &&
+              console.editor.document('from-ai.culs').loaded)
+            break;
+        }
+        expect(console.active?.entityId, 'from-ai.culs');
+        final doc = console.editor.document('from-ai.culs');
+        expect(doc.text, contains('350uL'));
+        await tester.tap(find.byKey(const Key('protocol-editor')));
+        await tester.enterText(
+          find.byKey(const Key('protocol-editor')),
+          doc.text.replaceFirst('350uL', '375uL'),
+        );
+        for (
+          var i = 0;
+          i < 300 && !renderer.completed.containsKey('mcp-preserve-edit');
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+        }
+        expect(renderer.completed['mcp-preserve-edit']?['outcome'], 'deferred');
+        expect(console.active?.view, 'editor');
+        expect(doc.text, contains('375uL'));
+        expect(doc.dirty, isTrue);
+        expect(console.runs, isEmpty);
+        expect(tester.takeException(), isNull);
+        // Leave the renderer alive until the MCP client receives its final durable receipt.
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        await tester.pumpWidget(const SizedBox());
+      } finally {
+        await renderer.close();
+        console.dispose();
+        layout.dispose();
+
+        api.close();
+      }
+    },
+    skip: Platform.environment['CULSMA_EDITOR_MCP_TEST'] != '1',
   );
   group("native drop provider limits", registerDropInteractorTests);
 }

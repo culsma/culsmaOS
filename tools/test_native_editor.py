@@ -13,6 +13,7 @@ from culsma_os.console.models import ConsoleSettings
 
 def run():
     output=ROOT/'run-artifacts/native-editor';output.mkdir(parents=True,exist_ok=True)
+    mcp_process=None;mcp_log=None
     with tempfile.TemporaryDirectory(prefix='culsma-editor-') as directory:
         temporary=Path(directory);home=temporary/'Home';programs=home/'projects';programs.mkdir(parents=True)
         source=temporary/'protocol.culs';source.write_text('let sample=tube(capacity=200uL);return sample;')
@@ -23,6 +24,12 @@ def run():
             environment={**os.environ,'CULSMA_EDITOR_TEST_ORIGIN':server.url,
                 'CULSMA_EDITOR_TEST_TOKEN':server.sessions.tokens.issue_console_session(),
                 'CULSMA_EDITOR_TEST_SOURCE':str(source),'CULSMA_EDITOR_TEST_ROOT':str(programs)}
+            sdk=os.environ.get('CULSMA_OS_MCP_SDK_PATH')
+            if sdk:
+                environment.update(CULSMA_EDITOR_MCP_TEST='1',CULSMA_EDITOR_RENDERER_TOKEN=server.sessions.tokens.issue_renderer_session())
+                mcp_log=(output/'mcp-e2e.log').open('w')
+                mcp_process=subprocess.Popen([sys.executable,'-m','tests.support.console.editor_mcp_client',str(settings.socket_path),str(home),str(programs),str(settings.program_store)],cwd=ROOT,
+                    env={**os.environ,'PYTHONPATH':sdk+os.pathsep+str(ROOT/'src')},stdout=mcp_log,stderr=subprocess.STDOUT)
             flutter=os.environ.get('CULSMA_OS_FLUTTER','flutter')
             with (output/'flutter-e2e.log').open('w') as log:
                 result=subprocess.run([flutter,'test','integration_test/editor_test.dart','-d','macos','--no-pub'],
@@ -31,9 +38,14 @@ def run():
             assert 'Failed to update ui::AXTree' not in log_text, 'Native accessibility tree failed; inspect flutter-e2e.log'
             assert 'Lost connection to device' not in log_text, 'Native App connection was lost; inspect flutter-e2e.log'
             assert result.returncode==0,'Native editor E2E failed; see run-artifacts/native-editor/flutter-e2e.log'
+            if mcp_process is not None:assert mcp_process.wait(timeout=15)==0,'Official MCP/native test failed; inspect mcp-e2e.log'
             assert not settings.socket_path.exists()
             print('Native editor acceptance passed: native context menu, actual file drops and limits, create/edit/save/Save As, Culsma diagnostics, quiet refresh, reload protection and concurrent edits. No resident or instruments started.')
-        finally:server.shutdown();thread.join(5);server.server_close()
+        finally:
+            if mcp_process is not None and mcp_process.poll() is None:
+                mcp_process.terminate();mcp_process.wait(timeout=10)
+            if mcp_log is not None:mcp_log.close()
+            server.shutdown();thread.join(5);server.server_close()
 
 
 if __name__=='__main__':run()

@@ -116,7 +116,11 @@ class NativeRendererInteractor {
     return true;
   }
 
-  Future<void> close() async {
+  Future<void>? closing;
+
+  Future<void> close() => closing ??= closeSession();
+
+  Future<void> closeSession() async {
     stopped = true;
     timer?.cancel();
     heartbeatTimer?.cancel();

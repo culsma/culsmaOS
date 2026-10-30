@@ -277,19 +277,31 @@ outside the program root. Both clients must point to the same resident socket.
 No device plugin is needed in the bridge environment. The MCP SDK is optional;
 normal OS/console installation and simulator operation do not load it.
 
+Opening the native App does not register this bridge with an external AI client.
+Configure the client once with the bridge command and the same resident socket,
+Home, experiment root and snapshot store used by `culsma-os desktop`. The native
+`.app` receives its private connection through the desktop launcher; opening the
+bare bundle is not a complete installed product startup.
+
+The current MCP surface covers experiment files, inspection/start, loading plans,
+run controls, observations and presentation. System Settings configuration writes
+and the Developer exception-test controls do not yet have MCP tools. Physical
+loading confirmation remains an operator action.
+
 | Tools | Responsibility |
 | --- | --- |
 | `station_status`, `list_runs`, `run_status` | Read existing OS observations |
 | `list_programs`, `inspect_program`, `preview_program`, `start_program`, `submit_program`, `control_run` | Review source, preview loading without admission, and request queue/control actions |
 | `loading_plan`, `revise_loading_plan` | Read or revise the fingerprinted loading plan |
 | `begin_loading`, `loading_request_status` | Reserve for loading and inspect durable command outcomes |
+| `read_document`, `create_document`, `save_document`, `receive_files` | Share the same experiment files and revision-conflict rules as the native editor |
 
 ### Shared console view control
 
 `view_state` lists live renderer sessions, their `epoch`, `revision` and reported view.
 Select an explicit session before `open_view(session_id, epoch, expected_revision,
 request_id, view, entity_id)` or `reveal_entity(..., entity_id)`. Supported views are
-`experiment`, `workstation`, `files`, `settings` and `system_info`. Experiment views
+`experiment`, `workstation`, `files`, `settings`, `system_info` and `editor`. Editor views require a readable experiment path. Experiment views
 require a run ID; workstation entities are checked against the declared driver layout.
 `view_request_status(request_id)` returns `accepted`, `displayed`, `deferred`,
 `rejected` or `expired`. A display receipt is a renderer report, not execution evidence.
@@ -309,8 +321,8 @@ configuration commands. Sessions expire after 15 seconds without a heartbeat;
 unhandled requests expire after 30 seconds and are never replayed on a new renderer.
 Request IDs are idempotent; changed payloads or stale view revisions are rejected.
 Closing the renderer leaves resident runs and instrument reservations unchanged.
-This implements the shared interaction channel; the proposed windowed desktop
-appearance and PAWS/resource inventory integration remain later work.
+The native windowed console implements this shared interaction channel.
+PAWS/resource inventory integration remains later work.
 
 The three-layer module is `console_interaction/{interactors,repository,models}.py`.
 `ConsoleApplicationLifecycleInteractor` is the renamed console launcher; view control
@@ -539,3 +551,10 @@ New/Save As dialog cancellation, reload/close protection and quiet background re
 Native provider limit tests run on the real platform filesystem rather than a fake plugin.
 The harness rejects accessibility-tree errors and lost native connections. It starts a private local HTTP server;
 it starts no resident or instruments. Test logs stay under ignored `run-artifacts/`.
+
+With `CULSMA_OS_MCP_SDK_PATH` set to the isolated pinned SDK packages,
+`tools/test_native_editor.py` also runs an official MCP stdio client: create/save,
+revision-conflict rejection, source inspection, a native editor display receipt and
+deferral while the human editor has unsaved changes. No resident or instruments
+are started by this acceptance. Known use-case failures retain their code in MCP
+error responses; unexpected exception details remain server-side.
