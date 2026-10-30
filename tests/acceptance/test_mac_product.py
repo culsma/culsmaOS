@@ -106,3 +106,14 @@ def test_product_launchers_disable_bundle_bytecode_writes(tmp_path):
     assert ' -I -B ' in launcher.read_text()
     assert launcher.stat().st_mode & 0o111
     assert '"-I", "-B"' in (ROOT/'tools/desktop/Launcher.swift').read_text()
+
+
+def test_builder_rejects_personal_native_build_paths(tmp_path):
+    spec=importlib.util.spec_from_file_location('mac_builder',ROOT/'tools/build_mac_product.py')
+    builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
+    files=['Contents/MacOS/culsma_console','Contents/Frameworks/App.framework/Versions/A/App']
+    for name in files:
+        p=tmp_path/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b'neutral build')
+    subject=builder.MacProductBuilder();subject.validate_native_paths(tmp_path)
+    (tmp_path/files[1]).write_bytes(('file://'+str(Path.home())+'/developer/project.dart').encode())
+    with pytest.raises(ValueError,match='NATIVE_PERSONAL_BUILD_PATH'):subject.validate_native_paths(tmp_path)

@@ -38,6 +38,12 @@ class MacProductBuilder:
             result[environment].sort(key=lambda r:r['name'].lower())
         return result
 
+    def validate_native_paths(self, native):
+        for name in ('Contents/MacOS/culsma_console',
+                     'Contents/Frameworks/App.framework/Versions/A/App'):
+            if str(Path.home()).encode() in (native/name).read_bytes():
+                raise ValueError('NATIVE_PERSONAL_BUILD_PATH: build from a neutral source archive')
+
     def write_shell(self, path, mode):
         path.write_text('#!/bin/sh\nset -eu\nRESOURCES="$(CDPATH= cd -- "$(dirname -- "$0")/../Resources" && pwd)"\n'
             'exec "$RESOURCES/runtime/bin/python3.11" -I -B "$RESOURCES/launch.py" '+mode+'\n')
@@ -73,6 +79,7 @@ class MacProductBuilder:
         if self.digest(runtime_archive)!=lock['sha256'] or self.digest(licenses_archive)!=lock['licenses']['sha256']:
             raise ValueError('PYTHON_ARCHIVE_HASH_MISMATCH')
         if output.exists():raise ValueError('MAC_OUTPUT_MUST_BE_NEW')
+        self.validate_native_paths(native)
         if not (native/'Contents/MacOS/culsma_console').is_file():raise ValueError('NATIVE_BUILD_REQUIRED')
         output.mkdir(parents=True)
         image=output/'image';image.mkdir()
