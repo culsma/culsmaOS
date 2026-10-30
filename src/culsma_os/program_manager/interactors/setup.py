@@ -158,15 +158,24 @@ class RunSetupInteractor:
 
 
 class RunSetupRequestInteractor:
-    def __init__(self, repository, tasks):
+    def __init__(self, repository, tasks, setup_supported=True):
         self.repository, self.tasks = repository, tasks
+        self.setup_supported = setup_supported
 
     def execute(self, request):
         from uuid import uuid4
         self.tasks.get(request.run_id)
         action = request.action.removeprefix('setup-')
         if action == 'show':
-            return {**self.repository.get(request.run_id), 'activity': self.repository.activity(request.run_id)}
+            try:record = self.repository.get(request.run_id)
+            except KeyError:
+                return {'run_id':request.run_id, 'supported':self.setup_supported,
+                    'status':'not_generated' if self.setup_supported else 'not_applicable', 'plan':None,
+                    'reason':('The loading plan has not been generated for this run.' if self.setup_supported else
+                        'This driver uses preconfigured program bindings; it does not create a separate loading plan.')}
+            return {**record, 'activity': self.repository.activity(request.run_id)}
+        if not self.setup_supported:
+            raise ValueError('SETUP_NOT_SUPPORTED')
         if action == 'status':
             result = self.repository.request(request.request_id)
             if result['run_id'] != request.run_id:

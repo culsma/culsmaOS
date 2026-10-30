@@ -47,7 +47,7 @@ def renderer_request(session, action, **changes):
 
 def test_no_ui_has_no_session_and_open_does_not_start_or_observe_run(system):
     s=system
-    assert s.reads.execute(s.automation,ViewStateReadRequest())=={'sessions':[]}
+    assert s.reads.execute(s.automation,ViewStateReadRequest())=={'sessions':[],'activity':[]}
     with pytest.raises(ViewInteractionError,match='RENDERER_UNAVAILABLE'):
         s.requests.execute(s.automation,request({'session_id':'missing','epoch':'old','revision':0}))
     assert not s.observation.calls
@@ -195,7 +195,7 @@ def test_read_without_renderer_does_not_create_storage_or_parent(tmp_path):
     repository=SqliteViewInteractionRepository(tmp_path/'missing'/'views.sqlite3','s')
     tokens=TokenInteractor(SessionCredentialRepository())
     reader=ViewStateReadInteractor(tokens,repository)
-    assert reader.execute('Bearer '+tokens.issue_automation_session(),ViewStateReadRequest())=={'sessions':[]}
+    assert reader.execute('Bearer '+tokens.issue_automation_session(),ViewStateReadRequest())=={'sessions':[],'activity':[]}
     assert repository.receipt('unknown') is None and repository.session('unknown') is None
     assert not (tmp_path/'missing').exists()
 

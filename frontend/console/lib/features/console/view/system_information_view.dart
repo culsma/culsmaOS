@@ -298,6 +298,21 @@ class NativeSystemInformationView extends StatelessWidget {
           ),
         ]),
         section('drivers', 'Drivers and capabilities', [
+          const Text('Current workstation capabilities'),
+          NativeInfoTable(
+            columns: const ['Operation', 'Availability', 'Details'],
+            rows: [
+              for (final entry
+                  in (host['capabilities']?['features'] as Map? ?? {}).entries)
+                [
+                  entry.key.toString().replaceAll('_', ' '),
+                  entry.value['supported'] == true
+                      ? 'Supported'
+                      : 'Not applicable / unavailable',
+                  entry.value['reason'] ?? 'Provided by the configured driver',
+                ],
+            ],
+          ),
           const Text(
             'Installed plugin metadata describes supported choices; it does not establish which hardware is connected.',
           ),

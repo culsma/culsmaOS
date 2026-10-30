@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import secrets
 from threading import Lock
-from .models import CallerContext, ConsoleAccessError
+from .models import CallerContext, ConsoleAccessError, UseCaseObservationPort
 
 
 class TokenInteractor:
@@ -61,12 +61,31 @@ class AuthorizedInteractor:
 
     def __init__(self, tokens):
         self.tokens = tokens
+        self.observer: UseCaseObservationPort | None = None
+
+    def observe(self, method, *arguments):
+        # Presentation telemetry must never change or repeat a business outcome.
+        if self.observer is None:
+            return None
+        try:
+            return getattr(self.observer, method)(*arguments)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning("Use-case observation unavailable")
+            return None
 
     def execute(self, raw_credential, request):
         caller = self.tokens.execute(raw_credential)
         if self.required_capability not in caller.capabilities:
             raise ConsoleAccessError('CONSOLE_CAPABILITY_DENIED','forbidden')
-        return self.perform_authorized(caller, request)
+        observation = self.observe("started", request, caller)
+        try:
+            result = self.perform_authorized(caller, request)
+        except Exception as error:
+            self.observe("finished", observation, None, error)
+            raise
+        self.observe("finished", observation, result, None)
+        return result
 
     def perform_authorized(self, caller, request):
         return self.perform(request)

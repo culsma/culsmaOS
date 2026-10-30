@@ -846,6 +846,10 @@
         {
           "component": "RemoteDeviceProfileInteractor",
           "path": "src/culsma_os/device_manager/interactors.py"
+        },
+        {
+          "component": "StationCapabilitiesInteractor",
+          "path": "src/culsma_os/device_manager/interactors.py"
         }
       ]
     },
@@ -1154,6 +1158,10 @@
         {
           "component": "ConsoleAccessError",
           "path": "src/culsma_os/auth/models.py"
+        },
+        {
+          "component": "UseCaseObservationPort",
+          "path": "src/culsma_os/auth/models.py"
         }
       ]
     },
@@ -1180,6 +1188,28 @@
         {
           "component": "FileReadRequest",
           "path": "src/culsma_os/file_system/models.py"
+        }
+      ]
+    },
+    {
+      "module": "ConsoleInteraction",
+      "directory": "src/culsma_os/console_interaction/",
+      "components": [
+        {
+          "component": "ViewStateReadInteractor",
+          "path": "src/culsma_os/console_interaction/interactors.py"
+        },
+        {
+          "component": "ViewRequestInteractor",
+          "path": "src/culsma_os/console_interaction/interactors.py"
+        },
+        {
+          "component": "RendererSessionInteractor",
+          "path": "src/culsma_os/console_interaction/interactors.py"
+        },
+        {
+          "component": "ConsoleActivityInteractor",
+          "path": "src/culsma_os/console_interaction/interactors.py"
         }
       ]
     }

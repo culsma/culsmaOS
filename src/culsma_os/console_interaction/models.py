@@ -43,6 +43,7 @@ class RendererSessionRequest:
     state: dict | None = None
     request_id: str | None = None
     outcome: str | None = None
+    activity_after: int = 0
 
 
 @dataclass(frozen=True)

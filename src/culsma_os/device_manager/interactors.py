@@ -305,3 +305,24 @@ class RemoteDeviceProfileInteractor:
     def export_layout(self,driver,configuration):return self.query(DeviceProfileRequest('export_layout',driver,configuration))
     def import_layout(self,driver,source):return self.query(DeviceProfileRequest('import_layout',driver,layout_source=source))
     def program_bindings(self,driver,configuration):return self.query(DeviceProfileRequest('program_bindings',driver,configuration))
+
+
+class StationCapabilitiesInteractor:
+    """Configured driver ports, never permissions or physical device discovery."""
+    def __init__(self, driver, *, layout=False, loading_plan=False, labware_editor=False,
+                 simulated_tip_replacement=False, fault_test=False):
+        self.driver = driver
+        self.support = dict(layout=layout, loading_plan=loading_plan, labware_editor=labware_editor,
+                            simulated_tip_replacement=simulated_tip_replacement, fault_test=fault_test)
+
+    def describe(self):
+        reasons = {
+            'layout': 'The selected driver has no layout reader.',
+            'loading_plan': 'This driver uses preconfigured program bindings rather than a separate loading plan.',
+            'labware_editor': 'The selected driver has no quick labware editor. Saved configuration editing is separate.',
+            'simulated_tip_replacement': 'This session has no stock-replacement port. Normal simulation does not require manual replenishment.',
+            'fault_test': 'The selected driver has no detached diagnostic-test port.'}
+        return {'schema':'culsma_station_capabilities_v1','driver':self.driver,
+                'source':'configured_driver_ports','physical_observation':False,
+                'features':{key:{'supported':bool(value),'reason':None if value else reasons[key]}
+                            for key,value in self.support.items()}}

@@ -69,6 +69,12 @@ class LayoutController extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshDrafts() async {
+    final value = await api.read('/api/v1/configuration/drafts');
+    drafts = List<Map<String, dynamic>>.from(value['drafts']);
+    notifyListeners();
+  }
+
   Future<void> load() => perform(() async {
     active = await api.read('/api/v1/configuration/active');
     profiles = List<Map<String, dynamic>>.from(

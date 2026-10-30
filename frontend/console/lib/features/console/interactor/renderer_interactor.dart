@@ -10,6 +10,7 @@ class NativeRendererInteractor {
   Map<String, dynamic>? session;
   final completed = <String, Map<String, dynamic>>{};
   Timer? timer, heartbeatTimer;
+  int activityCursor = 0;
   bool stopped = false, visible = true;
   NativeRendererInteractor(this.api, this.console);
   Future<Map<String, dynamic>> request(Map<String, dynamic> payload) =>
@@ -38,15 +39,22 @@ class NativeRendererInteractor {
   Future<void> poll() async {
     if (stopped) return;
     try {
-      session ??= (await request({
-        'action': 'register',
-        'state': console.viewState,
-      }))['session'];
+      if (session == null) {
+        final registered = await request({
+          'action': 'register',
+          'state': console.viewState,
+        });
+        session = registered['session'];
+        // History is visible, but old actions never steal focus when a renderer starts.
+        await observeActivity(registered['activity'], follow: false);
+      }
       final result = await request({
         ...identity('poll'),
+        'activity_after': activityCursor,
         'state': console.viewState,
       });
       session = result['session'];
+      await observeActivity(result['activity']);
       for (final row in result['requests'] as List) {
         if (stopped) break;
         final id = row['request_id'] as String,
@@ -87,7 +95,18 @@ class NativeRendererInteractor {
     } catch (_) {
       /* A transport failure never repeats an experiment command. */
     }
-    if (!stopped) timer = Timer(const Duration(seconds: 1), poll);
+    if (!stopped) timer = Timer(const Duration(milliseconds: 600), poll);
+  }
+
+  Future<void> observeActivity(dynamic rows, {bool follow = true}) async {
+    if (rows is! List) return;
+    for (final value in rows) {
+      final row = Map<String, dynamic>.from(value);
+      final sequence = row['sequence'] as int;
+      if (sequence <= activityCursor) continue;
+      activityCursor = sequence;
+      await console.observeActivity(row, follow: follow && visible);
+    }
   }
 
   Future<bool> apply(Map<String, dynamic> command) async {

@@ -214,7 +214,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         if (not isinstance(payload, dict) or set(payload) - {field.name for field in fields(model)}
                 or any(value is not None and not isinstance(value, (str, int, dict)) for value in payload.values())
                 or any(key in payload and payload[key] is not None and type(payload[key]) is not int
-                       for key in ['revision', 'expected_revision'])
+                       for key in ['revision', 'expected_revision', 'activity_after'])
                 or any(key in payload and not isinstance(payload[key], str) for key in
                        ['action','request_id','session_id','epoch','view','entity_id','outcome'] if payload.get(key) is not None)
                 or payload.get('state') is not None and not isinstance(payload['state'], dict)):

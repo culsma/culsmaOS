@@ -385,7 +385,9 @@ class ResidentCommandFactory:
         from .program_manager.interactors.setup import RunSetupPreviewInteractor
         from .program_manager.interactors.setup_requirements import SetupRequirementsInteractor
         from .workspace_manager.interactors import WorkspacePlanningInteractor
-        preview = RunSetupPreviewInteractor(getattr(factory, 'build_workspace_reader', lambda: None)(),
+        workspace_reader = getattr(factory, 'build_workspace_reader', lambda: None)()
+        setup_requests.setup_supported = workspace_reader is not None
+        preview = RunSetupPreviewInteractor(workspace_reader,
             configuration, context, SetupRequirementsInteractor(RuntimeCheckpointCodecInteractor()),
             WorkspacePlanningInteractor(), HostedRuntimeInteractor())
         from .resource_manager.interactors import SupplyReplacementInteractor,StationPathInteractor
@@ -403,6 +405,10 @@ class ResidentCommandFactory:
         from .device_manager.interactors import DeviceProfileInteractor
         from .driver_framework.interactors import DriverProfileInteractor
         profile_queries = ResidentDeviceProfileInteractor(DeviceProfileInteractor(DriverProfileInteractor()))
+        from .device_manager.interactors import StationCapabilitiesInteractor
+        capabilities = StationCapabilitiesInteractor(context.driver_name, layout=layout_reader is not None,
+            loading_plan=workspace_reader is not None, labware_editor=labware_editor is not None,
+            simulated_tip_replacement=replacement_port is not None, fault_test=test_port is not None)
         return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
             HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
-            devices,configuration,setup_requests,layout,labware,preview,supplies,fault_tests,profile_queries)
+            devices,configuration,setup_requests,layout,labware,preview,supplies,fault_tests,profile_queries,capabilities)

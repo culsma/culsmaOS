@@ -36,6 +36,8 @@ class NativeConsoleInteractor extends ChangeNotifier {
   Map<String, dynamic>? station, inspection, pendingStart, launchReview;
   String? activeId, selectedFile, selectedEntity, message, messageDetails;
   bool busy = false, disposed = false;
+  bool refreshing = false;
+  final activity = <Map<String, dynamic>>[];
   bool checkingRun = false, submittingRun = false;
   Completer<void>? refreshCompletion;
   bool get reviewBusy => checkingRun || submittingRun;
@@ -259,17 +261,20 @@ class NativeConsoleInteractor extends ChangeNotifier {
     timer?.cancel();
     if (!disposed)
       timer = Timer(const Duration(seconds: 2), () async {
-        await refresh();
+        await refresh(background: true);
         schedule();
       });
   }
 
-  Future<void> refresh() async {
-    if (busy || disposed) return;
+  Future<void> refresh({bool background = false}) async {
+    if (disposed || (background && (busy || refreshing))) return;
+    while (refreshing) {
+      await refreshCompletion?.future;
+      if (disposed) return;
+    }
     final completion = Completer<void>();
     refreshCompletion = completion;
-    busy = true;
-    notifyListeners();
+    refreshing = true;
     try {
       station = await api.read('/api/v1/station');
       await information.observe(station);
@@ -311,10 +316,48 @@ class NativeConsoleInteractor extends ChangeNotifier {
           'The operation could not be completed. Check the workstation and try again when it is ready.';
       messageDetails = error.toString();
     } finally {
-      busy = false;
+      refreshing = false;
       refreshCompletion = null;
       completion.complete();
       if (!disposed) notifyListeners();
+    }
+  }
+
+  Future<void> observeActivity(
+    Map<String, dynamic> row, {
+    bool follow = true,
+  }) async {
+    activity.add(row);
+    if (activity.length > 40) activity.removeAt(0);
+    notifyViewChanged();
+    if (row['phase'] != 'returned' || row['actor'] != 'automation') return;
+    final action = row['action'] as String;
+    if (action.startsWith('file.')) {
+      if (files.initialized) await files.refresh();
+      final path = row['target'];
+      if (row['view'] == 'editor' && path is String && path.endsWith('.culs')) {
+        await editor.load(
+          path,
+        ); // Retains unsaved human edits and marks external changes.
+      }
+    }
+    if (!follow || row['follow'] != true || dirty || working) return;
+    final view = row['view'] as String;
+    final target = row['target'] as String?;
+    if (view == 'editor' && target != null) {
+      open('editor', target);
+    } else if (view == 'experiment' && target != null) {
+      open('experiment', target);
+      await refresh();
+    } else if (view == 'settings') {
+      open('settings');
+      await refresh();
+      await layout.refreshDrafts();
+    } else if (view == 'workstation') {
+      open('workstation');
+      await refresh();
+    } else if (action == 'file.receive') {
+      open('files');
     }
   }
 

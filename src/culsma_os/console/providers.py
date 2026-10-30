@@ -31,6 +31,17 @@ class ConsoleApplicationFactory:
                 ViewRequestInteractor(tokens, repository, observation, documents=documents),
                 RendererSessionInteractor(tokens, repository))
 
+    def observe_operations(self, settings, application):
+        from culsma_os.console_interaction.interactors import ConsoleActivityInteractor
+        path = settings.view_store_path or settings.socket_path.with_name(settings.socket_path.name + '.views.sqlite3')
+        station_id = hashlib.sha256(str(settings.socket_path.resolve()).encode()).hexdigest()
+        observer = ConsoleActivityInteractor(SqliteViewInteractionRepository(path, station_id))
+        for name in ('configuration','bindings','activation','programs','setup','setup_commands','labware','file_workspace'):
+            owner=getattr(application,name,None)
+            if owner is not None:
+                owner.observer=observer
+        return application
+
     def build_desktop(self, settings, executable, resident_command=None, log_path=None):
         from .interactors import ConsoleApplicationLifecycleInteractor
         from .adapters.desktop import NativeConsoleProcessAdapter, ResidentProcessAdapter
@@ -73,7 +84,7 @@ class ConsoleApplicationFactory:
         from culsma_os.workspace_manager.interactors import LabwareConfigurationInteractor
         from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
         from culsma_os.developer_tools.interactors import DeveloperTestInteractor
-        return ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
+        return self.observe_operations(settings, ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
             StationConfigurationInteractor(tokens,repository,profiles),ConsoleSessionInteractor(tokens),
             ConsoleProgramInteractor(tokens,source,ResidentClientAdapter(settings.socket_path,timeout=10),{"installation":self.installation_source(settings)}),
             ProgramBindingInteractor(tokens,repository,profiles,source),
@@ -85,7 +96,7 @@ class ConsoleApplicationFactory:
             supplies=SupplyInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
             file_reads=self.build_files(settings,tokens,source),
             file_workspace=self.build_workspace(tokens,source),
-            developer_tests=DeveloperTestInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)))
+            developer_tests=DeveloperTestInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10))))
 
     def build_mcp(self, settings, profiles=None):
         from .adapters.mcp import MCPServerAdapter
@@ -109,4 +120,4 @@ class ConsoleApplicationFactory:
             activation=ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),resident),
             labware=LabwareConfigurationInteractor(tokens,repository,resident),
             developer_tests=DeveloperTestInteractor(tokens,resident))
-        return MCPHostInteractor(tokens,bridge)
+        return MCPHostInteractor(tokens,self.observe_operations(settings,bridge))

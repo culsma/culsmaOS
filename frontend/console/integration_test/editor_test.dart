@@ -514,12 +514,19 @@ void main() {
           await tester.pump(const Duration(milliseconds: 100));
           await Future<void>.delayed(const Duration(milliseconds: 30));
           if (console.active?.view == 'editor' &&
-              console.editor.document('from-ai.culs').loaded)
+              console.editor.document('from-ai.culs').text.contains('350uL'))
             break;
         }
         expect(console.active?.entityId, 'from-ai.culs');
         final doc = console.editor.document('from-ai.culs');
         expect(doc.text, contains('350uL'));
+        expect(
+          console.activity.any(
+            (v) => v['action'] == 'file.save' && v['phase'] == 'returned',
+          ),
+          isTrue,
+        );
+        expect(find.textContaining('Console activity'), findsOneWidget);
         await tester.tap(find.byKey(const Key('protocol-editor')));
         await tester.enterText(
           find.byKey(const Key('protocol-editor')),

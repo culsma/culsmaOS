@@ -30,7 +30,7 @@ class MCPServerAdapter(MCPSettingsTools):
         from mcp.types import ToolAnnotations
         self.raw_credential = raw_credential
         server = MCPServer('culsmaOS', instructions=(
-            'Operate the existing local OS resident. Commands return durable request receipts; '
+            'Operate the existing local OS resident. Authorized file/configuration operations appear in the native console activity and refresh saved content; unsaved operator edits are retained. view_state includes recent presentation activity, not device execution evidence. Read station_status.data.host.capabilities before optional driver operations. Tool visibility does not imply driver support. Commands return durable request receipts; '
             'poll their status before claiming application. Read the latest loading plan before editing; '
             'include its fingerprint. Physical loading confirmation belongs to the operator console '
             'and is not an MCP tool. Declared layout and material are not sensor observations.'))

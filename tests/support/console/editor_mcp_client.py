@@ -18,8 +18,15 @@ async def verify(socket,home,programs,store):
             result=await client.call_tool(name,arguments)
             assert not result.is_error,result
             return result.structured_content
+        # Wait for the actual native renderer, then rely on shared business activity.
+        for _ in range(1600):
+            live=[v for v in (await call('view_state'))['sessions'] if v['online']]
+            if live:break
+            await asyncio.sleep(.1)
+        assert len(live)==1,'Native renderer did not register'
         original='let sample=tube(capacity=200uL);return sample;'
         updated=original.replace('200uL','350uL')
+        await call('receive_files',entries=[{'path':'received/helper.culs','data':base64.b64encode(original.encode()).decode()}])
         await call('create_document',path='from-ai.culs',content=original)
         read=await call('read_document',path='from-ai.culs')
         await call('save_document',path='from-ai.culs',content=updated,expected_revision=read['revision'])
@@ -27,20 +34,15 @@ async def verify(socket,home,programs,store):
         assert conflict.is_error
         assert any("FILE_REVISION_CONFLICT" in getattr(item,"text","") for item in conflict.content),conflict
         assert (await call('read_document',path='from-ai.culs'))['content']==updated
-        await call('receive_files',entries=[{'path':'received/helper.culs','data':base64.b64encode(original.encode()).decode()}])
         assert (await call('inspect_program',program_id='from-ai.culs'))['valid']
-        for _ in range(600):
-            live=[s for s in (await call('view_state'))['sessions'] if s['online'] and not s['state']['busy']]
-            if live:break
+        for _ in range(300):
+            state=await call('view_state')
+            session=next(v for v in state['sessions'] if v['session_id']==live[0]['session_id'])
+            if session['state']['view']=='editor' and session['state']['entity_id']=='from-ai.culs':break
             await asyncio.sleep(.1)
-        assert len(live)==1,'Native renderer did not register'
-        session=live[0]
-        await call('open_view',session_id=session['session_id'],epoch=session['epoch'],expected_revision=session['revision'],request_id='mcp-open-editor',view='editor',entity_id='from-ai.culs')
-        for _ in range(200):
-            receipt=await call('view_request_status',request_id='mcp-open-editor')
-            if receipt['status']!='accepted':break
-            await asyncio.sleep(.1)
-        assert receipt['status']=='displayed',receipt
+        assert session['state']['entity_id']=='from-ai.culs',(session,state.get('activity'))
+        events=state['activity']
+        assert any(v['action']=='file.save' and v['phase']=='returned' and v['actor']=='automation' for v in events)
         for _ in range(200):
             session=next(s for s in (await call('view_state'))['sessions'] if s['session_id']==session['session_id'])
             if session['state']['dirty']:break
@@ -53,7 +55,7 @@ async def verify(socket,home,programs,store):
             await asyncio.sleep(.1)
         assert receipt['status']=='deferred',receipt
         assert (await call('read_document',path='from-ai.culs'))['content']==updated
-        print(json.dumps({'tools':len(names),'editor':'displayed','unsaved_edits':'preserved','stale_save':'rejected','instruments_started':False}))
+        print(json.dumps({'tools':len(names),'editor':'automatically_followed','unsaved_edits':'preserved','stale_save':'rejected','instruments_started':False}))
 
 
 if __name__=='__main__':asyncio.run(verify(*sys.argv[1:]))

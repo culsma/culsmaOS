@@ -106,12 +106,58 @@ class ConsoleDesktop extends StatelessWidget {
                 ),
               ),
             ),
+            if (console.activity.isNotEmpty)
+              Material(
+                color: const Color(0xffe7eff7),
+                child: ExpansionTile(
+                  dense: true,
+                  leading: const Icon(Icons.smart_toy_outlined, size: 20),
+                  title: Text(
+                    activityText(console.activity.last),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: const Text(
+                    'Console activity · commands and file changes, not device execution evidence',
+                  ),
+                  children: [
+                    SizedBox(
+                      height: 130,
+                      child: ListView(
+                        children: [
+                          for (final row in console.activity.reversed.take(12))
+                            ListTile(
+                              dense: true,
+                              title: Text(activityText(row)),
+                              subtitle: Text(row['code']?.toString() ?? ''),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             workbar(context),
           ],
         ),
       ),
     ),
   );
+  String activityText(Map<String, dynamic> row) {
+    final actor = row['actor'] == 'automation' ? 'AI' : 'Operator';
+    final phase =
+        {
+          'started': 'working',
+          'returned': 'request returned',
+          'failed': 'needs attention',
+        }[row['phase']] ??
+        row['phase'];
+    final action = (row['action'] as String)
+        .replaceAll('.', ' · ')
+        .replaceAll('_', ' ');
+    return '$actor · $action · $phase${row['target'] == null ? '' : ' · ${row['target']}'}';
+  }
+
   Widget workbar(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) {
       final compact = bounds.maxWidth < 1000,

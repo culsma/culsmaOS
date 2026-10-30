@@ -6,7 +6,7 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None, fault_tests=None, profile_queries=None):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None, fault_tests=None, profile_queries=None, capabilities=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
         self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
@@ -17,6 +17,7 @@ class ResidentCommandInteractor:
         self.supplies = supplies
         self.fault_tests = fault_tests
         self.profile_queries = profile_queries
+        self.capabilities = capabilities
 
     def execute(self, request):
         if request.action == 'configuration-profile':
@@ -46,7 +47,8 @@ class ResidentCommandInteractor:
             self.require_idle_configuration()
             return self.configuration.request(request,self.context,self.status)
         if request.action == 'host-status':
-            return self.status.snapshot()
+            value = self.status.snapshot()
+            return {**value, 'capabilities': self.capabilities.describe()} if self.capabilities else value
         if request.action == 'layout-status' and self.layout is not None:
             return self.layout.execute()
         if request.action == 'device-status':

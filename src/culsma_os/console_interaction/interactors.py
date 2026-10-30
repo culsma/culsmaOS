@@ -66,7 +66,8 @@ class ViewStateReadInteractor(AuthorizedInteractor):
             raise ViewInteractionError('CONSOLE_VIEW_READ_INVALID')
         now = self.clock()
         if request.action == 'sessions' and request.request_id is None:
-            return {'sessions': [session_view(row, now, self.lease) for row in self.repository.sessions()]}
+            return {'sessions': [session_view(row, now, self.lease) for row in self.repository.sessions()],
+                    'activity': self.repository.activities(latest=True)}
         if request.action != 'receipt':
             raise ViewInteractionError('CONSOLE_VIEW_READ_INVALID')
         validate_identifier(request.request_id)
@@ -167,13 +168,15 @@ class RendererSessionInteractor(AuthorizedInteractor):
     def perform_authorized(self, caller, request):
         if not isinstance(request, RendererSessionRequest) or not isinstance(request.action, str) or request.action not in {'register', 'poll', 'acknowledge', 'close', 'inspect', 'heartbeat'}:
             raise ViewInteractionError('CONSOLE_RENDERER_REQUEST_INVALID')
+        validate_revision(request.activity_after)
         now = self.clock()
         if request.action == 'register':
             if any(getattr(request, key) is not None for key in ['session_id', 'epoch', 'revision', 'request_id', 'outcome']):
                 raise ViewInteractionError('CONSOLE_RENDERER_REQUEST_INVALID')
             session = self.repository.create_session(caller.subject, now, validate_view_state(request.state))
             self.validate_session_owner(session, caller.subject, session['epoch'], now)
-            return {'session': session_view(session, now, self.lease), 'requests': []}
+            return {'session': session_view(session, now, self.lease), 'requests': [],
+                    'activity': self.repository.activities(latest=True)}
         for value in [request.session_id, request.epoch]:
             validate_identifier(value)
         validate_revision(request.revision)
@@ -207,10 +210,64 @@ class RendererSessionInteractor(AuthorizedInteractor):
         pending = self.repository.pending(request.session_id, request.epoch) if request.action == 'poll' else []
         receipts = [receipt_view(row, session, now, self.lease) for row in pending]
         return {'session': session_view(session, now, self.lease),
-                'requests': [row for row in receipts if row['status'] == 'accepted']}
+                'requests': [row for row in receipts if row['status'] == 'accepted'],
+                'activity': self.repository.activities(request.activity_after) if request.action == 'poll' else []}
 
     def validate_session_owner(self, session, owner, epoch, now):
         if session is None or session['owner'] != owner or session['epoch'] != epoch:
             raise ViewInteractionError('CONSOLE_RENDERER_OWNER_MISMATCH', 'forbidden')
         if session['closed'] or session['last_seen'] + self.lease <= now:
             raise ViewInteractionError('CONSOLE_RENDERER_EXPIRED', 'conflict')
+
+
+class ConsoleActivityInteractor:
+    """Observe shared use cases. No credentials, protocol contents or physical evidence."""
+    def __init__(self, repository, clock=time.time):
+        self.repository, self.clock = repository, clock
+
+    def describe(self, request):
+        from culsma_os.file_system.models import FileWorkspaceRequest
+        from culsma_os.workspace_manager.models import StationConfigurationRequest, LabwareRequest, ProgramBindingRequest
+        from culsma_os.lifecycle_manager.models import ConsoleActivationRequest
+        from culsma_os.program_manager.models import ConsoleProgramRequest, SetupInteractionRequest
+        if isinstance(request, FileWorkspaceRequest) and request.action in {'create','save','receive'}:
+            return {'action': 'file.'+request.action, 'target': request.path, 'view': 'files' if request.action=='receive' else 'editor'}
+        if isinstance(request, StationConfigurationRequest) and request.action in {'create','save','import_layout','validate'}:
+            return {'action': 'configuration.'+request.action, 'target': request.draft_id, 'view': 'settings'}
+        if isinstance(request, ConsoleActivationRequest) and request.action=='apply':
+            return {'action': 'configuration.apply_requested', 'target': request.draft_id, 'view': 'settings'}
+        if isinstance(request, LabwareRequest) and request.action=='prepare':
+            return {'action': 'labware.prepare', 'target': None, 'view': 'workstation'}
+        if isinstance(request, ProgramBindingRequest):
+            return {'action': 'program.bind', 'target': request.draft_id, 'view': 'settings'}
+        if isinstance(request, ConsoleProgramRequest) and request.action in {'inspect','preview','start','submit','pause','resume','cancel'}:
+            return {'action': 'program.'+request.action, 'target': request.program_id or request.run_id, 'view': 'files'}
+        if isinstance(request, SetupInteractionRequest) and request.action in {'revise','begin'}:
+            return {'action': 'loading.'+request.action, 'target': request.run_id, 'view': 'experiment'}
+        return None
+
+    def started(self, request, caller):
+        value=self.describe(request)
+        if value is None:
+            return None
+        from uuid import uuid4
+        value |= {'action_id':str(uuid4()), 'actor':'automation' if caller.subject=='local-mcp-process' else 'operator',
+                  'follow': 'console:views:request' in caller.capabilities}
+        self.repository.record_activity(value | {'phase':'started', 'time':self.clock()})
+        return value
+
+    def finished(self, value, result, error):
+        if value is None:
+            return
+        value=dict(value)
+        if error is None and isinstance(result,dict):
+            if value['action'].startswith('file.') and isinstance(result.get('path'),str):
+                value['target']=result['path']
+            if value['view']=='settings' and isinstance(result.get('draft'),dict):
+                value['target']=result['draft'].get('draft_id') or value['target']
+            if value['action'] in {'program.start','program.submit'}:
+                run_id=result.get('run_id') or (result.get('run') or {}).get('run_id')
+                if run_id:
+                    value.update(view='experiment',target=run_id)
+        self.repository.record_activity(value | {'phase':'failed' if error is not None else 'returned',
+            'code':getattr(error,'code',None) if error is not None else None, 'time':self.clock()})

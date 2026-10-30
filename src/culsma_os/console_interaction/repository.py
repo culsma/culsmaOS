@@ -44,6 +44,23 @@ class SqliteViewInteractionRepository:
             payload TEXT NOT NULL, created_at REAL NOT NULL, expires_at REAL NOT NULL,
             status TEXT NOT NULL, outcome TEXT)""")
 
+    def record_activity(self, payload):
+        with self.connection(initialize=True) as db:
+            db.execute("CREATE TABLE IF NOT EXISTS console_activity (sequence INTEGER PRIMARY KEY AUTOINCREMENT, payload TEXT NOT NULL)")
+            db.execute("INSERT INTO console_activity(payload) VALUES (?)", (json.dumps(payload, allow_nan=False),))
+            # A bounded presentation history, independent of the execution journal.
+            db.execute("DELETE FROM console_activity WHERE sequence <= (SELECT COALESCE(MAX(sequence),0)-1000 FROM console_activity)")
+
+    def activities(self, after=0, latest=False):
+        if not self.path.exists():
+            return []
+        with self.connection() as db:
+            if db.execute("SELECT 1 FROM sqlite_master WHERE name='console_activity'").fetchone() is None:
+                return []
+            rows = db.execute("SELECT sequence,payload FROM console_activity WHERE sequence > ? ORDER BY sequence " + ("DESC" if latest else "ASC") + " LIMIT 100", (after,)).fetchall()
+            values = [json.loads(row['payload']) | {'sequence': row['sequence']} for row in rows]
+            return list(reversed(values)) if latest else values
+
     @contextmanager
     def connection(self, initialize=False):
         if self.path.is_symlink():

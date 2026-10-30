@@ -42,3 +42,13 @@ def test_window_lifecycle_is_frontend_presentation_only():
     html=(web/'index.html').read_text()
     assert 'id="window-layer"' in html and 'id="taskbar"' in html
     assert 'class="sidebar"' not in html and 'class="topbar"' not in html
+
+
+def test_use_case_activity_is_shared_in_composition_and_auth_has_no_console_dependency():
+    source=(ROOT/'src/culsma_os/auth/interactors.py').read_text()
+    assert 'self.observe("started", request, caller)' in source
+    assert 'self.observe("finished", observation, result, None)' in source
+    assert 'console_interaction' not in source
+    source=(ROOT/'src/culsma_os/console/providers.py').read_text()
+    assert 'self.observe_operations(settings, ConsoleHTTPServer' in source
+    assert 'self.observe_operations(settings,bridge)' in source
