@@ -46,6 +46,7 @@ class SetupHeader extends StatelessWidget {
             button: true,
             label: 'Open station setup',
             child: PopupMenuButton<String>(
+              key: const Key('open-station-setup'),
               tooltip: blocked
                   ? 'Save or discard changes before opening another setup'
                   : 'Open station setup',

@@ -4,11 +4,7 @@ import pytest
 from culsma_os.driver_framework.interactors import DeviceFaultInteractor
 
 
-def fault(**changes):
-    return dict(code='DEVICE_ERROR',source='driver',execution_state='unknown',operation_id='step',
-                location=None,native_details={},schema='culsma_device_fault_v2',
-                reason='culsma.tip.pickup_failed',basis='device_feedback',
-                context={'channel':'1','planned_location':'B / 4'},stop_observation={'state':'unknown'},**changes)
+from tests.support.driver_framework.fault_detail import fault
 
 
 def test_v1_round_trip_has_no_new_fields():

@@ -65,55 +65,55 @@
       "path": "frontend/console/test/goldens/hamilton-1400.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
-      "sha256": "89db7bd1c4142d2b77889bcb29697e37f60859440ead947ed31f6092ceb844cc"
+      "sha256": "c77f5e9b2a60edc4d27ab080d84feab1848cae409941402126331e9de4153f39"
     },
     {
       "path": "frontend/console/test/goldens/hamilton-export-1400.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
-      "sha256": "65e36b9c183641b0d348e21ef5901586e23622d399ae497ca56ebbca7f7559f9"
+      "sha256": "de187e78264c4e3b9fab55793656e44719bdb1cda563120ca3c0835eb0f72c0a"
     },
     {
       "path": "frontend/console/test/goldens/layout-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
-      "sha256": "ee4bda7c80aa38623c7a2997f5ce8d84615b2f2c6103f7f74ae832269730475b"
+      "sha256": "7a9138a70fa7433079b2dc96a5984416f55720d881db6b203db953e12dbc6e8b"
     },
     {
       "path": "frontend/console/test/goldens/layout-390.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
-      "sha256": "2319f4b66b4731dd86ab0480c8d4c881ccc4dc34fcd123435a03f777b4e3ce65"
+      "sha256": "ec09d5fa37a665f9cc9bc5822ce8c4b7ab9e59fe5a9ee0f26b5d75dec29fda1e"
     },
     {
       "path": "frontend/console/test/goldens/native-experiment-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/migration_golden_test.dart",
-      "sha256": "c2f8ad7bf0cac20b79ece204fab346137312dbc7b9d7719606c8fc476fa8202f"
+      "sha256": "59dd275806d56b1ca68cd43aeace387b097dddfc666f334c70ffd3913086a1b7"
     },
     {
       "path": "frontend/console/test/goldens/native-files-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/migration_golden_test.dart",
-      "sha256": "91514b70ee1dfa44fa6150b6c04d348e1979db8916162eb2dd23863274585d95"
+      "sha256": "e7493738c846b0150984e32cb24aad401945420800c33ddbdd8414776467990a"
     },
     {
       "path": "frontend/console/test/goldens/native-position-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/mutation_widget_test.dart",
-      "sha256": "2c7672ba231c2e537bb3ea966438345ee0fadb1708806bf3cd0d5da28cf15d3a"
+      "sha256": "34bc47fb53fa959fcc0947761bcd35d00525ca7f618a174f6994978dc601221a"
     },
     {
       "path": "frontend/console/test/goldens/native-position-390.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/mutation_widget_test.dart",
-      "sha256": "f5dfaa7c0782696bf15c16cdbfc600f165a27400ec321e63d8ed600d7d5de159"
+      "sha256": "ee6a962fecc29da79abc48dae72c7e35e70dd9176a6373a2216b5a1eec83281a"
     },
     {
       "path": "frontend/console/test/goldens/native-system_info-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/migration_golden_test.dart",
-      "sha256": "3cad19c01a5826e2db2a45a5bb6bff4dc20d1360555863ff2f2f71b73aad170b"
+      "sha256": "23b38f6b81b284d815dea13b06bf22d218539ee124ac6cda5f7c12482e0ad71a"
     },
     {
       "path": "tests/modules/console/goldens/carrier-settings-1440.png",

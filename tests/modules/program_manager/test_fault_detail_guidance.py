@@ -1,7 +1,7 @@
 """Catalogue lookup and shared structured guidance over stored records."""
 from copy import deepcopy
 from culsma_os.program_manager.interactors.guidance import RunGuidanceInteractor
-from tests.modules.driver_framework.test_fault_detail import fault
+from tests.support.driver_framework.fault_detail import fault
 
 
 def view(faults):

@@ -157,7 +157,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('96-well plate · Corning 360 uL').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Open station setup'));
+      await tester.tap(find.byKey(const Key('open-station-setup')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('New: Hamilton · offline layout planning'));
       await tester.pumpAndSettle();

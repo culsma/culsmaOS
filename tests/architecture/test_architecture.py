@@ -16,6 +16,7 @@ class TestArchitecture:
             "processing_engine",
             "resource_manager",
             "device_manager",
+            "developer_tools",  # Detached driver diagnostics; no execution authority.
             "driver_framework",
             "event_journal",
             "recovery_manager",
