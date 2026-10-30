@@ -12,3 +12,12 @@ class FileReadRequest:
 class FileReadError(ValueError):
     def __init__(self,code,kind='invalid_request'):
         super().__init__(code);self.code,self.kind=code,kind
+
+
+@dataclass(frozen=True)
+class FileWorkspaceRequest:
+    action: str
+    path: str = ''
+    content: str | None = None
+    expected_revision: str | None = None
+    entries: list | None = None

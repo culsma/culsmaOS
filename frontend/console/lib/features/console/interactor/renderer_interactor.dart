@@ -92,8 +92,15 @@ class NativeRendererInteractor {
 
   Future<bool> apply(Map<String, dynamic> command) async {
     final view = command['view'] as String;
-    console.open(view, view == 'experiment' ? command['entity_id'] : null);
-    if (view != 'desktop') await console.refresh();
+    console.open(
+      view,
+      {'experiment', 'editor'}.contains(view) ? command['entity_id'] : null,
+    );
+    if (view == 'editor') {
+      await console.editor.load(command['entity_id']);
+      if (!console.editor.document(command['entity_id']).loaded) return false;
+    } else if (view != 'desktop')
+      await console.refresh();
     await SchedulerBinding.instance.endOfFrame;
     if ((console.active?.view ?? 'desktop') != view) return false;
     if (view == 'experiment' &&

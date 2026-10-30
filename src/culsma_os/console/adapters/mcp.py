@@ -7,9 +7,10 @@ from culsma_os.program_manager.models import SetupInteractionRequest, ConsolePro
 
 
 class MCPServerAdapter:
-    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None):
+    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None, file_workspace=None):
         self.setup, self.programs, self.observation = setup, programs, observation
         self.view_reads, self.view_requests = view_reads, view_requests
+        self.file_workspace=file_workspace
         self.file_reads=file_reads
         self.supplies = supplies
 
@@ -41,6 +42,12 @@ class MCPServerAdapter:
             server.tool(name=method.__name__, description=description, structured_output=True,
                 annotations=ToolAnnotations(readOnlyHint=read_only, destructiveHint=not read_only,
                                             idempotentHint=read_only, openWorldHint=False))(method)
+        if self.file_workspace is not None:
+            for method in (self.read_document,self.create_document,self.save_document,self.receive_files):
+                server.tool(name=method.__name__,description=method.__doc__,structured_output=True,
+                    annotations=ToolAnnotations(readOnlyHint=method==self.read_document,
+                        destructiveHint=method!=self.read_document,idempotentHint=method==self.read_document,
+                        openWorldHint=False))(method)
         if self.view_reads is not None and self.view_requests is not None:
             for method, read_only, description in [
                 (self.view_state, True, 'Read renderer-reported console sessions, view state, epochs and revisions; this is not physical evidence.'),
@@ -119,7 +126,7 @@ class MCPServerAdapter:
         return self.view_reads.execute(self.raw_credential, ViewStateReadRequest('receipt', request_id))
 
     def open_view(self, session_id: str, epoch: str, expected_revision: int, request_id: str,
-                  view: Literal['experiment','workstation','files','settings','system_info'],
+                  view: Literal['experiment','workstation','files','settings','system_info','editor'],
                   entity_id: str | None = None) -> dict[str, Any]:
         return self.view_requests.execute(self.raw_credential,
             ViewRequest('open', request_id, session_id, epoch, expected_revision, view, entity_id))
@@ -154,3 +161,24 @@ class MCPServerAdapter:
     def preview_file(self,root:str,path:str) -> dict[str,Any]:
         """Read a bounded text preview or binary-file metadata; never execute the file."""
         return self.file_reads.execute(self.raw_credential,FileReadRequest('preview',root,path))
+
+
+    def read_document(self,path:str) -> dict[str,Any]:
+        """Read editable experiment source with its current revision; no run is started."""
+        from culsma_os.file_system.models import FileWorkspaceRequest
+        return self.file_workspace.execute(self.raw_credential,FileWorkspaceRequest('read',path))
+
+    def create_document(self,path:str,content:str) -> dict[str,Any]:
+        """Create a .culs file in Experiments; existing files are never overwritten."""
+        from culsma_os.file_system.models import FileWorkspaceRequest
+        return self.file_workspace.execute(self.raw_credential,FileWorkspaceRequest('create',path,content))
+
+    def save_document(self,path:str,content:str,expected_revision:str) -> dict[str,Any]:
+        """Save .culs source only against the revision read earlier; conflicts preserve both edits."""
+        from culsma_os.file_system.models import FileWorkspaceRequest
+        return self.file_workspace.execute(self.raw_credential,FileWorkspaceRequest('save',path,content,expected_revision))
+
+    def receive_files(self,entries:list[dict[str,str]],directory:str='') -> dict[str,Any]:
+        """Copy a bounded package into Experiments. Entries contain relative path and base64 data; never execute or overwrite files."""
+        from culsma_os.file_system.models import FileWorkspaceRequest
+        return self.file_workspace.execute(self.raw_credential,FileWorkspaceRequest('receive',directory,entries=entries))

@@ -6,12 +6,19 @@ from culsma_os.auth.interactors import AuthorizedInteractor
 from culsma_os.program_manager.models import ConsoleReadRequest
 from .models import ViewInteractionError, ViewStateReadRequest, ViewRequest, RendererSessionRequest, RendererSession, ViewReceipt
 
-VIEWS = {'desktop', 'experiment', 'workstation', 'files', 'settings', 'system_info', 'developer'}
+VIEWS = {'desktop', 'experiment', 'workstation', 'files', 'settings', 'system_info', 'developer', 'editor'}
 
 
 def validate_identifier(value):
     if not isinstance(value, str) or re.fullmatch(r'[A-Za-z0-9_.:/-]{1,256}', value) is None:
         raise ViewInteractionError('CONSOLE_VIEW_ID_INVALID')
+
+
+def validate_view_entity(view,value):
+    if view=='editor':
+        if not isinstance(value,str) or not 1<=len(value)<=240 or '\x00' in value:
+            raise ViewInteractionError('CONSOLE_VIEW_ID_INVALID')
+    else:validate_identifier(value)
 
 
 def validate_revision(value):
@@ -26,7 +33,7 @@ def validate_view_state(state):
         raise ViewInteractionError('CONSOLE_VIEW_STATE_INVALID')
     for key in ['entity_id', 'selected_entity_id']:
         if state[key] is not None:
-            validate_identifier(state[key])
+            validate_view_entity(state['view'],state[key]) if key=='entity_id' else validate_identifier(state[key])
     return dict(state)
 
 
@@ -72,9 +79,10 @@ class ViewStateReadInteractor(AuthorizedInteractor):
 class ViewRequestInteractor(AuthorizedInteractor):
     required_capability = 'console:views:request'
 
-    def __init__(self, tokens, repository, observation, clock=time.time, lease=15, lifetime=30):
+    def __init__(self, tokens, repository, observation, clock=time.time, lease=15, lifetime=30, documents=None):
         super().__init__(tokens)
         self.repository, self.observation = repository, observation
+        self.documents=documents
         self.clock, self.lease, self.lifetime = clock, lease, lifetime
 
     def perform(self, request):
@@ -104,8 +112,8 @@ class ViewRequestInteractor(AuthorizedInteractor):
         if not isinstance(request.view, str) or request.view not in VIEWS:
             raise ViewInteractionError('CONSOLE_VIEW_UNSUPPORTED')
         if request.entity_id is not None:
-            validate_identifier(request.entity_id)
-        if request.view == 'experiment' and request.entity_id is None:
+            validate_view_entity(request.view,request.entity_id)
+        if request.view in {'experiment','editor'} and request.entity_id is None:
             raise ViewInteractionError('CONSOLE_VIEW_TARGET_REQUIRED')
         if request.action == 'reveal' and (request.view != 'workstation' or request.entity_id is None):
             raise ViewInteractionError('CONSOLE_VIEW_REVEAL_UNSUPPORTED')
@@ -113,7 +121,12 @@ class ViewRequestInteractor(AuthorizedInteractor):
             raise ViewInteractionError('CONSOLE_VIEW_TARGET_UNEXPECTED')
 
     def validate_target(self, request):
-        if request.view == 'experiment':
+        if request.view == 'editor':
+            if self.documents is None:raise ViewInteractionError('CONSOLE_VIEW_UNSUPPORTED')
+            from culsma_os.file_system.models import FileReadError
+            try:self.documents.read(request.entity_id)
+            except FileReadError as error:raise ViewInteractionError(error.code,error.kind) from error
+        elif request.view == 'experiment':
             self.observation.execute(ConsoleReadRequest('run', request.entity_id))
         elif request.view == 'workstation' and request.entity_id is not None:
             envelope = self.observation.execute(ConsoleReadRequest('station')).data.get('layout')

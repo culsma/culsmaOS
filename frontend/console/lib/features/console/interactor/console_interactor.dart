@@ -15,6 +15,7 @@ import 'system_information_interactor.dart';
 import 'file_browser_interactor.dart';
 import 'run_review_interactor.dart';
 import 'developer_interactor.dart';
+import 'editor_interactor.dart';
 
 /// Native presentation coordinator. Backend Interactors own every experiment decision.
 class NativeConsoleInteractor extends ChangeNotifier {
@@ -22,6 +23,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   final review = NativeRunReviewInteractor();
   final LayoutController layout;
   final PendingRequestRepository? requests;
+  late final NativeEditorInteractor editor;
   late final NativeDeveloperInteractor developer;
   late final NativeFileBrowserInteractor files;
   late final NativeLabwareInteractor labware;
@@ -46,6 +48,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
     ConsoleMutationRepository? mutations,
     String initialView = 'files',
   }) {
+    editor = NativeEditorInteractor(api)..addListener(notifyViewChanged);
     developer = NativeDeveloperInteractor(api)..addListener(notifyViewChanged);
     files = NativeFileBrowserInteractor(api)..addListener(notifyViewChanged);
     labware = NativeLabwareInteractor(api, mutations)
@@ -74,6 +77,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   }
 
   bool get dirty =>
+      editor.dirty ||
       layout.dirty ||
       labware.editing ||
       labware.pending != null ||
@@ -103,14 +107,20 @@ class NativeConsoleInteractor extends ChangeNotifier {
     }
     if (view == 'experiment' && (entityId == null || entityId.isEmpty))
       throw const FormatException('RUN_ID_REQUIRED');
-    final title = view == 'preparation'
+    final title = view == 'editor'
+        ? 'Edit · $entityId'
+        : view == 'preparation'
         ? 'Check experiment'
         : view == 'experiment'
         ? 'Experiment · ${entityId!.substring(0, min(8, entityId.length))}'
         : ConsoleWindowDescriptor.applications
               .firstWhere((a) => a.view == view)
               .label;
-    final id = view == 'experiment' ? 'run:$entityId' : view;
+    final id = view == 'editor'
+        ? 'editor:$entityId'
+        : view == 'experiment'
+        ? 'run:$entityId'
+        : view;
     final existing = windows.where((w) => w.id == id).firstOrNull;
     final window =
         existing ??
@@ -137,6 +147,10 @@ class NativeConsoleInteractor extends ChangeNotifier {
     return window;
   }
 
+  void openEditor(String path) {
+    open('editor', path);
+  }
+
   void showDesktop() {
     for (final w in windows) {
       w.minimized = true;
@@ -146,6 +160,12 @@ class NativeConsoleInteractor extends ChangeNotifier {
   }
 
   bool protect(ConsoleWindowModel w) {
+    if (w.view == 'editor' && editor.document(w.entityId!).dirty) {
+      message =
+          'Save your edits, use Save As, or discard them with Reload before closing.';
+      notifyListeners();
+      return true;
+    }
     if (working) {
       message = 'A console operation is finishing.';
       notifyListeners();
@@ -491,6 +511,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   void dispose() {
     disposed = true;
     timer?.cancel();
+    editor.dispose();
     developer.dispose();
     files.dispose();
     information.dispose();

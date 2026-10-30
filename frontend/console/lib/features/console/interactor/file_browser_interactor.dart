@@ -39,6 +39,47 @@ class NativeFileBrowserInteractor extends ChangeNotifier {
         parts[index];
   }
 
+  bool receiving = false;
+  String? notice;
+  String get experimentDirectory {
+    final base =
+        roots.where((r) => r['id'] == 'programs').firstOrNull?['path']
+            as String?;
+    if (root == 'programs') return path;
+    if (base != null && absolutePath.startsWith('$base/'))
+      return absolutePath.substring(base.length + 1);
+    return '';
+  }
+
+  Future<void> receive(
+    List<Map<String, String>> entries, {
+    String? directory,
+  }) async {
+    if (receiving) return;
+    final destination = directory ?? experimentDirectory;
+    receiving = true;
+    error = null;
+    notice = null;
+    changed();
+    try {
+      final result = await api.command('/api/v1/files/workspace', {
+        'action': 'receive',
+        'path': destination,
+        'entries': entries,
+      });
+      notice =
+          '${result['count']} files copied to Experiments${destination.isEmpty ? '' : '/$destination'}. Nothing was executed.';
+      await navigate('programs', destination);
+    } catch (e) {
+      error = e.toString().contains('FILE_ALREADY_EXISTS')
+          ? 'A file already exists. Nothing was overwritten. Rename the incoming file or choose another experiment folder.'
+          : 'Files could not be copied: $e';
+    } finally {
+      receiving = false;
+      changed();
+    }
+  }
+
   void changed() {
     if (!disposed) notifyListeners();
   }

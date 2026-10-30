@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:desktop_drop/desktop_drop.dart';
+import 'protocol_name_dialog.dart';
+import '../interactor/drop_interactor.dart';
 import '../interactor/console_interactor.dart';
 import '../interactor/file_browser_interactor.dart';
 
@@ -43,7 +46,71 @@ class NativeFileBrowserView extends StatelessWidget {
       await browser.select(row);
   }
 
-  Widget toolbar() => Column(
+  Future<void> createProtocol(BuildContext context) async {
+    final relative = await promptProtocolName(
+      context,
+      'New protocol',
+      'new-protocol.culs',
+    );
+    if (relative == null) return;
+    final directory = browser.experimentDirectory;
+    final path = directory.isEmpty ? relative : '$directory/$relative';
+    if (await console.editor.create(
+      path,
+      '// Describe your experiment here.\n',
+    )) {
+      await browser.navigate('programs', directory);
+      console.openEditor(path);
+    } else {
+      browser.error = console.editor.document(path).error;
+      browser.changed();
+    }
+  }
+
+  void editRow(Map row) {
+    final program = row['program'];
+    if (program?['source_scope'] == 'programs')
+      console.openEditor(program['program_id']);
+  }
+
+  Future<void> menu(BuildContext context, Map row, Offset position) async {
+    if (row['program']?['source_scope'] != 'programs') return;
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx,
+        position.dy,
+      ),
+      items: [
+        const PopupMenuItem(value: 'edit', child: Text('Edit')),
+        const PopupMenuItem(value: 'run', child: Text('Run')),
+      ],
+    );
+    if (choice == 'edit') editRow(row);
+    if (choice == 'run') await open(Map<String, dynamic>.from(row));
+  }
+
+  Future<void> drop(DropDetails details) async {
+    if (browser.receiving) return;
+    final directory = browser.experimentDirectory;
+    browser.receiving = true;
+    browser.error = null;
+    browser.changed();
+    try {
+      final entries = await NativeDropInteractor().collect(details.items);
+      browser.receiving = false;
+      await browser.receive(entries, directory: directory);
+    } catch (e) {
+      browser.error = 'Files could not be copied: $e';
+    } finally {
+      browser.receiving = false;
+      browser.changed();
+    }
+  }
+
+  Widget toolbar(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Row(
@@ -88,6 +155,24 @@ class NativeFileBrowserView extends StatelessWidget {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
           ),
+          IconButton(
+            key: const Key('files-new-protocol'),
+            tooltip: 'New protocol',
+            onPressed: () => createProtocol(context),
+            icon: const Icon(Icons.note_add_outlined),
+          ),
+        ],
+      ),
+      Wrap(
+        spacing: 8,
+        children: [
+          if (browser.selected?['program']?['source_scope'] == 'programs')
+            TextButton.icon(
+              key: const Key('files-edit'),
+              label: const Text('Edit'),
+              onPressed: () => editRow(browser.selected!),
+              icon: const Icon(Icons.edit_outlined),
+            ),
           if (browser.selected?['program'] != null)
             TextButton.icon(
               onPressed: console.working || console.pendingStart != null
@@ -260,7 +345,7 @@ class NativeFileBrowserView extends StatelessWidget {
     );
   }
 
-  Widget content(bool wide) => Column(
+  Widget content(BuildContext context, bool wide) => Column(
     children: [
       Container(
         color: const Color(0xfff7f9fb),
@@ -308,6 +393,8 @@ class NativeFileBrowserView extends StatelessWidget {
                           'file-entry-${browser.root}-${row['path']}',
                         ),
                         onTap: () => browser.select(row),
+                        onSecondaryTapUp: (details) =>
+                            menu(context, row, details.globalPosition),
                         onDoubleTap: row['openable'] == true
                             ? () => open(row)
                             : null,
@@ -397,10 +484,23 @@ class NativeFileBrowserView extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final wide = constraints.maxWidth >= 700;
-      return Column(
+      final body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          toolbar(),
+          toolbar(context),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Text(
+              'Drop files or folders here to copy into Experiments. Single-click to preview; Edit to change; double-click to run.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+          if (browser.receiving) const LinearProgressIndicator(),
+          if (browser.notice != null)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(browser.notice!),
+            ),
           if (console.pendingStart != null)
             MaterialBanner(
               content: const Text(
@@ -448,12 +548,20 @@ class NativeFileBrowserView extends StatelessWidget {
             child: Row(
               children: [
                 if (wide) SizedBox(width: 200, child: sidebar()),
-                Expanded(child: content(wide)),
+                Expanded(child: content(context, wide)),
               ],
             ),
           ),
         ],
       );
+      return NativeDropInteractor.available
+          ? DropTarget(
+              key: const Key('experiment-file-drop'),
+              acceptedKinds: const {DropItemKind.file, DropItemKind.directory},
+              onDrop: drop,
+              child: body,
+            )
+          : body;
     },
   );
 }

@@ -29,3 +29,16 @@ def test_run_outcome_reads_backend_guidance_instead_of_classifying_vendor_error_
     tree=ast.parse(owner.read_text())
     imports={n.module or '' for n in ast.walk(tree) if isinstance(n,ast.ImportFrom)}
     assert not any('adapters' in n or 'repositories' in n for n in imports)
+
+
+def test_editor_keeps_document_model_separate_and_reuses_source_inspection():
+    root=ROOT/'frontend/console/lib/features/console'
+    model=(root/'model/protocol_document.dart').read_text()
+    assert 'class ProtocolDocument' in model
+    assert not any(value in model for value in ['ConsoleApi','dart:io','/api/v1/'])
+    editor=(root/'interactor/editor_interactor.dart').read_text()
+    assert "'../model/protocol_document.dart'" in editor
+    assert "'/api/v1/files/workspace'" in editor and "'action': 'inspect'" in editor
+    assert not any(value in editor for value in ['dart:io',"'action': 'start'",'Process.start','Hamilton'])
+    views='\n'.join((root/'view'/name).read_text() for name in ['protocol_editor_view.dart','file_browser_view.dart'])
+    assert not any(value in views for value in ['Authorization','Bearer ','dart:io','/api/v1/'])

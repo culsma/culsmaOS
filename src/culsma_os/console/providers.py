@@ -23,12 +23,12 @@ from culsma_os.program_manager.interactors.setup_interaction import SetupInterac
 
 
 class ConsoleApplicationFactory:
-    def build_view_interaction(self, settings, tokens, observation):
+    def build_view_interaction(self, settings, tokens, observation, documents=None):
         path = settings.view_store_path or settings.socket_path.with_name(settings.socket_path.name + '.views.sqlite3')
         station_id = hashlib.sha256(str(settings.socket_path.resolve()).encode()).hexdigest()
         repository = SqliteViewInteractionRepository(path, station_id)
         return (ViewStateReadInteractor(tokens, repository),
-                ViewRequestInteractor(tokens, repository, observation),
+                ViewRequestInteractor(tokens, repository, observation, documents=documents),
                 RendererSessionInteractor(tokens, repository))
 
     def build_desktop(self, settings, executable, resident_command=None, log_path=None):
@@ -47,6 +47,16 @@ class ConsoleApplicationFactory:
         return ProgramSourceInteractor(FileProgramSourceRepository(self.installation_root(settings),
             (settings.program_store or Path('run-artifacts/console/programs'))/'installation',selected_only=True),
             CompilationInteractor(),HostedRuntimeInteractor(),selected_only=True)
+
+    def build_document_query(self,source):
+        from culsma_os.file_system.interactors import DocumentInspectionInteractor
+        from culsma_os.file_system.repository import LocalFileWorkspaceRepository
+        return DocumentInspectionInteractor(LocalFileWorkspaceRepository(source.sources.root)) if source.sources.root is not None else None
+
+    def build_workspace(self,tokens,source):
+        from culsma_os.file_system.interactors import FileWorkspaceInteractor
+        from culsma_os.file_system.repository import LocalFileWorkspaceRepository
+        return FileWorkspaceInteractor(tokens,LocalFileWorkspaceRepository(source.sources.root)) if source.sources.root is not None else None
 
     def build_files(self,settings,tokens,source):
         from culsma_os.file_system.interactors import FileReadInteractor
@@ -71,9 +81,10 @@ class ConsoleApplicationFactory:
             SetupInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
             SetupConfirmationInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
             LabwareConfigurationInteractor(tokens,repository,ResidentClientAdapter(settings.socket_path,timeout=10)),
-            *self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3))),
+            *self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)), self.build_document_query(source)),
             supplies=SupplyInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
             file_reads=self.build_files(settings,tokens,source),
+            file_workspace=self.build_workspace(tokens,source),
             developer_tests=DeveloperTestInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)))
 
     def build_mcp(self, settings):
@@ -83,9 +94,9 @@ class ConsoleApplicationFactory:
         resident = ResidentClientAdapter(settings.socket_path, timeout=10)
         source = ProgramSourceInteractor(FileProgramSourceRepository(settings.program_root,
             settings.program_store or Path('run-artifacts/console/programs'), settings.home_path), CompilationInteractor(), HostedRuntimeInteractor())
-        view_reads, view_requests, _ = self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(resident))
+        view_reads, view_requests, _ = self.build_view_interaction(settings,tokens,ConsoleCommandInteractor(resident),self.build_document_query(source))
         from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
         bridge = MCPServerAdapter(SetupInteractionInteractor(tokens,resident),
             ConsoleProgramInteractor(tokens,source,resident,{"installation":self.installation_source(settings)}),
-            AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)),view_reads,view_requests,SupplyInteractionInteractor(tokens,resident),self.build_files(settings,tokens,source))
+            AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)),view_reads,view_requests,SupplyInteractionInteractor(tokens,resident),self.build_files(settings,tokens,source),file_workspace=self.build_workspace(tokens,source))
         return MCPHostInteractor(tokens,bridge)

@@ -18,9 +18,10 @@ from culsma_os.console_interaction.models import ViewInteractionError, ViewState
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None, file_reads=None, developer_tests=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None, file_reads=None, developer_tests=None, file_workspace=None):
         self.view_reads, self.view_requests, self.renderer_sessions = view_reads, view_requests, renderer_sessions
         self.settings = settings
+        self.file_workspace=file_workspace
         self.file_reads=file_reads
         self.developer_tests=developer_tests
         self.supplies = supplies
@@ -183,6 +184,15 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             raise ConsoleReadError('SETUP_REQUEST_INVALID','invalid_request')
         return SetupInteractionRequest(**payload)
 
+    def workspace_request(self,payload):
+        from culsma_os.file_system.models import FileWorkspaceRequest
+        if (not isinstance(payload,dict) or set(payload)-{f.name for f in fields(FileWorkspaceRequest)}
+                or not isinstance(payload.get('action'),str)
+                or any(k in payload and payload[k] is not None and not isinstance(payload[k],str) for k in ('path','content','expected_revision'))
+                or 'entries' in payload and payload['entries'] is not None and not isinstance(payload['entries'],list)):
+            raise ConsoleReadError('FILE_REQUEST_INVALID','invalid_request')
+        return FileWorkspaceRequest(**payload)
+
     def file_request(self,payload):
         if not isinstance(payload,dict) or set(payload)-{'action','root','path','offset'} or not isinstance(payload.get('action'),str) or any(k in payload and not isinstance(payload[k],str) for k in ['root','path']) or 'offset' in payload and type(payload['offset']) is not int:raise ConsoleReadError('FILE_REQUEST_INVALID','invalid_request')
         return FileReadRequest(**payload)
@@ -233,7 +243,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         try:
             url = urlsplit(self.path)
             self.validate_context(True)
-            endpoints = {'/api/v1/developer/fault-test':(self.server.developer_tests,self.developer_request,'culsma_developer_test_v1'),'/api/v1/files':(self.server.file_reads,self.file_request,'culsma_files_v1'),'/api/v1/consumables':(self.server.supplies,self.supply_request,'culsma_supply_v1'),'/api/v1/console/views/read':(self.server.view_reads,self.view_read_request,'culsma_view_interaction_v1'),
+            endpoints = {'/api/v1/files/workspace':(self.server.file_workspace,self.workspace_request,'culsma_workspace_v1'),'/api/v1/developer/fault-test':(self.server.developer_tests,self.developer_request,'culsma_developer_test_v1'),'/api/v1/files':(self.server.file_reads,self.file_request,'culsma_files_v1'),'/api/v1/consumables':(self.server.supplies,self.supply_request,'culsma_supply_v1'),'/api/v1/console/views/read':(self.server.view_reads,self.view_read_request,'culsma_view_interaction_v1'),
                          '/api/v1/console/views/request':(self.server.view_requests,self.view_request,'culsma_view_interaction_v1'),
                          '/api/v1/console/renderer':(self.server.renderer_sessions,self.renderer_request,'culsma_view_interaction_v1'),
                          '/api/v1/configuration/labware':(self.server.labware,self.labware_request,'culsma_configuration_v1'),'/api/v1/setup':(self.server.setup_commands,self.setup_request,'culsma_setup_console_v1'),
@@ -254,7 +264,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             if len(lengths) != 1 or not lengths[0].isdigit() or self.headers.get('Transfer-Encoding') is not None:
                 raise ConsoleReadError('CONSOLE_BODY_INVALID','invalid_request')
             length = int(lengths[0])
-            limit = 1500000 if url.path in {'/api/v1/configuration/layout-import','/api/v1/configuration/drafts'} else 250000
+            limit = 6000000 if url.path=='/api/v1/files/workspace' else 1500000 if url.path in {'/api/v1/configuration/layout-import','/api/v1/configuration/drafts'} else 250000
             if not 1 <= length <= limit or self.headers.get('Content-Type','').split(';')[0] != 'application/json':
                 raise ConsoleReadError('CONSOLE_BODY_INVALID','invalid_request')
             try:

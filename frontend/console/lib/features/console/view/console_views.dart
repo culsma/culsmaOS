@@ -11,6 +11,7 @@ import 'file_browser_view.dart';
 import 'run_outcome_view.dart';
 import 'run_review_view.dart';
 import 'developer_view.dart';
+import 'protocol_editor_view.dart';
 
 class ConsoleViews extends StatelessWidget {
   final NativeConsoleInteractor console;
@@ -19,6 +20,11 @@ class ConsoleViews extends StatelessWidget {
   @override
   Widget build(BuildContext context) => switch (window.view) {
     'files' => files(context),
+    'editor' => NativeProtocolEditorView(
+      key: ValueKey(window.entityId),
+      console: console,
+      path: window.entityId!,
+    ),
     'workstation' => WorkstationRecords(console: console),
     'settings' => NativeSettingsView(console: console),
     'system_info' => NativeSystemInformationView(console: console),

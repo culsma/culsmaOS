@@ -95,7 +95,7 @@
       "path": "frontend/console/test/goldens/native-files-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/migration_golden_test.dart",
-      "sha256": "c3c00d1c0c81349492ae09bdc33cee2321267c964a64537ba745fb923c3c38c6"
+      "sha256": "91514b70ee1dfa44fa6150b6c04d348e1979db8916162eb2dd23863274585d95"
     },
     {
       "path": "frontend/console/test/goldens/native-position-1100.png",
@@ -251,13 +251,79 @@
       "path": "frontend/console/test/goldens/native-preparation-1100.png",
       "kind": "golden",
       "source": "Reviewed actionable run preparation screen; source: frontend/console/test/console/run_outcome_golden_test.dart",
-      "sha256": "0e917595f6d8a1455b0f9bd8ff9d7160fd672f5797f677671a7ddb865dbaf9ec"
+      "sha256": "c5d20267891a123e41ba974c49d788bd554e81486435dcc61e6e1cc7c49b6810"
     },
     {
       "path": "frontend/console/test/goldens/native-preparation-390.png",
       "kind": "golden",
       "source": "Reviewed actionable run preparation screen; source: frontend/console/test/console/run_outcome_golden_test.dart",
-      "sha256": "bc8f10ad14f0c687ff3a50077c55659c74e062549846db036c826afdbd0c958b"
+      "sha256": "72bd3fba862bd331007248ca541b998096e29d4a30797dae94493c1d60f8df8d"
+    },
+    {
+      "path": "frontend/console/assets/fonts/RobotoMono.ttf",
+      "kind": "font",
+      "source": "Google Fonts Roboto Mono variable font, SIL OFL-1.1; license: frontend/console/assets/fonts/RobotoMono-OFL.txt",
+      "sha256": "66a80e79d17e4c7cabd162e2916578a4cc08fd19eef6e2a643305eae9c567b2b"
+    },
+    {
+      "path": "frontend/console/test/console/goldens/developer-interrupted.png",
+      "kind": "golden",
+      "source": "Native developer fault scenario; source: frontend/console/test/console/developer_view_test.dart",
+      "sha256": "3eafef60bfd73dc84ba1525d125faca667dd54f764a2b9c07c4cb2ddf170ee98"
+    },
+    {
+      "path": "frontend/console/test/console/goldens/developer-liquid_insufficient.png",
+      "kind": "golden",
+      "source": "Native developer fault scenario; source: frontend/console/test/console/developer_view_test.dart",
+      "sha256": "c5f99d0f70cdefb51891399a476ac2acc83064ca79fb8044da0ce46b8009324d"
+    },
+    {
+      "path": "frontend/console/test/console/goldens/developer-tip_unavailable.png",
+      "kind": "golden",
+      "source": "Native developer fault scenario; source: frontend/console/test/console/developer_view_test.dart",
+      "sha256": "cd979d4e5df7b323a9dd459ff6241df1587148b8f83a6bc9e4978815a7205092"
+    },
+    {
+      "path": "frontend/console/test/console/goldens/fault-detail.png",
+      "kind": "golden",
+      "source": "Structured device-fault details; source: frontend/console/test/console/fault_detail_test.dart",
+      "sha256": "ad25cab8c89be8b87a32fedbe43b7d170f88b0b44efb4d666f20b99b64b0382c"
+    },
+    {
+      "path": "frontend/console/test/console/goldens/protocol-editor-conflict.png",
+      "kind": "golden",
+      "source": "Narrow editor conflict and source diagnostics; source: frontend/console/test/console/editor_golden_test.dart",
+      "sha256": "ca1c1925497629604a860c1a6d2669c2fb9e0d5e5bf4435538acd0dfae1a1d88"
+    },
+    {
+      "path": "frontend/console/test/console/goldens/protocol-editor.png",
+      "kind": "golden",
+      "source": "Native syntax-highlighted protocol editor; source: frontend/console/test/console/editor_golden_test.dart",
+      "sha256": "a2b95134902b641ddccb2a656d83b639f6444afe54a490c4a12203d96c61fa2b"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-language-report-1100.png",
+      "kind": "golden",
+      "source": "Culsma result presentation; source: frontend/console/test/console/run_report_panel_test.dart",
+      "sha256": "4119ab4d70e30d8ee652baf9a31f6c961a6e66fdd2f111fc816a06c2b2c7ff8b"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-language-report-390.png",
+      "kind": "golden",
+      "source": "Culsma result presentation; source: frontend/console/test/console/run_report_panel_test.dart",
+      "sha256": "50a3d02068cff7324dea22a8fe8eb34eea867c2baf045bc6cf58e93f97365349"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-loading-plan-1280.png",
+      "kind": "golden",
+      "source": "Native preparation layout; source: frontend/console/test/console/preparation_layout_test.dart",
+      "sha256": "4dad7ef6c72007971df85a7756c14fcf422c1f8cccb0fcd1bde7ca7c9fbe8401"
+    },
+    {
+      "path": "frontend/console/test/goldens/native-loading-plan-390.png",
+      "kind": "golden",
+      "source": "Native preparation layout; source: frontend/console/test/console/preparation_layout_test.dart",
+      "sha256": "af94c209578d111b88da62d255339bba55900d0f2abc151c4ab175a782134aff"
     }
   ]
 }

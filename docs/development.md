@@ -510,3 +510,32 @@ Device faults use the OS `DeviceFault` contract. Plugin-owned mappers convert na
 Developer → Exception tests uses a driver-owned detached model probe and the production fault normalizer/guidance. Tests are not submitted as experiment runs and do not modify the active station. The protected endpoint reuses `programs:execute`; authentication grants are unchanged. No vendor resume or physical-loading acknowledgement is exposed here.
 
 Fault guidance now separates execution certainty, device-stop observation, operation/location and recovery availability. Operator checks follow preservation and safe-access prerequisites. Status refresh reads recorded facts and is not hardware inspection or confirmation of a manual correction. Experiment and Developer views share this presentation.
+
+
+### Native experiment files
+
+Files accepts native file/folder drops as copies into Experiments (up to 200 files / 4 MB
+per drop). Existing names are not overwritten. Select a `.culs` file and choose Edit,
+or use its context menu; double-click retains the experiment review/run flow.
+The editor provides Save, Save As, Check and Run. Checks use the existing language
+pipeline and preserve parser/semantic source positions. Execution snapshots remain
+immutable after source edits.
+
+The native editor loads the Culsma Syntax TextMate grammar from
+`frontend/console/assets/syntax/culsma.tmLanguage.json` through `syntax_highlight`.
+The grammar is copied unchanged from Culsma Syntax 0.3.0; syntax changes belong to
+the language's grammar source before updating this asset.
+
+HTTP `/api/v1/files/workspace` and MCP `read_document`, `create_document`,
+`save_document`, `receive_files` use the same authorized FileWorkspaceInteractor.
+Saves require the revision returned by a read. MCP `open_view(view="editor",
+entity_id="relative/path.culs", ...)` uses existing renderer session/revision receipts.
+File operations do not execute protocols or change already frozen source snapshots.
+
+Run `tools/test_native_editor.py` with the simulator Python environment and the
+pinned Flutter SDK to exercise actual drop-provider bytes, user files, native editing,
+Culsma checks and conflicting writes. It also exercises secondary-click Edit, repeated
+New/Save As dialog cancellation, reload/close protection and quiet background refresh.
+Native provider limit tests run on the real platform filesystem rather than a fake plugin.
+The harness rejects accessibility-tree errors and lost native connections. It starts a private local HTTP server;
+it starts no resident or instruments. Test logs stay under ignored `run-artifacts/`.

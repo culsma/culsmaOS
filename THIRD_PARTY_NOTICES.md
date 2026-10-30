@@ -37,3 +37,15 @@ Upstream sources: [Opentrons](https://github.com/Opentrons/opentrons),
 The desktop console includes Roboto Regular and Medium under the Apache License 2.0.
 The font license is provided in `frontend/console/assets/fonts/LICENSE.txt`.
 Flutter itself and its SDK components retain their respective upstream licenses.
+
+
+## Native file drop and highlighting
+
+The native console uses `desktop_drop` 0.9.2 (Apache-2.0) and
+`syntax_highlight` 0.4.0 (BSD-3-Clause). Flutter includes their package license
+notices in the application license registry. The Culsma TextMate grammar is the
+existing Culsma Syntax grammar, bundled as a first-party language asset.
+
+The code editor bundles Roboto Mono from the Google Fonts project under the SIL
+Open Font License 1.1. Its copyright and full license are included at
+`frontend/console/assets/fonts/RobotoMono-OFL.txt`.

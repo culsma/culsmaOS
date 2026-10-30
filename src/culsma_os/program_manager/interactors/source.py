@@ -69,7 +69,7 @@ class ProgramSourceInteractor:
             if re.fullmatch(r'[A-Z][A-Z0-9_]{0,79}',code) is None:
                 code = 'PROGRAM_COMPILE_FAILED'
             return {'program_id':program_id,'snapshot_id':snapshot.snapshot_id,'valid':False,
-                    'scope':self.validation_scope,'diagnostics':[{'code':code,'severity':'error'}],
+                    'scope':self.validation_scope,'diagnostics':[self.compilation_diagnostic(error,code)],
                     'allocations':[],'operations':[]}
         diagnostics = [*compiled.semantic.diagnostics,*compiled.typed.diagnostics,*compiled.plan.diagnostics,
                        *self.semantics.validate_plan(compiled.plan)]
@@ -81,3 +81,12 @@ class ProgramSourceInteractor:
                 'operations':sorted(set(step.op for step in steps)),
                 'source':self.sources.read_source(snapshot,program_id)}
 
+
+
+    def compilation_diagnostic(self,error,code):
+        """Expose source positions supplied by the language parser, without reparsing."""
+        result={'code':code,'severity':'error','message':'The program could not be checked.'}
+        line,column=getattr(error,'line',None),getattr(error,'column',None)
+        if type(line) is int and line>0 and type(column) is int and column>0:
+            result.update(message=str(error).splitlines()[0][:500],span={'line':line,'col':column})
+        return result
