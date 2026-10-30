@@ -23,43 +23,43 @@
       "path": "frontend/console/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png",
       "kind": "template-icon",
       "sha256": "6232e5815af17e25e0268b2fec7aea9e068cc92ec709e9605c2b31df4ff2a313",
-      "source": "Flutter create macOS template; development icon, to be replaced before native installer release"
+      "source": "Flutter macOS development template; Mac product builder generates its release icon from the reviewed shared Culsma logo"
     },
     {
       "path": "frontend/console/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_128.png",
       "kind": "template-icon",
       "sha256": "15591f03f31313af6fd644ed0512106cc04365130b8b73244f1cfa6dddfb4400",
-      "source": "Flutter create macOS template; development icon, to be replaced before native installer release"
+      "source": "Flutter macOS development template; Mac product builder generates its release icon from the reviewed shared Culsma logo"
     },
     {
       "path": "frontend/console/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_16.png",
       "kind": "template-icon",
       "sha256": "cc6928b5adfc00dbf526192e2705dd9af641cdf20ab4c6c7ca7cd4936dca59f0",
-      "source": "Flutter create macOS template; development icon, to be replaced before native installer release"
+      "source": "Flutter macOS development template; Mac product builder generates its release icon from the reviewed shared Culsma logo"
     },
     {
       "path": "frontend/console/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png",
       "kind": "template-icon",
       "sha256": "416efd77cde932d42ef34168da24dd428a495b1f4f34bbbd125a18d2add186a2",
-      "source": "Flutter create macOS template; development icon, to be replaced before native installer release"
+      "source": "Flutter macOS development template; Mac product builder generates its release icon from the reviewed shared Culsma logo"
     },
     {
       "path": "frontend/console/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png",
       "kind": "template-icon",
       "sha256": "ae8c4458e41f1e28b1e851ed87d3268d4a0351ceea427fa2a84cc94ddfb6d4c5",
-      "source": "Flutter create macOS template; development icon, to be replaced before native installer release"
+      "source": "Flutter macOS development template; Mac product builder generates its release icon from the reviewed shared Culsma logo"
     },
     {
       "path": "frontend/console/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png",
       "kind": "template-icon",
       "sha256": "0a91c6c1bf242e54ee179e34629e9ef3e8a6d286c0fce01e302280a8be9277e6",
-      "source": "Flutter create macOS template; development icon, to be replaced before native installer release"
+      "source": "Flutter macOS development template; Mac product builder generates its release icon from the reviewed shared Culsma logo"
     },
     {
       "path": "frontend/console/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_64.png",
       "kind": "template-icon",
       "sha256": "6ad229623498e5f1277800db3ab7cb11faf85eb2569e1213f7d8e55003c07b42",
-      "source": "Flutter create macOS template; development icon, to be replaced before native installer release"
+      "source": "Flutter macOS development template; Mac product builder generates its release icon from the reviewed shared Culsma logo"
     },
     {
       "path": "frontend/console/test/goldens/hamilton-1400.png",

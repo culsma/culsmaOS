@@ -1,0 +1,24 @@
+# macOS arm64 CPython 3.11 wheel pins; install OS separately from the matching release.
+culsma==1.0.8+gca7a0984d0b5 --hash=sha256:c2ff1df7b928be1b9d8ec60f25d974769caad2a7bec420c57ff9001f76bb2b62
+culsma-opentrons-simulator==0.1.0+gddf73c41e40f --hash=sha256:c351d593f9d42dc6f744c78821b5bababd8119fb48179eca31c13c7c1a15131d
+opentrons==8.8.2 --hash=sha256:e6f455a1aa807c7787f3d469757d3c7b6ada0fa0390a8319106bdbe2dd85e89d
+pydantic==2.11.7 --hash=sha256:dde5df002701f6de26248661f6835bbe296a47bf73990135c7d07ce741b9623b
+pydantic-settings==2.10.1 --hash=sha256:a60952460b99cf661dc25c29c0ef171721f98bfcb52ef8d9ea4c943d7c8cc796
+aionotify==0.3.1 --hash=sha256:25816a9eef030c774beaee22189a24e29bc43f81cebe574ef723851eaf89ddee
+opentrons_shared_data==8.8.2 --hash=sha256:12d77eab3a41bfb4e5a947f7ca5062d40eb1fcffcf2a6d12a317af7ac249b6f3
+pydantic_core==2.33.2 --hash=sha256:e799c050df38a639db758c617ec771fd8fb7a5f8eaaa4b27b101f266b216a246
+pyusb==1.2.1 --hash=sha256:2b4c7cb86dbadf044dfb9d3a4ff69fd217013dbe78a792177a3feb172449ea36
+anyio==4.15.1 --hash=sha256:6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101
+click==8.5.0 --hash=sha256:255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360
+jsonschema==4.17.3 --hash=sha256:a870ad254da1a8ca84b6a2905cac29d265f805acc57af304784962a2aa6508f6
+numpy==1.26.4 --hash=sha256:edd8b5fe47dab091176d21bb6de568acdd906d1887a4584a15a9a96a1dca06ef
+typing_extensions==4.16.0 --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8
+annotated-types==0.8.0 --hash=sha256:f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
+attrs==26.1.0 --hash=sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309
+idna==3.20 --hash=sha256:ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c
+lark==1.3.1 --hash=sha256:c629b661023a014c37da873b4ff58a817398d12635d3bbb2c5a03be7fe5d1e12
+packaging==26.3 --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
+pyrsistent==0.20.0 --hash=sha256:0f3b1bcaa1f0629c978b355a7c37acd58907390149b7311b5db1b37648eb6958
+pyserial==3.5 --hash=sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0
+python-dotenv==1.2.4 --hash=sha256:42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc
+typing-inspection==0.4.4 --hash=sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147

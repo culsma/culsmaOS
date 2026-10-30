@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.11.18%2B20261026-aarch64-apple-darwin-install_only.tar.gz",
+  "sha256": "cba3455e18516fbe8668cff2820c9b6a53447c552d612443c2b2fb60d390a908",
+  "version": "3.11.18",
+  "target": "aarch64-apple-darwin",
+  "licenses": {
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.11.18%2B20261026-aarch64-apple-darwin-pgo%2Blto-full.tar.zst",
+    "sha256": "4e1e6570f461bfbd051a9774a2a14613c5014dfda0be9cb402597b51e7dc4b3b"
+  }
+}

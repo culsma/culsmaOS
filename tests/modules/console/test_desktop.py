@@ -119,3 +119,12 @@ def test_native_private_pipe_includes_renderer_identity_and_station_key(tmp_path
     ConsoleApplicationLifecycleInteractor(f,f.sessions,f).execute()
     assert f.connection['renderer_access_token']=='renderer-fixture'
     assert f.connection['station_key']==sha256(str(f.settings.socket_path.resolve()).encode()).hexdigest()
+
+
+def test_desktop_rejects_both_attach_and_product_endpoint(tmp_path,capsys):
+    from culsma_os.cli import CulsmaOSCLI
+    with pytest.raises(SystemExit) as error:
+        CulsmaOSCLI.main(['desktop','--socket',str(tmp_path/'attach.sock'),'--resident-socket',str(tmp_path/'product.sock')])
+    assert error.value.code==2
+    assert 'not allowed with argument' in capsys.readouterr().err
+    assert not (tmp_path/'attach.sock').exists()

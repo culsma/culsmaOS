@@ -103,7 +103,9 @@ class CulsmaOSCLI:
         desktop = commands.add_parser("desktop", help="Start the local desktop console and resident as one product")
         desktop.add_argument("--file-root", type=Path, help="User workspace shown by Files; defaults to --home (~/Culsma)")
         desktop.add_argument("--state-dir", type=Path, default=Path("run-artifacts/desktop"))
-        desktop.add_argument("--socket", type=Path, help="Attach to this existing resident instead of starting one")
+        endpoint = desktop.add_mutually_exclusive_group()
+        endpoint.add_argument("--socket", type=Path, help="Attach to this existing resident instead of starting one")
+        endpoint.add_argument("--resident-socket", type=Path, help="Private endpoint for a resident started by the desktop product")
         desktop.add_argument("--driver", default="opentrons-simulator")
         desktop.add_argument("--driver-config", type=Path)
         desktop.add_argument("--program-root", type=Path)
@@ -147,7 +149,7 @@ class CulsmaOSCLI:
             from culsma_os.console.models import ConsoleSettings
             from culsma_os.console.providers import ConsoleApplicationFactory
             state = args.state_dir.resolve()
-            socket = args.socket.resolve() if args.socket else state / 'station.sock'
+            socket = (args.socket or args.resident_socket).resolve() if args.socket or args.resident_socket else state / 'station.sock'
             application = args.application or Path(__file__).parent / 'console/native/culsma_console.app/Contents/MacOS/culsma_console'
             if not application.is_file():
                 parser.exit(2, "DESKTOP_APPLICATION_NOT_INSTALLED: build the bundled console or supply --application\n")

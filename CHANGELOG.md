@@ -1,12 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.2.0rc1 — Mac desktop test release
 
-- Add local configuration drafts with immutable revisions, external profile validation, JSON export and process-scoped authorization. Draft editing never activates device configuration.
-
-- Show run-scoped execution attempts, evidence, logical completions and matched material registrations in the read-only console. Existing CLI status responses are unchanged.
-
-- Add a loopback-only, read-only station console connected to an existing resident host. Station, queue and run-report views preserve recorded uncertainty and cannot issue device or run-control commands.
+- Add the native desktop, experiment file browser/editor, loading review and user-facing results.
+- Share file, experiment and configuration use cases with 43 authorized MCP tools.
+- Synchronize external configuration changes while preserving unsaved human edits.
+- Bundle a relocatable Python runtime, official Opentrons simulator and isolated MCP packages in a macOS arm64 DMG.
+- Preserve experiment files, durable execution records and explicit unknown outcomes.
+- Validate the installed product locally; physical instruments and Windows packaging remain outside this release.
 
 ## 0.1.1 — Public experimental preview
 

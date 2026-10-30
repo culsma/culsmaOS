@@ -18,7 +18,7 @@ def test_native_frontend_has_no_device_or_credential_bootstrap_bypass():
 def test_native_and_backend_share_product_version():
     version = tomllib.loads((ROOT/'pyproject.toml').read_text())['project']['version']
     source = (ROOT/'frontend/console/pubspec.yaml').read_text()
-    assert f'version: {version}+' in source
+    assert f"version: {version.replace('rc', '-rc.')}+" in source
 
 
 def test_console_desktop_adapter_only_transports_processes():

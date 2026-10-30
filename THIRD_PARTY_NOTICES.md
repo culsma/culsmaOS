@@ -8,7 +8,7 @@ and retain their own licenses and notices.
 | Culsma | Independent language compiler and runtime | Apache-2.0 |
 | Culsma Opentrons simulator plugin | External Culsma integration; not an official vendor product | Apache-2.0 |
 | Opentrons Python API and shared data 8.8.2 | Official simulator used by the external plugin | Apache-2.0 |
-| MCP Python SDK 2.3.0 | Optional, separately installed stdio bridge for external AI clients | MIT |
+| MCP Python SDK 2.3.0 | Isolated stdio bridge for external AI clients; included in the Mac product | MIT |
 | Pydantic and pydantic-settings | External plugin configuration | MIT |
 
 The release includes separately built compatibility wheels for the Culsma language
@@ -49,3 +49,16 @@ existing Culsma Syntax grammar, bundled as a first-party language asset.
 The code editor bundles Roboto Mono from the Google Fonts project under the SIL
 Open Font License 1.1. Its copyright and full license are included at
 `frontend/console/assets/fonts/RobotoMono-OFL.txt`.
+
+## Self-contained Mac preview
+
+The desktop DMG additionally includes CPython 3.11.18 from Astral's
+python-build-standalone distribution (Python-2.0/CNRI-Python and embedded-library
+licenses). Its matching upstream `PYTHON.json` and complete `licenses/` directory
+are retained under `Contents/Resources/PythonLicenses`.
+The Mac product includes simulator dependencies as installed distributions, with
+original wheel metadata and license/NOTICE files. `Product.json` lists each
+isolated environment's exact package versions and license locations. NumPy's
+bundled numerical-library notices remain in its installed wheel metadata.
+Flutter's `NOTICES.Z` license registry and both font licenses are retained.
+No Hamilton binaries, labware definitions or site-specific layouts are included.

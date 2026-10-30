@@ -11,7 +11,7 @@ outcomes remain explicit and block further execution of the affected run.
 
 [Install](#installation) · [Run an example](#quick-start) · [Example protocols](#example-protocols) · [Architecture](#architecture)
 
-**0.1.1 experimental preview** · Python 3.11–3.12 · [Apache-2.0](LICENSE) · [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23467661.svg)](https://doi.org/10.5281/zenodo.23467661)
+**0.2.0rc1 desktop preview** · Python 3.11–3.12 · [Apache-2.0](LICENSE) · [Archived 0.1.1 DOI](https://doi.org/10.5281/zenodo.23467661)
 
 ## Architecture
 
@@ -43,12 +43,29 @@ functional units. Measurement remains reserved.
 - **Manage resources across programs:** track plate positions, tips and resource reservations.
 - **Inspect execution:** review results, device evidence and unresolved outcomes.
 
-The current preview supports one station with one worker and fixed configuration.
+The desktop preview supports one station with one worker, a native console and
+shared MCP operations for experiment files, execution and station configuration.
 Its main execution path is validated with the official Opentrons simulator;
 physical instrument operation is not yet accepted. culsmaOS runs as a Python
 application on the host computer.
 
 ## Installation
+
+### Mac desktop preview
+
+Download the **macOS arm64 DMG** from the
+[0.2.0rc1 prerelease](https://github.com/culsma/culsmaOS/releases/tag/0.2.0rc1),
+then drag **CulsmaOS Preview.app** into **Applications**. Python, the official
+Opentrons simulator and an isolated MCP bridge are included. Open the App and try
+**Files → Experiments → Transfer → transfer.culs**. Apple Silicon and macOS 15+
+are required; Windows packaging is pending.
+
+This experimental App is ad-hoc signed and has not been Apple notarized.
+See the short [installation and MCP guide](docs/mac-preview.md) for first launch,
+AI client configuration and the separate preview workspace. Physical instruments
+are not connected by this package.
+
+### Archived command-line preview (0.1.1)
 
 Use **Python 3.11 or 3.12**. The commands below use a macOS/Linux shell;
 installed-package validation has been performed on macOS. The resident service

@@ -2,13 +2,12 @@ cff-version: 1.2.0
 message: "If you use culsmaOS, please cite this software release."
 type: software
 title: "culsmaOS: An Operating-System Framework for Laboratory Protocols"
-version: "0.1.1"
-doi: "10.5281/zenodo.23467661"
-date-released: "2026-10-19"
+version: "0.2.0rc1"
+date-released: "2026-10-30"
 license: "Apache-2.0"
 repository-code: "https://github.com/culsma/culsmaOS"
 url: "https://github.com/culsma/culsmaOS"
-abstract: "Laboratory execution host for Culsma programs, with persistent scheduling, external device plugins, evidence-aware material registration, station resource ownership, and conservative recovery of uncertain execution outcomes. Version 0.1.1 is an experimental source preview validated with restricted simulator profiles."
+abstract: "Laboratory execution host for Culsma programs, with persistent scheduling, external device plugins, evidence-aware material registration, station resource ownership, and conservative recovery of uncertain execution outcomes. Version 0.2.0rc1 is an experimental native desktop preview with local simulator and MCP acceptance."
 authors:
   - family-names: "Chen"
     given-names: "Yang"

@@ -99,8 +99,8 @@ Build and verify artifacts locally before uploading a release.
 
 ## Native station console (development checkout)
 
-The console is a local Flutter application and is not included in the published
-0.1.1 wheel. Build it locally with the pinned FVM SDK, then attach it to an
+The console is a local Flutter application. The 0.2.0rc1 Mac DMG bundles it with
+its runtime; the archived 0.1.1 wheel did not include it. Build it locally with the pinned FVM SDK, then attach it to an
 existing resident:
 
 ```sh
@@ -592,3 +592,19 @@ resident's Device Manager through the bounded `configuration-profile` read port.
 The isolated MCP process uses `RemoteDeviceProfileInteractor`; it does not install,
 import or discover instrument plugins. An unavailable resident is an explicit query
 failure, with no fallback to a different local driver environment.
+
+### Mac product acceptance
+
+`tools/build_mac_product.py` assembles the native UI, checksum-pinned standalone
+Python runtime, matching upstream licenses, and separate simulator/MCP package
+trees. It signs locally and creates no GitHub Actions run. Runtime and dependency
+pins are recorded under `tools/desktop/`.
+`tools/test_mac_product.py --app /path/to/CulsmaOS\ Preview.app --output /path/to/evidence`
+runs the installed code with a private user Home and no developer Python paths.
+It checks MCP file editing/conflicts, current profiles, official simulator
+transfer completion, and the native renderer's result-display receipt.
+
+For each runtime package tree, install `tools/desktop/<environment>-requirements.txt`
+with `pip --require-hashes --find-links /path/to/compatibility-wheels --target ...`,
+then install the matching OS wheel with `--no-deps`. The builder rejects package
+version drift and verifies both upstream Python archive hashes before assembly.
