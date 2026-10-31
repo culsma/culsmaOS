@@ -52,6 +52,19 @@ require the current revision/fingerprint and an explicit apply operation.
 Codex configuration follows the [official MCP documentation](https://learn.chatgpt.com/docs/extend/mcp).
 The App does not change your AI client's configuration automatically.
 
+## Select a workstation with AI
+
+The installed product provides `station_selection_status` and
+`select_station_for_next_start`. Read the current selection, then pass its
+`selected_profile` as `expected_selected_profile` with an installed `profile_id`.
+The choice is saved for the next App start. It does not stop the current
+resident, change its driver, or alter station files and run history.
+
+When the reply requests a restart, quit and reopen CulsmaOS and reconnect the
+MCP server. Use `station_status` to verify the actual running driver. The
+`connected_profile` field identifies this MCP connection; it is not a hardware
+observation. Selection also works while the App is closed.
+
 ## Troubleshooting and removal
 
 Startup logs: `~/Library/Application Support/culsmaOS/preview/launcher.log` and

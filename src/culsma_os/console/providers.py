@@ -23,6 +23,19 @@ from culsma_os.program_manager.interactors.setup_interaction import SetupInterac
 
 
 class ConsoleApplicationFactory:
+    def build_station_selection(self, settings, tokens):
+        import os
+        import json
+        path=os.environ.get('CULSMA_OS_STATION_SELECTION_FILE')
+        if path is None:
+            return None
+        from culsma_os.lifecycle_manager.repository import FileStationSelectionRepository
+        from culsma_os.lifecycle_manager.interactors import StationSelectionInteractor
+        catalogue=json.loads(os.environ['CULSMA_OS_STATION_PROFILES'])
+        repository=FileStationSelectionRepository(Path(path),catalogue,catalogue[0]['id'])
+        return StationSelectionInteractor(tokens,repository,os.environ['CULSMA_OS_PRODUCT_PROFILE'],
+            ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)))
+
     def build_view_interaction(self, settings, tokens, observation, documents=None):
         path = settings.view_store_path or settings.socket_path.with_name(settings.socket_path.name + '.views.sqlite3')
         station_id = hashlib.sha256(str(settings.socket_path.resolve()).encode()).hexdigest()
@@ -119,5 +132,6 @@ class ConsoleApplicationFactory:
             bindings=ProgramBindingInteractor(tokens,repository,profiles,source),
             activation=ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),resident),
             labware=LabwareConfigurationInteractor(tokens,repository,resident),
-            developer_tests=DeveloperTestInteractor(tokens,resident))
+            developer_tests=DeveloperTestInteractor(tokens,resident),
+            station_selection=self.build_station_selection(settings,tokens))
         return MCPHostInteractor(tokens,self.observe_operations(settings,bridge))

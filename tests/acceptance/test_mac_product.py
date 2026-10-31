@@ -15,6 +15,7 @@ def product(tmp_path):
     defaults=resources/'defaults';defaults.mkdir(parents=True)
     (defaults/'deck.json').write_text('{"mode":"simulation"}')
     (defaults/'transfer.culs').write_text('let sample=tube(capacity=200uL);return sample;')
+    for name in ('simulator','mcp'):(resources/'packages'/name).mkdir(parents=True)
     home=tmp_path/'User';home.mkdir()
     return MacPreviewProduct(resources,home,tmp_path)
 
@@ -122,11 +123,14 @@ def test_builder_rejects_personal_native_build_paths(tmp_path):
 def test_hamilton_selection_is_explicit_and_retains_existing_opentrons_station(tmp_path):
     p=product(tmp_path);p.initialize()
     deck=p.state/'deck.json';deck.write_text('preserved user configuration')
-    with pytest.raises(ValueError,match='HAMILTON_LOCAL_ADDON_NOT_INSTALLED'):
+    with pytest.raises(ValueError,match='STATION_PROFILE_NOT_INSTALLED'):
         p.select_profile('hamilton-local')
     defaults=p.addon/'defaults';defaults.mkdir(parents=True)
     (defaults/'deck.json').write_text('{"mode":"simulation"}')
     (defaults/'transfer.culs').write_text('Hamilton private example')
+    (defaults/'loadout.json').write_text('{}')
+    (p.addon/'packages').mkdir()
+    (p.addon/'LabWare').mkdir()
     p.select_profile('hamilton-local')
     h=MacPreviewProduct(p.resources,p.user_home,tmp_path);h.initialize()
     assert h.profile=='hamilton-local' and h.socket!=p.socket and h.state!=p.state
@@ -140,7 +144,7 @@ def test_hamilton_selection_is_explicit_and_retains_existing_opentrons_station(t
 
 def test_hamilton_profile_cannot_be_selected_with_unrecognized_name_or_symlink(tmp_path):
     p=product(tmp_path);p.initialize()
-    with pytest.raises(ValueError,match='PRODUCT_STATION_PROFILE_INVALID'):p.select_profile('hamilton-agent')
+    with pytest.raises(ValueError,match='STATION_PROFILE_NOT_FOUND'):p.select_profile('hamilton-agent')
     (p.base_state/'station.json').symlink_to(tmp_path/'outside')
-    with pytest.raises(ValueError,match='PRODUCT_STATION_SELECTION_IS_LINK'):p.select_profile('opentrons-simulator')
+    with pytest.raises(ValueError,match='STATION_SELECTION_FILE_IS_LINK'):p.select_profile('opentrons-simulator')
     with pytest.raises(ValueError,match='PRODUCT_STATION_SELECTION_IS_LINK'):MacPreviewProduct(p.resources,p.user_home,tmp_path)

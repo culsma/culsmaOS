@@ -1,13 +1,14 @@
 """MCP settings adapter: typed request mapping to the existing UI use cases."""
 from typing import Any, Literal
 from culsma_os.workspace_manager.models import StationConfigurationRequest, ProgramBindingRequest, LabwareRequest
-from culsma_os.lifecycle_manager.models import ConsoleActivationRequest
+from culsma_os.lifecycle_manager.models import ConsoleActivationRequest, StationSelectionRequest
 from culsma_os.developer_tools.models import FaultTestRequest
 
 
 class MCPSettingsTools:
     def settings_tools(self):
         groups = [
+            (self.station_selection, [(self.station_selection_status, True), (self.select_station_for_next_start, False)]),
             (self.configuration, [(self.configuration_profiles, True), (self.list_configurations, True),
                 (self.read_configuration, True), (self.create_configuration, False),
                 (self.save_configuration, False), (self.validate_configuration, True),
@@ -80,3 +81,11 @@ class MCPSettingsTools:
     def test_device_fault(self, scenario: Literal['tip_unavailable','liquid_insufficient','interrupted']) -> dict[str, Any]:
         """Run the Developer panel's detached fault test and return the same operator guidance; never alters station inventory or resumes a run."""
         return self.developer_tests.execute(self.raw_credential, FaultTestRequest(scenario))
+
+    def station_selection_status(self) -> dict[str, Any]:
+        """Read installed product workstations, this connection's profile, next-start selection and actual resident readiness. Works before starting the App."""
+        return self.station_selection.execute(self.raw_credential, StationSelectionRequest('status'))
+
+    def select_station_for_next_start(self, profile_id: str, expected_selected_profile: str) -> dict[str, Any]:
+        """Persist a workstation choice against the selection read earlier. Does not stop or switch the running station. Restart the App and reconnect MCP when indicated; station_status verifies the actual driver."""
+        return self.station_selection.execute(self.raw_credential, StationSelectionRequest('select',profile_id,expected_selected_profile))

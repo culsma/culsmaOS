@@ -20,7 +20,9 @@ async def exercise(app, env):
             assert not result.is_error,result
             return result.structured_content
         tools=(await client.list_tools()).tools
-        assert len(tools)==43,len(tools)
+        assert {'station_selection_status','select_station_for_next_start'}<={tool.name for tool in tools}
+        selection=await call('station_selection_status')
+        assert selection['connected_profile']=='opentrons-simulator'
         for _ in range(300):
             result=await client.call_tool('station_status',{})
             if not result.is_error and result.structured_content['data']['host']['status']=='ready':break

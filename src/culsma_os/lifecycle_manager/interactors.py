@@ -514,3 +514,52 @@ class ConsoleActivationInteractor(AuthorizedInteractor):
         if not isinstance(result,dict):
             raise ConfigurationError('CONFIGURATION_HOST_RESPONSE_INVALID','bad_response')
         return result
+
+
+from culsma_os.auth.interactors import AuthorizedInteractor
+
+
+class StationSelectionInteractor(AuthorizedInteractor):
+    """Select a startup profile without stopping, rebinding or replaying a resident."""
+    required_capability = 'configuration:activate'
+
+    def __init__(self, tokens, repository, connected_profile, observation=None):
+        super().__init__(tokens)
+        self.repository, self.connected_profile, self.observation = repository, connected_profile, observation
+
+    def perform(self, request):
+        from .models import StationSelectionRequest, StationSelectionError
+        if not isinstance(request,StationSelectionRequest) or request.action not in {'status','select'}:
+            raise StationSelectionError('STATION_SELECTION_REQUEST_INVALID')
+        profiles=self.repository.profiles()
+        if request.action=='status':
+            if request.profile_id is not None or request.expected_selected_profile is not None:
+                raise StationSelectionError('STATION_SELECTION_REQUEST_INVALID')
+        else:
+            if not isinstance(request.profile_id,str) or not isinstance(request.expected_selected_profile,str):
+                raise StationSelectionError('STATION_SELECTION_REQUEST_INVALID')
+            target=next((row for row in profiles if row['id']==request.profile_id),None)
+            if target is None:
+                raise StationSelectionError('STATION_PROFILE_NOT_FOUND','not_found')
+            if not target['available']:
+                raise StationSelectionError('STATION_PROFILE_NOT_INSTALLED','unavailable')
+            self.repository.select(request.profile_id,request.expected_selected_profile)
+        selected=self.repository.read()
+        changed=selected!=self.connected_profile
+        return {'schema':'culsma_station_selection_v1','profiles':profiles,
+                'connected_profile':self.connected_profile,'selected_profile':selected,
+                'activation':'next_app_start','restart_required':changed,'mcp_reconnect_required':changed,
+                'runtime_changed':False,'station_data_changed':False,
+                'resident':self.resident_status(),
+                'next_step':('Restart CulsmaOS, reconnect this MCP server, then verify station_status.' if changed else
+                    'This connection uses the selected profile. Verify station_status for actual resident readiness.')}
+
+    def resident_status(self):
+        if self.observation is None:
+            return {'status':'not_observed','driver':None}
+        from culsma_os.program_manager.models import ConsoleReadRequest, ConsoleReadError
+        try:
+            host=self.observation.execute(ConsoleReadRequest('station')).data['host']
+            return {'status':host['status'],'driver':host.get('capabilities',{}).get('driver')}
+        except ConsoleReadError:
+            return {'status':'unavailable','driver':None}

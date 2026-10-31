@@ -105,31 +105,34 @@ class MacPreviewProduct:
                 CULSMA_HAMILTON_LOCAL_LOADOUT=str(self.addon/'defaults/loadout.json'),
                 CULSMA_HAMILTON_LOCAL_WORKSPACE=str(self.state/'local-model'))
             sys.path.insert(0,str(self.addon/'packages'))
+        os.environ.update(CULSMA_OS_STATION_SELECTION_FILE=str(self.base_state/'station.json'),
+            CULSMA_OS_PRODUCT_PROFILE=self.profile,
+            CULSMA_OS_STATION_PROFILES=json.dumps(self.station_profiles()))
         os.environ.update(PYTHONPATH=os.pathsep.join(paths), PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1',
                           CULSMA_OS_STATION_ROOT=str(self.state / 'stations'))
         sys.dont_write_bytecode = True
         sys.path.insert(0, str(site))
 
+    def station_profiles(self):
+        return [
+            {'id':'opentrons-simulator','label':'Opentrons official simulator','driver':'opentrons-simulator',
+             'required_paths':[str(self.resources/'defaults/deck.json'),str(self.resources/'packages/simulator')]},
+            {'id':'hamilton-local','label':'Hamilton local simulation','driver':'hamilton-local',
+             'required_paths':[str(self.addon/name) for name in ('packages','LabWare','defaults/deck.json','defaults/loadout.json','defaults/transfer.culs')]},
+        ]
+
     def select_profile(self, profile):
-        if profile not in {'opentrons-simulator','hamilton-local'}:
-            raise ValueError('PRODUCT_STATION_PROFILE_INVALID')
-        if profile=='hamilton-local' and not (self.addon/'defaults/deck.json').is_file():
-            raise ValueError('HAMILTON_LOCAL_ADDON_NOT_INSTALLED')
-        self.private_directory(self.base_state)
-        target=self.base_state/'station.json'
-        if target.is_symlink():
-            raise ValueError('PRODUCT_STATION_SELECTION_IS_LINK')
-        temporary=target.with_suffix('.pending')
-        descriptor=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
-        try:
-            with os.fdopen(descriptor,'w') as stream:
-                json.dump({'profile':profile},stream)
-                stream.flush();os.fsync(stream.fileno())
-            temporary.replace(target)
-        finally:
-            temporary.unlink(missing_ok=True)
-        return {'profile':profile,'status':'selected_for_next_start',
-            'instruction':'Quit and reopen CulsmaOS, then reconnect its MCP server. Existing workstations and files are retained.'}
+        from culsma_os.auth.interactors import TokenInteractor
+        from culsma_os.auth.repository import SessionCredentialRepository
+        from culsma_os.lifecycle_manager.interactors import StationSelectionInteractor
+        from culsma_os.lifecycle_manager.repository import FileStationSelectionRepository
+        from culsma_os.lifecycle_manager.models import StationSelectionRequest
+        tokens=TokenInteractor(SessionCredentialRepository())
+        repository=FileStationSelectionRepository(self.base_state/'station.json',self.station_profiles(),'opentrons-simulator')
+        owner=StationSelectionInteractor(tokens,repository,self.profile)
+        credential='Bearer '+tokens.issue_console_session()
+        current=owner.execute(credential,StationSelectionRequest('status'))
+        return owner.execute(credential,StationSelectionRequest('select',profile,current['selected_profile']))
 
     def connection_settings(self):
         return {'mcpServers': {'culsma_os': {'command': str(self.mcp), 'args': []}}}
@@ -146,6 +149,7 @@ class MacPreviewProduct:
 
     def run(self, mode):
         if mode.startswith('select-'):
+            self.configure_environment('mcp')
             print(json.dumps(self.select_profile(mode.removeprefix('select-'))))
             return
         arguments = self.command(mode)

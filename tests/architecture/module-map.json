@@ -1102,6 +1102,22 @@
         {
           "component": "ConsoleActivationRequest",
           "path": "src/culsma_os/lifecycle_manager/models.py"
+        },
+        {
+          "component": "StationSelectionInteractor",
+          "path": "src/culsma_os/lifecycle_manager/interactors.py"
+        },
+        {
+          "component": "StationSelectionRequest",
+          "path": "src/culsma_os/lifecycle_manager/models.py"
+        },
+        {
+          "component": "StationSelectionRepository",
+          "path": "src/culsma_os/lifecycle_manager/repository.py"
+        },
+        {
+          "component": "FileStationSelectionRepository",
+          "path": "src/culsma_os/lifecycle_manager/repository.py"
         }
       ]
     },

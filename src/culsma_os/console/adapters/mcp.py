@@ -5,6 +5,7 @@ from .settings_mcp import MCPSettingsTools
 from culsma_os.device_manager.models import DeviceProfileQueryError
 from culsma_os.workspace_manager.models import ConfigurationError
 from culsma_os.auth.models import ConsoleAccessError
+from culsma_os.lifecycle_manager.models import StationSelectionError
 from culsma_os.file_system.models import FileReadError
 from culsma_os.console_interaction.models import ViewInteractionError
 from culsma_os.program_manager.models import ConsoleReadError, ConsoleProgramError
@@ -16,7 +17,8 @@ from culsma_os.program_manager.models import SetupInteractionRequest, ConsolePro
 
 
 class MCPServerAdapter(MCPSettingsTools):
-    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None, file_workspace=None, configuration=None, bindings=None, activation=None, labware=None, developer_tests=None):
+    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None, file_workspace=None, configuration=None, bindings=None, activation=None, labware=None, developer_tests=None, station_selection=None):
+        self.station_selection = station_selection
         self.setup, self.programs, self.observation = setup, programs, observation
         self.configuration, self.bindings, self.activation = configuration, bindings, activation
         self.labware, self.developer_tests = labware, developer_tests
@@ -30,7 +32,7 @@ class MCPServerAdapter(MCPSettingsTools):
         from mcp.types import ToolAnnotations
         self.raw_credential = raw_credential
         server = MCPServer('culsmaOS', instructions=(
-            'Operate the existing local OS resident. Authorized file/configuration operations appear in the native console activity and refresh saved content; unsaved operator edits are retained. view_state includes recent presentation activity, not device execution evidence. Read station_status.data.host.capabilities before optional driver operations. Tool visibility does not imply driver support. Commands return durable request receipts; '
+            'Operate the existing local OS resident. When available, station_selection_status and select_station_for_next_start choose a product workstation for the next App start; they do not hot-switch a running driver. Restart the App and reconnect MCP when indicated, then verify station_status. Authorized file/configuration operations appear in the native console activity and refresh saved content; unsaved operator edits are retained. view_state includes recent presentation activity, not device execution evidence. Read station_status.data.host.capabilities before optional driver operations. Tool visibility does not imply driver support. Commands return durable request receipts; '
             'poll their status before claiming application. Read the latest loading plan before editing; '
             'include its fingerprint. Physical loading confirmation belongs to the operator console '
             'and is not an MCP tool. Declared layout and material are not sensor observations.'))
@@ -89,7 +91,7 @@ class MCPServerAdapter(MCPSettingsTools):
         def call(*args, **kwargs):
             try:
                 return method(*args, **kwargs)
-            except (ConsoleAccessError, FileReadError, ViewInteractionError,
+            except (ConsoleAccessError, StationSelectionError, FileReadError, ViewInteractionError,
                     ConsoleReadError, ConsoleProgramError, SupplyReplacementError, ConfigurationError, DeviceProfileQueryError) as error:
                 raise ToolError(f'{error.code} ({error.kind})') from None
         return call

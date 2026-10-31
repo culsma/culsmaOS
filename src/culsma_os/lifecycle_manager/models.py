@@ -24,3 +24,16 @@ class ConsoleActivationRequest:
     revision: int | None = None
     expected_fingerprint: str | None = None
     request_id: str | None = None
+
+
+@dataclass(frozen=True)
+class StationSelectionRequest:
+    action: str
+    profile_id: str | None = None
+    expected_selected_profile: str | None = None
+
+
+class StationSelectionError(ValueError):
+    def __init__(self, code, kind='invalid_request'):
+        super().__init__(code)
+        self.code, self.kind = code, kind

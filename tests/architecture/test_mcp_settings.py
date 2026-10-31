@@ -3,7 +3,7 @@ import ast
 import inspect
 from culsma_os.auth.interactors import AuthorizedInteractor
 from culsma_os.workspace_manager.interactors import StationConfigurationInteractor,ProgramBindingInteractor,LabwareConfigurationInteractor
-from culsma_os.lifecycle_manager.interactors import ConsoleActivationInteractor
+from culsma_os.lifecycle_manager.interactors import ConsoleActivationInteractor,StationSelectionInteractor
 from culsma_os.developer_tools.interactors import DeveloperTestInteractor
 from culsma_os.console.adapters.settings_mcp import MCPSettingsTools
 from tests.support.paths import ROOT
@@ -21,7 +21,7 @@ def test_settings_mcp_contains_only_typed_request_delegation():
         source=inspect.getsource(method)
         assert '.execute(self.raw_credential,' in source
         assert 'self.raw_credential =' not in source
-    for owner in (StationConfigurationInteractor,ProgramBindingInteractor,LabwareConfigurationInteractor,ConsoleActivationInteractor,DeveloperTestInteractor):
+    for owner in (StationConfigurationInteractor,ProgramBindingInteractor,LabwareConfigurationInteractor,ConsoleActivationInteractor,DeveloperTestInteractor,StationSelectionInteractor):
         assert owner.execute is AuthorizedInteractor.execute
         assert owner.required_capability
 
@@ -68,3 +68,11 @@ def test_mcp_queries_resident_profiles_and_has_no_vendor_discovery_dependency():
         assert not any('repository' in name or 'culsma_driver_' in name for name in imports)
     source=inspect.getsource(RemoteDeviceProfileInteractor)
     assert 'configuration-profile' in source and 'fallback' not in source and 'discover(' not in source
+
+
+def test_station_selection_transport_does_not_restart_or_stop_processes():
+    source=inspect.getsource(MCPSettingsTools.select_station_for_next_start)
+    assert 'StationSelectionRequest' in source and '.execute(self.raw_credential,' in source
+    assert not any(word in source for word in ('subprocess','kill(','Path(','write_text'))
+    source=inspect.getsource(StationSelectionInteractor)
+    assert not any(word in source for word in ('subprocess','host-stop','shutdown','kill('))

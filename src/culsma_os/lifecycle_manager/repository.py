@@ -124,3 +124,62 @@ class SqliteResidentConfigurationRepository:
             if current is not None and current[0] != fingerprint:
                 raise ValueError('HOST_CONFIGURATION_MISMATCH')
             self.connection.execute('INSERT OR IGNORE INTO os_resident_configuration VALUES(1,?)', (fingerprint,))
+
+
+class StationSelectionRepository(Protocol):
+    def read(self) -> str: ...
+    def profiles(self) -> list[dict]: ...
+    def select(self, profile_id: str, expected: str) -> None: ...
+
+
+class FileStationSelectionRepository:
+    """Product-local startup preference only; no device or runtime persistence."""
+    def __init__(self, path, catalogue, default_profile):
+        self.path, self.catalogue, self.default_profile = Path(path), tuple(catalogue), default_profile
+
+    def profiles(self):
+        return [{'id':row['id'], 'label':row['label'], 'driver':row['driver'],
+                 'available':all(Path(item).exists() for item in row.get('required_paths', ())) }
+                for row in self.catalogue]
+
+    def read(self):
+        import json
+        from .models import StationSelectionError
+        if self.path.is_symlink():
+            raise StationSelectionError('STATION_SELECTION_FILE_IS_LINK')
+        if not self.path.exists():
+            return self.default_profile
+        try:
+            value=json.loads(self.path.read_text())
+            if not isinstance(value,dict) or set(value)!={'profile'} or not isinstance(value['profile'],str):
+                raise ValueError()
+            return value['profile']
+        except (ValueError,OSError) as error:
+            raise StationSelectionError('STATION_SELECTION_FILE_INVALID') from error
+
+    def select(self, profile_id, expected):
+        import fcntl
+        import json
+        import os
+        import tempfile
+        from .models import StationSelectionError
+        self.path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+        if self.path.parent.is_symlink():
+            raise StationSelectionError('STATION_SELECTION_DIRECTORY_IS_LINK')
+        descriptor=os.open(self.path.with_suffix('.lock'),os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
+        with os.fdopen(descriptor,'a+') as lock:
+            fcntl.flock(lock,fcntl.LOCK_EX)
+            current=self.read()
+            if current!=expected:
+                raise StationSelectionError('STATION_SELECTION_CONFLICT','conflict')
+            if current==profile_id:
+                return
+            descriptor,name=tempfile.mkstemp(prefix='.station-',dir=self.path.parent)
+            temporary=Path(name)
+            try:
+                with os.fdopen(descriptor,'w') as stream:
+                    json.dump({'profile':profile_id},stream)
+                    stream.flush();os.fsync(stream.fileno())
+                os.replace(temporary,self.path)
+            finally:
+                temporary.unlink(missing_ok=True)
