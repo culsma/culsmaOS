@@ -24,7 +24,7 @@ class ProcessingConditionInteractor:
         passive = condition.get("release_kind") == "remove_labware"
         if passive and (self.motions is None or not self.motions.condition_release_registered(activation)):
             return False
-        phases = {"verify_removed": "returned"} if passive else {"disengage": "returned"}
+        phases = {"verify_removed": "returned"} if condition.get("release_kind") in {"remove_labware", "driver_managed_removal"} else {"disengage": "returned"}
         return (attempt is not None and fact is not None and fact.run_id == activation.run_id and fact.mode == activation.mode
                 and fact.attempt_id == attempt.attempt_id
                 and attempt.context["configuration_revision"] == activation.context["configuration_revision"]
@@ -125,3 +125,44 @@ class ProcessingConditionProjectionInteractor:
             projected = self.placement.project_move(condition.labware, condition.source,
                                                     condition.destination, projected)
         return (), projected
+
+
+class BatchProcessingConditionInteractor:
+    """Plan driver-managed retained conditions; no device calls or state registration."""
+    def __init__(self, processing, snapshot):
+        self.processing, self.snapshot = processing, snapshot
+        self.retained = []
+
+    def before_effect(self, pending):
+        from .preparation import MagneticEnvironmentInteractor
+        return () if MagneticEnvironmentInteractor().retains(pending) else self.finish()
+
+    def describe(self, pending, intent, layout, positions):
+        from dataclasses import asdict
+        from ..models import MagneticSeparationIntent
+        if not isinstance(intent, MagneticSeparationIntent):
+            return {}
+        _, module = self.processing.bind_intent(intent, layout, self.snapshot, positions)
+        capability = self.snapshot.processing_capabilities[intent.capability][module]
+        if capability.get('condition_release') != 'driver_managed_removal' or capability.get('batch_condition_release') is not True:
+            raise ValueError('BATCH_RETAINED_CONDITION_UNSUPPORTED')
+        if self.retained:
+            raise ValueError('PROCESSING_CONDITION_ALREADY_RETAINED')
+        condition={'kind':'magnetic_field','release_kind':'driver_managed_removal',
+                   'targets':[target.container_id for target in intent.targets]}
+        self.retained.append((pending.effect_id, intent, module, layout.bindings))
+        return {'operation_kind':'magnetic_separation','module_id':module,
+                'retained_condition':condition,'request':asdict(intent)}
+
+    def finish(self):
+        from dataclasses import asdict
+        from culsma_os.driver_framework.models import BatchOperation
+        result=[]
+        for effect_id, producer, module, bindings in self.retained:
+            release_id=effect_id+'/condition-release'
+            intent=MagneticReleaseIntent(release_id,producer.targets,producer.step_id)
+            result.append(BatchOperation(release_id,intent,bindings,
+                {'operation_kind':'magnetic_release','module_id':module,'system_effect':'condition_release',
+                 'request':asdict(intent),'phases':{'verify_removed':'returned'}}))
+        self.retained=[]
+        return tuple(result)

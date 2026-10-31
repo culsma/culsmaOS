@@ -30,6 +30,8 @@ class BatchProjectionInteractor:
             raise ValueError('BATCH_PROJECTION_REJECTED')
         if effects.units and self.host.codec.fingerprint(effects.units[0]) != self.host.codec.fingerprint(data['pending']):
             raise ValueError('BATCH_PROJECTION_PREFIX_MISMATCH')
+        if effects.batch_conditions is not None:
+            effects.operations.extend(effects.batch_conditions.finish())
         return tuple(effects.units), tuple(effects.operations)
 
 
@@ -38,10 +40,15 @@ class BatchProjectionEffectInteractor(PreflightEffectInteractor):
         super().__init__(data, state, preflight)
         self.codec = codec
         self.units, self.operations = [], []
+        from culsma_os.processing_engine.interactors.conditions import BatchProcessingConditionInteractor
+        self.batch_conditions = (BatchProcessingConditionInteractor(preflight.conditions.processing, preflight.snapshot)
+            if preflight.conditions is not None else None)
         self.allocations = tuple(s for p in data['plan'].plans for s in PlanStepTree.leaves(p.steps) if s.op == 'AllocContainer')
 
     def collect(self, pending):
         preflight = self.preflight
+        if self.batch_conditions is not None:
+            self.operations.extend(self.batch_conditions.before_effect(pending))
         moves = ()
         if preflight.motion is not None and self.motion_projection is not None:
             revision, positions = self.motion_projection
@@ -57,7 +64,8 @@ class BatchProjectionEffectInteractor(PreflightEffectInteractor):
         intent = planner.preflight(pending, preflight.space, preflight.snapshot,
             self.data['scope_id'], self.allocations, physical_positions=positions)
         if intent is not None:
-            self.operations.append(BatchOperation(pending.effect_id, intent, layout.bindings))
+            description = self.batch_conditions.describe(pending,intent,layout,positions) if self.batch_conditions is not None else {}
+            self.operations.append(BatchOperation(pending.effect_id, intent, layout.bindings, description))
 
     def execute(self, step):
         if step.op in self.bootstrap_ops:

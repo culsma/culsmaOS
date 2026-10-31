@@ -103,6 +103,7 @@ class MacPreviewProduct:
             paths.append(str(self.addon/'packages'))
             os.environ.update(CULSMA_HAMILTON_LABWARE_ROOT=str(self.addon/'LabWare'),
                 CULSMA_HAMILTON_LOCAL_LOADOUT=str(self.addon/'defaults/loadout.json'),
+                CULSMA_HAMILTON_LOCAL_MAGNETIC_LOADOUT=str(self.addon/'profiles/magnetic/loadout.json'),
                 CULSMA_HAMILTON_LOCAL_WORKSPACE=str(self.state/'local-model'))
             sys.path.insert(0,str(self.addon/'packages'))
         os.environ.update(CULSMA_OS_STATION_SELECTION_FILE=str(self.base_state/'station.json'),

@@ -40,6 +40,7 @@ class BatchOperation:
     effect_id: str
     intent: LabwareMoveIntent | TransferIntent | ThermalHoldIntent | OrbitalShakeIntent | CentrifugeIntent | MagneticSeparationIntent | MagneticReleaseIntent
     bindings: tuple[SpaceBinding, ...]
+    description: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

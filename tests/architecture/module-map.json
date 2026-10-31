@@ -718,6 +718,10 @@
         {
           "component": "ProjectedConditionRelease",
           "path": "src/culsma_os/processing_engine/models.py"
+        },
+        {
+          "component": "BatchProcessingConditionInteractor",
+          "path": "src/culsma_os/processing_engine/interactors/conditions.py"
         }
       ]
     },

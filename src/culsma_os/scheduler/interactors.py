@@ -606,7 +606,7 @@ class BatchRunExecutionInteractor:
         descriptions = []
         for op in operations:
             move = hasattr(op.intent, 'destination')
-            description = {'operation_kind': 'labware_move' if move else getattr(op.intent, 'capability', 'transfer')}
+            description = {'operation_kind': 'labware_move' if move else getattr(op.intent, 'capability', 'transfer'), **op.description}
             if move:
                 description['motion_intent'] = asdict(op.intent)
                 resources.update((f'{snapshot.mode}:{snapshot.device_id}:gripper',
