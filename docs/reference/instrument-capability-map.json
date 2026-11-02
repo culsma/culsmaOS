@@ -122,7 +122,8 @@
         "Arbitrary mass-to-volume conversion",
         "General liquid-method constraints and arbitrary container bindings"
       ],
-      "owner": "transfer_engine"
+      "owner": "device_manager",
+      "program_mapping_owner": "program_manager"
     },
     {
       "family": "Environment",
@@ -141,7 +142,8 @@
         "General nested field/environment lifecycle",
         "Concurrent heat and shake"
       ],
-      "owner": "processing_engine"
+      "owner": "device_manager",
+      "program_mapping_owner": "program_manager"
     },
     {
       "family": "Agitation",
@@ -169,7 +171,8 @@
         "rock",
         "rotation"
       ],
-      "owner": "processing_engine"
+      "owner": "device_manager",
+      "program_mapping_owner": "program_manager"
     },
     {
       "family": "Separation",
@@ -187,7 +190,8 @@
         "Temperature-controlled centrifugation",
         "Physical supernatant transfer on MicroSpin/HiG"
       ],
-      "owner": "processing_engine"
+      "owner": "device_manager",
+      "program_mapping_owner": "program_manager"
     },
     {
       "family": "Fractionation",
@@ -201,7 +205,8 @@
         "chromatography_program",
         "Fraction collection and device feedback"
       ],
-      "owner": "processing_engine"
+      "owner": "device_manager",
+      "program_mapping_owner": "program_manager"
     },
     {
       "family": "Readout",
@@ -236,8 +241,9 @@
     "external:Culsma/src/culsma/domains/agitation/contracts.py",
     "external:Culsma/src/culsma/pipeline/validate/environment.py",
     "src/culsma_os/program_manager/interactors/semantics.py",
-    "src/culsma_os/processing_engine/interactors/preparation.py",
-    "src/culsma_os/processing_engine/interactors/centrifuge.py"
+    "src/culsma_os/program_manager/interactors/processing_preparation.py",
+    "src/culsma_os/program_manager/interactors/separation_intents.py",
+    "src/culsma_os/device_manager/instruments/execution.py"
   ],
   "flex_workstation": {
     "status": "verified_restricted_simulation",

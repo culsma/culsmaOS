@@ -40,7 +40,7 @@ class BatchProjectionEffectInteractor(PreflightEffectInteractor):
         super().__init__(data, state, preflight)
         self.codec = codec
         self.units, self.operations = [], []
-        from culsma_os.processing_engine.interactors.conditions import BatchProcessingConditionInteractor
+        from culsma_os.scheduler.conditions import BatchProcessingConditionInteractor
         self.batch_conditions = (BatchProcessingConditionInteractor(preflight.conditions.processing, preflight.snapshot)
             if preflight.conditions is not None else None)
         self.allocations = tuple(s for p in data['plan'].plans for s in PlanStepTree.leaves(p.steps) if s.op == 'AllocContainer')

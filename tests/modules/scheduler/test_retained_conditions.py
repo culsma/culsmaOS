@@ -19,7 +19,10 @@ def values(tmp_path):
     layout=LayoutSnapshot('run','layout',(SpaceBinding(target,'plate','A1',2000,'alloc'),))
     snapshot=DeviceConfigurationSnapshot('device','simulation','revision',(),processing_capabilities={
         'magnetic_separation':{'magnet':{'labware':['plate'],'condition_release':'driver_managed_removal','batch_condition_release':True}}})
-    processing=ProcessingInteractor(None,None,None,'device')
+    from culsma_os.device_manager.instruments.execution import InstrumentExecutionRouterInteractor
+    from culsma_os.device_manager.instruments.magnet.interactors import MagnetExecutionPreparationInteractor
+    processing=ProcessingInteractor(None,None,None,'device', devices=InstrumentExecutionRouterInteractor(
+        {'magnetic_separation': MagnetExecutionPreparationInteractor(None)}))
     owner=BatchProcessingConditionInteractor(processing,snapshot)
     return owner,pending,MagneticSeparationIntent('sep',(target,),5),layout,snapshot
 

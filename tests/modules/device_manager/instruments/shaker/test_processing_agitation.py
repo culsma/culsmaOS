@@ -192,7 +192,7 @@ class TestAgitationProcessing:
         assert 'agit' not in scheduler and 'OrbitalShake' not in scheduler
         adapter = (root/'driver_framework/adapters/opentrons.py').read_text()
         assert '.set_and_wait_for_shake_speed' not in adapter and '.close_labware_latch' not in adapter
-        source = (root/'processing_engine/interactors/preparation.py').read_text()
+        source = (root/'program_manager/interactors/processing_preparation.py').read_text()
         assert 'self.intent_planners.get(' in source
         for node in ast.walk(ast.parse(source)):
             if isinstance(node, ast.ImportFrom):

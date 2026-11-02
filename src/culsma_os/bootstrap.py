@@ -23,8 +23,19 @@ from .driver_framework.interactors import (
     NormalizedReceiptInteractor,
     DriverLoaderInteractor,
 )
-from .transfer_engine.interactors import TransferInteractor, MagneticTransferInteractor, CentrifugeTransferInteractor
-from .processing_engine.interactors import (ProcessingInteractor, ThermalHoldPreparationInteractor, AgitationPreparationInteractor, SeparationPreparationInteractor, CentrifugeMethodBindingInteractor)
+from .program_manager.interactors.transfer_preparation import TransferPreparationInteractor
+from .program_manager.interactors.transfer_intents import MagneticTransferInteractor, CentrifugeTransferInteractor
+from .device_manager.instruments.pipetting.interactors import PipettingExecutionPreparationInteractor
+from .device_manager.instruments.magnet.interactors import MagnetExecutionPreparationInteractor
+from .program_manager.interactors.processing_preparation import ProcessingPreparationInteractor
+from .program_manager.interactors.processing_intents import ThermalHoldPreparationInteractor
+from .program_manager.interactors.separation_intents import AgitationPreparationInteractor, SeparationPreparationInteractor
+from .device_manager.instruments.plate_transport.interactors import PlateTransportExecutionPreparationInteractor
+from .device_manager.instruments.execution import InstrumentExecutionRouterInteractor
+from .device_manager.instruments.centrifuge.interactors import CentrifugeMethodBindingInteractor, CentrifugeExecutionPreparationInteractor
+from .device_manager.instruments.temperature.interactors import TemperatureExecutionPreparationInteractor
+from .device_manager.instruments.incubator.interactors import IncubatorExecutionPreparationInteractor
+from .device_manager.instruments.shaker.interactors import ShakerExecutionPreparationInteractor
 from .resource_manager.repository import SqliteResourceRepository, SqliteRunReservationRepository
 from .resource_manager.interactors import ResourceInteractor, ConsumableInteractor, RunReservationInteractor, StationUsageInteractor
 from .program_manager.interactors.safety import RunSafetyInteractor
@@ -127,16 +138,25 @@ class OSApplicationFactory:
             RunWorkspaceInteractor(task_repository, codec, strict=context.workspace_config_path is not None),
         )
         gateway = DriverGatewayInteractor(port, device, receipt_mapper)
-        transfer = TransferInteractor(space, device, gateway, snapshot.device_id, (CentrifugeTransferInteractor(), MagneticTransferInteractor()))
+        transfer = TransferPreparationInteractor(space, device, gateway, snapshot.device_id, (CentrifugeTransferInteractor(), MagneticTransferInteractor()),
+            preparation=PipettingExecutionPreparationInteractor(gateway))
         from .workspace_manager.repository import SqliteLabwarePositionRepository
         from .workspace_manager.interactors import LabwareMotionInteractor
         motion = LabwareMotionInteractor(SqliteLabwarePositionRepository(connections[9], connections[2],
             str(context.database_path.resolve())), space, snapshot, str(context.database_path.resolve()))
-        processing = ProcessingInteractor(space, device, gateway, snapshot.device_id,
+        device_preparers = {
+            'magnetic_separation': MagnetExecutionPreparationInteractor(gateway, motion),
+            'thermal_hold': TemperatureExecutionPreparationInteractor(gateway, motion),
+            'orbital_shake': ShakerExecutionPreparationInteractor(gateway, motion),
+            'centrifuge': CentrifugeExecutionPreparationInteractor(gateway, motion, CentrifugeMethodBindingInteractor()),
+        }
+        device_processing = InstrumentExecutionRouterInteractor(device_preparers,
+            IncubatorExecutionPreparationInteractor(gateway, motion))
+        processing = ProcessingPreparationInteractor(space, device, gateway, snapshot.device_id,
             {"env_hold": ThermalHoldPreparationInteractor(), "agit": AgitationPreparationInteractor(), "sep": SeparationPreparationInteractor()},
-            {"centrifuge": CentrifugeMethodBindingInteractor()}, placement=motion)
+            devices=device_processing)
         from .program_manager.interactors.preflight import ProgramPreflightInteractor
-        from .processing_engine.interactors.conditions import ProcessingConditionProjectionInteractor
+        from .scheduler.conditions import ProcessingConditionProjectionInteractor
         condition_projection = ProcessingConditionProjectionInteractor(processing, space, snapshot, motion)
         preflight = ProgramPreflightInteractor(space, snapshot,
             {"Mutation": transfer, "env_hold": processing, "agit": processing, "sep": processing},
@@ -166,10 +186,12 @@ class OSApplicationFactory:
         execution = ExecutionHostInteractor(tasks, host, state)
         material = MaterialInteractor(LocalMaterialRepository(connections[5]), codec)
         operation_repository = SqliteOperationRepository(connections[6])
-        from .processing_engine.interactors.conditions import ProcessingConditionInteractor
+        from .scheduler.conditions import ProcessingConditionInteractor
         from .scheduler.interactors import MotionSchedulerInteractor
-        motions = MotionSchedulerInteractor(motion, execution, gateway, resource, evidence, device, state)
-        conditions = ProcessingConditionInteractor(evidence, gateway, resource, motions)
+        motions = MotionSchedulerInteractor(motion, execution, gateway, resource, evidence, device, state,
+            preparation=PlateTransportExecutionPreparationInteractor(gateway))
+        conditions = ProcessingConditionInteractor(evidence, gateway, resource, motions,
+            preparation=device_preparers["magnetic_separation"])
         safety = RunSafetyInteractor(tasks, execution, evidence, material, conditions, motions)
         reservations = RunReservationInteractor(station_repository, safety, station_id,
             str(context.database_path.resolve()), snapshot, usage)

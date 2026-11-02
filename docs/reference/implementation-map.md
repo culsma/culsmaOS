@@ -9,13 +9,14 @@
 | Centralized execution strategy, FIFO run ownership and operation dispatch | Scheduler / ResourceManager |
 | Typed identities and evidence-based material registration | MaterialSystem |
 | Physical bindings, positions and motion revisions | WorkspaceManager |
-| Liquid/group planning and processing requests | TransferEngine / ProcessingEngine |
+| Program-step and material-expectation mapping | ProgramManager |
+| Pipetting, magnetic, thermal, shaker, centrifuge, incubator and transport preparation | DeviceManager instrument modules |
 | Device capability snapshots and external plugin contracts | DeviceManager / DriverFramework |
 | Attempts, evidence, reconciliation and finalization | EventJournal / RecoveryManager / LifecycleManager |
 | Native windows, workbar and renderer session client | Flutter console (`frontend/console/lib/features/console/`) |
 | Shared console view requests, renderer sessions and display receipts | ConsoleInteraction (`console_interaction/`) |
 
-Module packages use Interactor / Repository / Model. Visual functional units do not add package layers. Vendor implementations remain external plugins. MeasurementSystem is reserved.
+Old `transfer_engine` and `processing_engine` imports are compatibility exports only. Runtime preparation lives in Device Manager; language mapping remains in Program Manager and retained-condition sequencing in Scheduler. Module packages use Interactor / Repository / Model. Visual functional units do not add package layers. Vendor implementations remain external plugins. MeasurementSystem is reserved.
 
 `ExecutionStrategyInteractor` owns execution-mode selection. The default is
 `stepwise`. An explicitly configured `batch` driver receives a privately projected

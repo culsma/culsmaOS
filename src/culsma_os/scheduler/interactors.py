@@ -2,7 +2,7 @@ from uuid import uuid4
 from dataclasses import dataclass, replace
 from culsma_os.program_manager.models import PendingEffectGroup
 from culsma_os.driver_framework.models import GroupGatewayPort
-from culsma_os.transfer_engine.models import TransferRequest
+from culsma_os.device_manager.instruments.pipetting.models import TransferRequest
 from .models import OperationRequest, OperationConditionPort, ExecutionMode, RunExecutionPort
 from culsma_os.driver_framework.models import OperationPreparationRequest, OperationPreparationPort
 from .repository import OperationRepository
@@ -413,7 +413,9 @@ class LogicalEffectInteractor:
 
 class MotionSchedulerInteractor:
     """Journal auxiliary carrier moves before the language's pending effect."""
-    def __init__(self, motion, execution, gateway, resource, evidence, device, state):
+    def __init__(self, motion, execution, gateway, resource, evidence, device, state, preparation=None):
+        from culsma_os.device_manager.instruments.plate_transport.interactors import PlateTransportExecutionPreparationInteractor
+        self.preparation = preparation or PlateTransportExecutionPreparationInteractor(gateway)
         self.motion, self.execution, self.gateway = motion, execution, gateway
         self.resource, self.evidence, self.device, self.state = resource, evidence, device, state
 
@@ -474,7 +476,7 @@ class MotionSchedulerInteractor:
                 f"{snapshot.mode}:{snapshot.device_id}:slot:{intent.destination}"}))
             context = PlanContext(run_id, snapshot.device_id, snapshot.mode, snapshot.configuration_revision,
                 layout.revision, snapshot.calibration_revision, resources)
-            plan = self.gateway.prepare_motion(effect_id, intent, context)
+            plan = self.preparation.prepare_execution(effect_id, intent, context)
             attempt_id = str(uuid4())
             permit = self.resource.acquire(plan, attempt_id)
             self.motion.space.validate_snapshot(run_id, layout.revision)

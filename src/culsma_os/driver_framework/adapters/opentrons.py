@@ -2,8 +2,8 @@
 
 from dataclasses import asdict
 from culsma_opentrons.modules.models import TemperatureTargetVolume, TemperatureHoldIntent, PreparedTemperatureHold, OrbitalShakeIntent as VendorShakeIntent, PreparedOrbitalShake
-from culsma_os.processing_engine.models import OrbitalShakeIntent, MagneticSeparationIntent, MagneticReleaseIntent
-from culsma_os.transfer_engine.models import MagneticFlowthroughTransferIntent
+from culsma_os.device_manager.instruments.execution_models import OrbitalShakeIntent, MagneticSeparationIntent, MagneticReleaseIntent
+from culsma_os.device_manager.instruments.pipetting.models import MagneticFlowthroughTransferIntent
 from culsma_opentrons.modules.models import MagneticSeparationIntent as VendorMagneticIntent, MagneticReleaseIntent as VendorReleaseIntent, PreparedMagneticOperation, MagneticSourceSelection
 from culsma_opentrons.models import SimulatorBinding, WellAddress, DriverValidationError
 from culsma_os.driver_framework.models import DevicePreparationError

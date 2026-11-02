@@ -46,6 +46,8 @@ class TestArchitecture:
                     "repositories",
                     "adapters",
                     "providers.py",
+                    *( {"instruments"} if relative.parts[0] == "device_manager" else set() ),
+                    *( {"conditions.py"} if relative.parts[0] == "scheduler" else set() ),
                 }, path
             for node in ast.walk(tree):
                 if not isinstance(node, ast.ImportFrom):

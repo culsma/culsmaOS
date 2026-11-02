@@ -1,3 +1,4 @@
+from culsma_os.program_manager.models import RunRequest
 from copy import deepcopy
 from dataclasses import dataclass
 from itertools import product
@@ -252,8 +253,15 @@ class TestTransferMatrix:
         try:
             app.client.start()
             if problem=='insufficient-tips':
+                # Admission restores the station inventory. Induce the device-side
+                # shortage after admission, before the first external operation.
+                identity=app.client.submit_run(RunRequest(plan,init_state(plan)))
+                app.client.lifecycle.runs.advance_ready(identity)
                 backend.restore_consumables({'tips':95})
-            result=app.execute(plan,init_state(plan))
+                app.client.run_until_settled(identity)
+                result=app.client.result(identity)
+            else:
+                result=app.execute(plan,init_state(plan))
             assert not result.ok and result.user_result['os']['status']=='failed'
             code='WORKSPACE_BINDING_MISSING' if problem=='missing-binding' else 'DRV_OT_TIPS_INSUFFICIENT'
             assert code in ' '.join(d.message for d in result.diagnostics)

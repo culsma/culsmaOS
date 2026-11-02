@@ -123,7 +123,7 @@ class DriverGatewayInteractor:
 
     def prepare_collective_group(self, effect_id, step_id, member_effect_ids, intents, context, bindings):
         from .models import PreparedTransferGroup
-        from culsma_os.transfer_engine.models import TransferGroupIntent
+        from culsma_os.device_manager.instruments.pipetting.models import TransferGroupIntent
         self.device.validate_ready(context)
         self.validate_material(context, bindings)
         self.feedback.require_unit(context, "batch")
@@ -208,8 +208,8 @@ class DriverGatewayInteractor:
             yield
 
     def require_selection(self, intent, context):
-        from culsma_os.transfer_engine.interactors import TransferConstraintInteractor
-        TransferConstraintInteractor().require_supported(intent.requirements, self.device.get(context.device_id))
+        from culsma_os.device_manager.instruments.pipetting.interactors import PipettingCapabilityInteractor
+        PipettingCapabilityInteractor().require_supported(intent.requirements, self.device.get(context.device_id))
         if self.device.get(context.device_id).supports_transfer is False:
             raise ValueError("TRANSFER_DEVICE_UNSUPPORTED")
         kind = getattr(intent, "selection_kind", None)

@@ -158,7 +158,7 @@ class TestMultichannelOS:
 
     def test_collective_boundaries(self):
         root=ROOT/'src/culsma_os'
-        for name in ['scheduler/interactors.py','transfer_engine/interactors.py','driver_framework/interactors.py']:
+        for name in ['scheduler/interactors.py','program_manager/interactors/transfer_intents.py','driver_framework/interactors.py']:
             text=(root/name).read_text()
             assert 'culsma_opentrons' not in text and 'pick_up_tip' not in text
         adapter=(root/'driver_framework/adapters/opentrons.py').read_text()

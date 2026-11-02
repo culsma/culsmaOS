@@ -332,6 +332,66 @@
         {
           "component": "RunGuidanceInteractor",
           "path": "src/culsma_os/program_manager/interactors/guidance.py"
+        },
+        {
+          "component": "TransferPreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/transfer_preparation.py"
+        },
+        {
+          "component": "MagneticTransferInteractor",
+          "path": "src/culsma_os/program_manager/interactors/transfer_intents.py"
+        },
+        {
+          "component": "CentrifugeTransferInteractor",
+          "path": "src/culsma_os/program_manager/interactors/transfer_intents.py"
+        },
+        {
+          "component": "TransferConstraintInteractor",
+          "path": "src/culsma_os/program_manager/interactors/transfer_intents.py"
+        },
+        {
+          "component": "ProcessingPreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/processing_preparation.py"
+        },
+        {
+          "component": "ProcessingArgumentsInteractor",
+          "path": "src/culsma_os/program_manager/interactors/processing_arguments.py"
+        },
+        {
+          "component": "ThermalHoldPreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/processing_intents.py"
+        },
+        {
+          "component": "AgitationPreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/separation_intents.py"
+        },
+        {
+          "component": "MagneticPreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/magnetic_intents.py"
+        },
+        {
+          "component": "MagneticEnvironmentInteractor",
+          "path": "src/culsma_os/program_manager/interactors/magnetic_intents.py"
+        },
+        {
+          "component": "ProcessingMaterialVolumeInteractor",
+          "path": "src/culsma_os/program_manager/interactors/material_volumes.py"
+        },
+        {
+          "component": "OrbitalShakePreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/processing_intents.py"
+        },
+        {
+          "component": "CentrifugePreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/separation_intents.py"
+        },
+        {
+          "component": "SeparationPreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/separation_intents.py"
+        },
+        {
+          "component": "CentrifugeSeparationPreparationInteractor",
+          "path": "src/culsma_os/program_manager/interactors/separation_intents.py"
         }
       ]
     },
@@ -394,6 +454,18 @@
         {
           "component": "ExecutionRecoveryPort",
           "path": "src/culsma_os/scheduler/models.py"
+        },
+        {
+          "component": "ProcessingConditionInteractor",
+          "path": "src/culsma_os/scheduler/conditions.py"
+        },
+        {
+          "component": "ProcessingConditionProjectionInteractor",
+          "path": "src/culsma_os/scheduler/conditions.py"
+        },
+        {
+          "component": "BatchProcessingConditionInteractor",
+          "path": "src/culsma_os/scheduler/conditions.py"
         }
       ]
     },
@@ -566,166 +638,6 @@
       ]
     },
     {
-      "module": "TransferEngine",
-      "directory": "src/culsma_os/transfer_engine/",
-      "components": [
-        {
-          "component": "TransferInteractor",
-          "path": "src/culsma_os/transfer_engine/interactors.py"
-        },
-        {
-          "component": "TransferRequest",
-          "path": "src/culsma_os/transfer_engine/models.py"
-        },
-        {
-          "component": "TransferAliquot",
-          "path": "src/culsma_os/transfer_engine/models.py"
-        },
-        {
-          "component": "TransferIntent",
-          "path": "src/culsma_os/transfer_engine/models.py"
-        },
-        {
-          "component": "TransferExecutionDecision",
-          "path": "src/culsma_os/transfer_engine/models.py"
-        },
-        {
-          "component": "MagneticTransferInteractor",
-          "path": "src/culsma_os/transfer_engine/interactors.py"
-        },
-        {
-          "component": "MagneticFlowthroughTransferIntent",
-          "path": "src/culsma_os/transfer_engine/models.py"
-        },
-        {
-          "component": "TransferSelectionPort",
-          "path": "src/culsma_os/transfer_engine/models.py"
-        },
-        {
-          "component": "CentrifugeTransferInteractor",
-          "path": "src/culsma_os/transfer_engine/interactors.py"
-        },
-        {
-          "component": "CentrifugeSupernatantTransferIntent",
-          "path": "src/culsma_os/transfer_engine/models.py"
-        },
-        {
-          "component": "TransferConstraintInteractor",
-          "path": "src/culsma_os/transfer_engine/interactors.py"
-        }
-      ]
-    },
-    {
-      "module": "ProcessingEngine",
-      "directory": "src/culsma_os/processing_engine/",
-      "components": [
-        {
-          "component": "ProcessingInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
-        },
-        {
-          "component": "ThermalHoldIntent",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "ProcessingArgumentsInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
-        },
-        {
-          "component": "ThermalHoldPreparationInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
-        },
-        {
-          "component": "AgitationPreparationInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
-        },
-        {
-          "component": "OrbitalShakeIntent",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "ProcessingIntentPort",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "MagneticPreparationInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
-        },
-        {
-          "component": "MagneticEnvironmentInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
-        },
-        {
-          "component": "ProcessingConditionInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/conditions.py"
-        },
-        {
-          "component": "MagneticSeparationIntent",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "MagneticReleaseIntent",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "ProcessingMaterialVolumeInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/material_volume.py"
-        },
-        {
-          "component": "ProcessingMaterialVolume",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "OrbitalShakePreparationInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/preparation.py"
-        },
-        {
-          "component": "CentrifugePreparationInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
-        },
-        {
-          "component": "CentrifugeIntent",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "SeparationPreparationInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
-        },
-        {
-          "component": "CentrifugeSeparationPreparationInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
-        },
-        {
-          "component": "CentrifugeMethodBindingInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/centrifuge.py"
-        },
-        {
-          "component": "ProcessingIntentBindingPort",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "CentrifugeSeparationIntent",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "ProcessingMethodProfile",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "ProcessingConditionProjectionInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/conditions.py"
-        },
-        {
-          "component": "ProjectedConditionRelease",
-          "path": "src/culsma_os/processing_engine/models.py"
-        },
-        {
-          "component": "BatchProcessingConditionInteractor",
-          "path": "src/culsma_os/processing_engine/interactors/conditions.py"
-        }
-      ]
-    },
-    {
       "module": "ResourceManager",
       "directory": "src/culsma_os/resource_manager/",
       "components": [
@@ -854,6 +766,82 @@
         {
           "component": "StationCapabilitiesInteractor",
           "path": "src/culsma_os/device_manager/interactors.py"
+        },
+        {
+          "component": "TransferRequest",
+          "path": "src/culsma_os/device_manager/instruments/pipetting/models.py"
+        },
+        {
+          "component": "TransferAliquot",
+          "path": "src/culsma_os/device_manager/instruments/pipetting/models.py"
+        },
+        {
+          "component": "TransferIntent",
+          "path": "src/culsma_os/device_manager/instruments/pipetting/models.py"
+        },
+        {
+          "component": "TransferExecutionDecision",
+          "path": "src/culsma_os/device_manager/instruments/pipetting/models.py"
+        },
+        {
+          "component": "MagneticFlowthroughTransferIntent",
+          "path": "src/culsma_os/device_manager/instruments/pipetting/models.py"
+        },
+        {
+          "component": "TransferSelectionPort",
+          "path": "src/culsma_os/device_manager/instruments/pipetting/models.py"
+        },
+        {
+          "component": "CentrifugeSupernatantTransferIntent",
+          "path": "src/culsma_os/device_manager/instruments/pipetting/models.py"
+        },
+        {
+          "component": "ThermalHoldIntent",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "OrbitalShakeIntent",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "ProcessingIntentPort",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "MagneticSeparationIntent",
+          "path": "src/culsma_os/device_manager/instruments/magnet/models.py"
+        },
+        {
+          "component": "MagneticReleaseIntent",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "ProcessingMaterialVolume",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "CentrifugeIntent",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "CentrifugeMethodBindingInteractor",
+          "path": "src/culsma_os/device_manager/instruments/centrifuge/interactors.py"
+        },
+        {
+          "component": "ProcessingIntentBindingPort",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "CentrifugeSeparationIntent",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "ProcessingMethodProfile",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "ProjectedConditionRelease",
+          "path": "src/culsma_os/device_manager/instruments/execution_models.py"
         }
       ]
     },

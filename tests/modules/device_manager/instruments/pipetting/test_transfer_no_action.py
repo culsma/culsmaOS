@@ -224,7 +224,7 @@ class TestTransferNoAction:
         assert 'class LogicalCompletion' in (root/'event_journal/models.py').read_text()
         material=(root/'material_system/interactors.py').read_text()
         assert 'reconcile_logical' in material and 'OS_TRANSFER_NO_ACTION' in material
-        for relative in ['scheduler/interactors.py','transfer_engine/interactors.py','event_journal/interactors/evidence.py','material_system/interactors.py']:
+        for relative in ['scheduler/interactors.py','program_manager/interactors/transfer_intents.py','event_journal/interactors/evidence.py','material_system/interactors.py']:
             source=(root/relative).read_text()
             assert 'culsma_opentrons' not in source and 'culsma_driver_hamilton' not in source
         for node in ast.walk(ast.parse((root/'event_journal/models.py').read_text())):

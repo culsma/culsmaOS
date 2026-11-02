@@ -1,0 +1,1 @@
+"""Independent shaker profile preparation."""

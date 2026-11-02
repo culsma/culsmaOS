@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Any, Protocol
-from culsma_os.processing_engine.models import ThermalHoldIntent, OrbitalShakeIntent, CentrifugeIntent, MagneticSeparationIntent, MagneticReleaseIntent
+from culsma_os.device_manager.instruments.execution_models import ThermalHoldIntent, OrbitalShakeIntent, CentrifugeIntent, MagneticSeparationIntent, MagneticReleaseIntent
 from culsma_os.program_manager.models import PendingEffect
 from culsma.pipeline.plan_nodes import PlanStep
-from culsma_os.transfer_engine.models import TransferIntent, TransferGroupIntent
+from culsma_os.device_manager.instruments.pipetting.models import TransferIntent, TransferGroupIntent
 from pathlib import Path
 from dataclasses import field
 from typing import ContextManager

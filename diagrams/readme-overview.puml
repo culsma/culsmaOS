@@ -29,24 +29,17 @@ package "culsmaOS" as OS {
   rectangle "<b>Program Control</b>\nProgramManager\nScheduler" as CONTROL
   rectangle "<b>Material System</b>\nMaterialSystem\n<size:14>Material state and registration</size>" as MATERIAL
   rectangle "<b>Workspace</b>\nWorkspaceManager\n<size:14>Containers and physical locations</size>" as WORKSPACE
-  rectangle "<b>Transfer</b>\nTransferEngine\n<size:14>Liquid transfer</size>" as TRANSFER
-  rectangle "<b>Processing</b>\nProcessingEngine\n<size:14>Temperature, shaking, separation</size>" as PROCESS
   rectangle "<b>Measurement</b>\nMeasurementSystem\n<size:14>Reserved · not integrated</size>" as MEASURE #F0F1F3
   CONTROL -[hidden]right-> MATERIAL
   MATERIAL -[hidden]right-> WORKSPACE
-  TRANSFER -[hidden]right-> PROCESS
-  PROCESS -[hidden]right-> MEASURE
-  MATERIAL -[hidden]down-> PROCESS
   WORKSPACE -[hidden]down-> MEASURE
  }
  rectangle "<b>Shared runtime management</b>\nResourceManager · EventJournal\nRecoveryManager · LifecycleManager" as COMMON #FFF8E9
- rectangle "<b>Capability interfaces and adaptation</b>\nDeviceManager · DriverFramework" as ACCESS #F4F1FA
- PROCESS -[hidden]down-> COMMON
+ rectangle "<b>Capability interfaces and adaptation</b>\nDeviceManager · DriverFramework\n<size:14>Pipetting · Magnet · Centrifuge · Temperature\nShaker · Incubator · Plate transport</size>" as ACCESS #F4F1FA
  COMMON -[hidden]down-> ACCESS
 }
 rectangle "<b>External instrument plugins</b>\nOpentrons · Hamilton · Other backends\n<size:14>Simulators / laboratory instruments</size>" as PLUGINS #F2F5FA
 LANGUAGE -down-> CONTROL : submit program / host runtime
-CONTROL -[#238658]down-> TRANSFER
-TRANSFER -[#238658]down-> ACCESS : prepare / execute
+CONTROL -[#238658]down-> ACCESS : resolved device requests / dispatch
 ACCESS <-down-> PLUGINS : device plans / execution evidence
 @enduml
