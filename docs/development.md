@@ -682,12 +682,13 @@ The batch gateway checks projected step coverage and driver-derived operation fa
 then passes typed selections to the driver. Root execution evidence records the
 exact references, supplied parameters and effective native settings.
 
-Hamilton currently consumes these selections only in its explicit local magnetic
-batch backend. It generates each transfer fragment with its selected settings,
-retaining one OS batch and existing dispatch/evidence/recovery rules. Stepwise,
-collective and native VENUS batch paths reject bound Profiles until supported;
-there is no silent fallback. Local decoder height allowlists still apply. New local
-parameter test heights do not establish official-simulator or physical suitability.
+Hamilton consumes scoped pipetting selections in local magnetic batches and native
+combined HSL preparation, including passive magnetic workflows. Per-step heights
+share one layout, channel, tip cursor and batch outcome. Unsupported per-step changes
+to shared settings are rejected. Stepwise and collective paths still reject bound
+Profiles. Native generation is covered locally; the new Profile parameters still
+require official VENUS simulation. Local decoder height allowlists apply independently;
+passing them does not establish vendor or physical suitability.
 
 
 `tools/test_mac_profile_runtime.py --app /Applications/CulsmaOS\ Preview.app
