@@ -8,6 +8,9 @@ from culsma_os.developer_tools.models import FaultTestRequest
 class MCPSettingsTools:
     def settings_tools(self):
         groups = [
+            (self.instrument_profiles, [(self.instrument_profile_catalogue, True),
+                (self.list_instrument_profiles, True), (self.read_instrument_profile, True),
+                (self.validate_instrument_profile, True), (self.save_instrument_profile, False)]),
             (self.station_selection, [(self.station_selection_status, True), (self.select_station_for_next_start, False)]),
             (self.configuration, [(self.configuration_profiles, True), (self.list_configurations, True),
                 (self.read_configuration, True), (self.create_configuration, False),

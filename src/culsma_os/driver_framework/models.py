@@ -4,6 +4,7 @@ from culsma_os.device_manager.instruments.execution_models import ThermalHoldInt
 from culsma_os.program_manager.models import PendingEffect
 from culsma.pipeline.plan_nodes import PlanStep
 from culsma_os.device_manager.instruments.pipetting.models import TransferIntent, TransferGroupIntent
+from culsma_os.device_manager.instruments.models import ResolvedModuleMethod
 from pathlib import Path
 from dataclasses import field
 from typing import ContextManager
@@ -41,6 +42,7 @@ class BatchOperation:
     intent: LabwareMoveIntent | TransferIntent | ThermalHoldIntent | OrbitalShakeIntent | CentrifugeIntent | MagneticSeparationIntent | MagneticReleaseIntent
     bindings: tuple[SpaceBinding, ...]
     description: dict = field(default_factory=dict)
+    method: ResolvedModuleMethod | None = None
 
 
 @dataclass(frozen=True)

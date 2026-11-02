@@ -28,6 +28,7 @@ class DriverGatewayInteractor:
         self.receipt_mapper = receipt_mapper
         self.reservations = reservations
         self.feedback = FeedbackContractInteractor(device)
+        self.profile_bindings = None
 
     def prepare_vendor(self, operation, operation_id, *arguments):
         try:
@@ -40,6 +41,7 @@ class DriverGatewayInteractor:
 
     def prepare(self, effect_id, intent, context, bindings, completion_unit="operation"):
         self.device.validate_ready(context)
+        if self.profile_bindings is not None: self.profile_bindings.require_unprofiled(context.run_id)
         self.feedback.require_unit(context, completion_unit)
         self.require_selection(intent, context)
         self.validate_material(context, bindings)
@@ -51,6 +53,7 @@ class DriverGatewayInteractor:
 
     def prepare_processing(self, effect_id, intent, context, bindings):
         self.device.validate_ready(context)
+        if self.profile_bindings is not None: self.profile_bindings.require_unprofiled(context.run_id)
         self.feedback.require_unit(context, "operation")
         vendor_plan = self.prepare_vendor(self.port.prepare_processing, intent.step_id, intent, bindings)
         return PreparedDevicePlan(effect_id, intent, context, vendor_plan,
@@ -58,6 +61,7 @@ class DriverGatewayInteractor:
 
     def prepare_motion(self, effect_id, intent, context):
         self.device.validate_ready(context)
+        if self.profile_bindings is not None: self.profile_bindings.require_unprofiled(context.run_id)
         self.feedback.require_unit(context, "operation")
         motion = cast(MotionDevicePort, self.port)
         vendor_plan = self.prepare_vendor(motion.prepare_labware_move, intent.step_id, intent)
@@ -86,7 +90,8 @@ class DriverGatewayInteractor:
         for op in intent.operations:
             if hasattr(op.intent, 'aliquots'):
                 self.require_selection(op.intent, context)
-        vendor = self.prepare_vendor(port.prepare_batch, intent.step_id, intent.step_id, intent.operations)
+        operations = self.profile_bindings.prepare_batch(context, intent.operations) if self.profile_bindings is not None else intent.operations
+        vendor = self.prepare_vendor(port.prepare_batch, intent.step_id, intent.step_id, operations)
         description = port.describe_batch(vendor)
         if description.get('member_step_ids') != list(identities):
             raise ValueError('BATCH_OPERATION_COVERAGE_INVALID')
@@ -126,6 +131,7 @@ class DriverGatewayInteractor:
         from culsma_os.device_manager.instruments.pipetting.models import TransferGroupIntent
         self.device.validate_ready(context)
         self.validate_material(context, bindings)
+        if self.profile_bindings is not None: self.profile_bindings.require_unprofiled(context.run_id)
         self.feedback.require_unit(context, "batch")
         for intent in intents:
             self.require_selection(intent, context)
@@ -549,3 +555,26 @@ class DeviceFaultInteractor:
                 or (stop.state == 'confirmed_stopped' and (fault.source == 'simulation'
                     or fault.basis != 'device_feedback' or not stop.scope or not stop.evidence_ref))):
             raise ValueError('DEVICE_FAULT_INVALID')
+
+
+class DriverInstrumentMethodInteractor:
+    """Discover an offline method factory without opening a device session."""
+    def __init__(self, candidates=None):
+        self.candidates = candidates
+
+    def for_configuration(self, driver, configuration, revision):
+        from culsma_os.device_manager.instruments.models import ModuleProfileError
+        candidates = self.candidates if self.candidates is not None else entry_points(group='culsma.os_devices')
+        matches = [candidate for candidate in candidates if candidate.name == driver]
+        if len(matches) != 1:
+            raise ModuleProfileError('PROFILE_DRIVER_UNAVAILABLE')
+        factory = matches[0].load()
+        build = getattr(factory, 'build_instrument_methods', None)
+        if not callable(build):
+            raise ModuleProfileError('INSTRUMENT_PROFILES_UNSUPPORTED')
+        try:
+            return build(configuration, revision, revision)
+        except ModuleProfileError:
+            raise
+        except (ValueError, KeyError, TypeError) as error:
+            raise ModuleProfileError('PROFILE_CONFIGURATION_INVALID') from error

@@ -126,6 +126,8 @@ class ResidentCommandInteractor:
         compiled = self.compile(request)
         identity = ((compiled.plan,compiled.state,request.configuration_fingerprint) if request.configuration_fingerprint is not None
                     else (compiled.plan,compiled.state))
+        if request.profile_bindings is not None:
+            identity = (identity, request.profile_bindings)
         startup = 'automatic' if request.action == 'start' else 'manual'
         if startup == 'automatic':
             identity = (identity, startup)
@@ -138,7 +140,7 @@ class ResidentCommandInteractor:
             return {**self.describe(previous.run_id), 'request_id': previous.request_id, 'accepted': True}
         if request.configuration_fingerprint is not None and request.configuration_fingerprint != self.configuration.fingerprint:
             raise ValueError('HOST_CONFIGURATION_STALE')
-        run_id = self.tasks.submit(RunRequest(compiled.plan, compiled.state), submission)
+        run_id = self.tasks.submit(RunRequest(compiled.plan, compiled.state, profile_bindings=request.profile_bindings), submission)
         return {**self.describe(run_id), 'request_id': submission.request_id, 'accepted': True}
 
     def close(self):

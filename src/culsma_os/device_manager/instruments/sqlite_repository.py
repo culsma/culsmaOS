@@ -3,6 +3,7 @@ import json
 from uuid import uuid4
 from .models import InstrumentModule, ProfileReference, ModuleProfileDraft, ModuleProfileRevision, ModuleProfileError
 from .values import plain_value
+from .applicability import ProfileApplicabilityInteractor
 
 
 class SqliteModuleProfileRepository:
@@ -24,7 +25,8 @@ class SqliteModuleProfileRepository:
                        'configuration_revision': module.configuration_revision,
                        'shared_resource_ids': list(module.shared_resource_ids)},
             'method_id': profile.method_id, 'definition_revision': profile.definition_revision,
-            'display_name': profile.display_name, 'parameters': plain_value(profile.parameters)},
+            'display_name': profile.display_name, 'parameters': plain_value(profile.parameters),
+            'applicability': ProfileApplicabilityInteractor().encode(profile.applicability)},
             sort_keys=True, allow_nan=False)
 
     def decode(self, payload):
@@ -32,7 +34,8 @@ class SqliteModuleProfileRepository:
         module = value['module']
         module['shared_resource_ids'] = tuple(module['shared_resource_ids'])
         return ModuleProfileRevision(ProfileReference(**value['reference']), InstrumentModule(**module),
-            value['method_id'], value['definition_revision'], value['display_name'], value['parameters'])
+            value['method_id'], value['definition_revision'], value['display_name'], value['parameters'],
+            ProfileApplicabilityInteractor().parse(value.get('applicability')))
 
     def get_revision(self, reference: ProfileReference):
         row = self.connection.execute('SELECT payload FROM module_profile_revisions WHERE device_id=? AND module_id=? AND profile_id=? AND revision=?',
@@ -60,7 +63,7 @@ class SqliteModuleProfileRepository:
                 raise ModuleProfileError('PROFILE_REVISION_CONFLICT')
             reference = ProfileReference(*key, str(uuid4()))
             result = ModuleProfileRevision(reference, module, draft.method_id,
-                draft.definition_revision, draft.display_name, draft.parameters)
+                draft.definition_revision, draft.display_name, draft.parameters, draft.applicability)
             self.connection.execute('INSERT INTO module_profile_revisions(device_id,module_id,profile_id,revision,payload) VALUES(?,?,?,?,?)',
                 (*key, reference.revision, self.encode(result)))
             self.connection.commit()
@@ -68,3 +71,64 @@ class SqliteModuleProfileRepository:
         except Exception:
             self.connection.rollback()
             raise
+
+
+class FileModuleProfileRepository:
+    """Same revision store with operation-scoped connections for HTTP and MCP."""
+    def __init__(self, path):
+        from pathlib import Path
+        self.path = Path(path)
+
+    def list_profiles(self, device_id, module_id):
+        from contextlib import closing
+        import sqlite3
+        if not self.path.exists():
+            return ()
+        with closing(sqlite3.connect(self.path, timeout=5)) as connection:
+            return SqliteModuleProfileRepository(connection).list_profiles(device_id, module_id)
+
+    def get_revision(self, reference):
+        from contextlib import closing
+        import sqlite3
+        if not self.path.exists():
+            raise ModuleProfileError('PROFILE_REVISION_NOT_FOUND')
+        with closing(sqlite3.connect(self.path, timeout=5)) as connection:
+            return SqliteModuleProfileRepository(connection).get_revision(reference)
+
+    def save_revision(self, draft):
+        from contextlib import closing
+        import sqlite3
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with closing(sqlite3.connect(self.path, timeout=5)) as connection:
+            return SqliteModuleProfileRepository(connection).save_revision(draft)
+
+
+class FileRunProfileBindingRepository:
+    """Immutable selections captured before run admission; no latest lookup at dispatch."""
+    def __init__(self, path):
+        from pathlib import Path
+        self.path = Path(path)
+
+    def save(self, run_id, profiles):
+        from contextlib import closing
+        import sqlite3
+        with closing(sqlite3.connect(self.path, timeout=5)) as connection, connection:
+            codec = SqliteModuleProfileRepository(connection)
+            payload = json.dumps({step: codec.encode(profile) for step, profile in profiles.items()}, sort_keys=True)
+            connection.execute('CREATE TABLE IF NOT EXISTS instrument_run_profiles(run_id TEXT PRIMARY KEY,payload TEXT NOT NULL)')
+            row = connection.execute('SELECT payload FROM instrument_run_profiles WHERE run_id=?', (run_id,)).fetchone()
+            if row is not None and row[0] != payload:
+                raise ModuleProfileError('PROFILE_RUN_BINDING_CONFLICT')
+            connection.execute('INSERT OR IGNORE INTO instrument_run_profiles VALUES(?,?)', (run_id, payload))
+
+    def get(self, run_id):
+        from contextlib import closing
+        import sqlite3
+        if not self.path.exists(): return {}
+        with closing(sqlite3.connect(self.path, timeout=5)) as connection:
+            if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='instrument_run_profiles'").fetchone() is None:
+                return {}
+            row = connection.execute('SELECT payload FROM instrument_run_profiles WHERE run_id=?', (run_id,)).fetchone()
+            if row is None: return {}
+            codec = SqliteModuleProfileRepository(connection)
+            return {step: codec.decode(profile) for step, profile in json.loads(row[0]).items()}

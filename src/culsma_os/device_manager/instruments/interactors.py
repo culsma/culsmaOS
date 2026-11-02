@@ -1,8 +1,7 @@
-"""Profile services: save and prepare_step_method are callable, not registered in the App.
+"""Profile validation and revision services.
 
-Protected UI/MCP calls must use inherited execute(raw_credential, request).
-Internal resolution is a peer-module service, never an alternative public entry.
-No live App entry, current caller or execution engine is changed here.
+Static UI/MCP management uses profile_api.InstrumentProfileInteractor. Internal
+method selection is separate and is not yet a persisted run binding.
 """
 from abc import ABC, abstractmethod
 from culsma_os.auth.interactors import AuthorizedInteractor
@@ -46,6 +45,13 @@ class SaveModuleProfileInteractor(AuthorizedInteractor):
         self.profiles = profiles
 
     def perform(self, request: ModuleProfileDraft) -> ModuleProfileRevision:
+        self.validate_draft(request)
+        return self.profiles.save_revision(request)
+
+    def validate_draft(self, request: ModuleProfileDraft):
+        from .applicability import ProfileApplicability, ProfileApplicabilityInteractor
+        if request.applicability is not None and not isinstance(request.applicability, ProfileApplicability):
+            raise ModuleProfileError('PROFILE_APPLICABILITY_INVALID')
         current = [module for module in self.methods.list_instrument_modules(request.module.device_id)
                    if module.module_id == request.module.module_id]
         if len(current) != 1 or current[0] != request.module:
@@ -57,7 +63,7 @@ class SaveModuleProfileInteractor(AuthorizedInteractor):
         validation = self.methods.validate_profile_parameters(request)
         if not validation.valid:
             raise ModuleProfileError('PROFILE_PARAMETERS_REJECTED', validation.diagnostics)
-        return self.profiles.save_revision(request)
+        return validation
 
 
 class ModuleProfileResolutionInteractor(ABC):

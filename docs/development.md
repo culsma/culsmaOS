@@ -616,3 +616,84 @@ used as a substitute for this check.
 
 The assembler strips native debug/local symbols before the personal-path gate;
 Dart source URI paths must already come from the neutral archive build.
+
+## Static instrument Profiles
+
+The console API and MCP share an authenticated Device Manager entry and an
+append-only SQLite store next to the configuration database. These settings
+are separate from station configuration templates.
+
+| MCP tool | Purpose |
+| --- | --- |
+| `instrument_profile_catalogue` | Read instrument IDs, methods, parameter schemas and configured defaults |
+| `list_instrument_profiles` | List all revisions for a device/module |
+| `read_instrument_profile` | Read an exact revision |
+| `validate_instrument_profile` | Check proposed parameters without saving |
+| `save_instrument_profile` | Validate and append a revision; require `expected_revision` when updating |
+
+HTTP uses `POST /api/v1/instrument-profiles` with actions `catalogue`, `list`,
+`read`, `validate`, or `save`, the console session credential and same-origin
+headers. Both interfaces delegate to `InstrumentProfileInteractor.execute`.
+
+Start with a saved configuration's `draft_id`, integer `configuration_revision`
+and `device_id`. Query the catalogue before supplying `module_id`, `method_id`,
+`definition_revision`, a `profile_id`, `display_name` and `parameters`. The driver
+resolves module facts; callers cannot provide a module descriptor or permissions.
+Read uses `profile_revision`; an update uses the last saved `expected_revision`.
+A revision conflict requires rereading, not an unconditional overwrite.
+
+Hamilton factories expose offline magnetic and pipetting rules plus their other
+configured instruments through `build_instrument_methods`. Unsupported installed
+drivers return `INSTRUMENT_PROFILES_UNSUPPORTED`; unavailable packages return
+`PROFILE_DRIVER_UNAVAILABLE`. No simulator, Agent or hardware session is opened.
+The OS does not invent parameter defaults for unsupported devices.
+
+Results explicitly report `scope=static_configuration`, `activation=not_applied`
+and `run_binding=not_bound`. A saved revision is statically checked, not scientifically
+validated or commissioned. Historical revisions remain readable even when a later
+station configuration differs. Per-program binding, execution consumption and AI
+selection policy are separate work; saving here does not change an experiment.
+
+
+Operation-scoped Profiles add an optional OS-owned `ProfileApplicability`: operation
+kind, allowed source/destination/tip models, per-aspiration volume bounds, and required
+source conditions. HTTP/MCP accept it as `applicability`; every saved revision stores
+it with the full parameter snapshot. Existing unscoped revisions remain unscoped.
+An edit must submit the complete applicability and parameters; there is no runtime
+inheritance or silent default Profile selection.
+
+`ProfileOperationContext` is an internal preparation input from the execution owner,
+not an MCP claim about physical state. A scoped selection requires matching run/step
+identity, operation, models, every split aspiration volume, and conditions. These
+checks restrict use; they do not establish scientific validity or detect physical loading.
+
+`PipettingParameters` defines portable heights (mm) and optional flow rates (uL/s).
+Hamilton advertises `positioned_pipetting` for heights, translates it to its configured
+native liquid class, and explicitly rejects unsupported flow rates. The older
+`fixed_height_pipetting` method remains available with its existing contract.
+`InstrumentMethodTranslationPort.translate_step_method` returns an immutable
+`TranslatedInstrumentMethod`, preserving the exact selection and driver-owned payload.
+
+Batch runs may now submit `profile_bindings` to `start_program` or `submit_program`:
+`{step_id: {device_id, module_id, profile_id, revision}}`. Inspect the exact source
+snapshot's `execution_steps` first. Admission captures full immutable revisions in
+Device Manager's run-profile table; later edits cannot change an admitted run.
+The batch gateway checks projected step coverage and driver-derived operation facts,
+then passes typed selections to the driver. Root execution evidence records the
+exact references, supplied parameters and effective native settings.
+
+Hamilton currently consumes these selections only in its explicit local magnetic
+batch backend. It generates each transfer fragment with its selected settings,
+retaining one OS batch and existing dispatch/evidence/recovery rules. Stepwise,
+collective and native VENUS batch paths reject bound Profiles until supported;
+there is no silent fallback. Local decoder height allowlists still apply. New local
+parameter test heights do not establish official-simulator or physical suitability.
+
+
+`tools/test_mac_profile_runtime.py --app /Applications/CulsmaOS\ Preview.app
+--output /path/outside/git/profile-result.json` uses the installed MCP server and
+resident. It preserves exact revisions while checking 2.5/4 mm and 2.5/3.5 mm
+transfer actions, complete magnetic workflows, and a pre-dispatch operation mismatch.
+Use the bundled interpreter with `Contents/Resources/packages/mcp` on `PYTHONPATH`.
+The active local decoder must explicitly permit those test heights; the probe does
+not alter its scope or any physical station. A deliberate failed run remains in history.

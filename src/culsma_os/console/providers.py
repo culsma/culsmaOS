@@ -23,6 +23,15 @@ from culsma_os.program_manager.interactors.setup_interaction import SetupInterac
 
 
 class ConsoleApplicationFactory:
+    def build_instrument_profiles(self, settings, tokens, repository):
+        from culsma_os.device_manager.instruments.profile_api import InstrumentProfileInteractor
+        from culsma_os.device_manager.instruments.sqlite_repository import FileModuleProfileRepository
+        from culsma_os.driver_framework.interactors import DriverInstrumentMethodInteractor
+        configuration_profiles = DeviceProfileInteractor(DriverProfileInteractor())
+        drafts = ConfigurationDraftInteractor(repository, configuration_profiles)
+        path = (settings.drafts_path or Path('run-artifacts/console/drafts.sqlite3')).with_suffix('.instrument-profiles.sqlite3')
+        return InstrumentProfileInteractor(tokens, drafts, DriverInstrumentMethodInteractor(), FileModuleProfileRepository(path))
+
     def build_station_selection(self, settings, tokens):
         import os
         import json
@@ -49,7 +58,7 @@ class ConsoleApplicationFactory:
         path = settings.view_store_path or settings.socket_path.with_name(settings.socket_path.name + '.views.sqlite3')
         station_id = hashlib.sha256(str(settings.socket_path.resolve()).encode()).hexdigest()
         observer = ConsoleActivityInteractor(SqliteViewInteractionRepository(path, station_id))
-        for name in ('configuration','bindings','activation','programs','setup','setup_commands','labware','file_workspace'):
+        for name in ('configuration','bindings','activation','programs','setup','setup_commands','labware','file_workspace','instrument_profiles'):
             owner=getattr(application,name,None)
             if owner is not None:
                 owner.observer=observer
@@ -109,7 +118,8 @@ class ConsoleApplicationFactory:
             supplies=SupplyInteractionInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
             file_reads=self.build_files(settings,tokens,source),
             file_workspace=self.build_workspace(tokens,source),
-            developer_tests=DeveloperTestInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10))))
+            developer_tests=DeveloperTestInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
+            instrument_profiles=self.build_instrument_profiles(settings,tokens,repository)))
 
     def build_mcp(self, settings, profiles=None):
         from .adapters.mcp import MCPServerAdapter
@@ -133,5 +143,6 @@ class ConsoleApplicationFactory:
             activation=ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),resident),
             labware=LabwareConfigurationInteractor(tokens,repository,resident),
             developer_tests=DeveloperTestInteractor(tokens,resident),
-            station_selection=self.build_station_selection(settings,tokens))
+            station_selection=self.build_station_selection(settings,tokens),
+            instrument_profiles=self.build_instrument_profiles(settings,tokens,repository))
         return MCPHostInteractor(tokens,self.observe_operations(settings,bridge))

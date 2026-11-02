@@ -8,10 +8,14 @@ class TaskInteractor:
     def __init__(self, repository: TaskRepository, preparation, state):
         self.repository, self.preparation, self.state = repository, preparation, state
         self.setup = None
+        self.profile_bindings = None
 
     def submit(self, request: RunRequest, queue_submission=None) -> str:
         run_id = str(uuid4())
         checkpoint = self.preparation.prepare(request, run_id)
+        if request.profile_bindings is not None:
+            if self.profile_bindings is None: raise ValueError('INSTRUMENT_PROFILES_UNSUPPORTED')
+            self.profile_bindings.bind_run(run_id, request.profile_bindings)
         required = self.setup is not None and self.setup.enabled()
         self.state.create_run(run_id, checkpoint, queue_submission, setup_required=required)
         if required:

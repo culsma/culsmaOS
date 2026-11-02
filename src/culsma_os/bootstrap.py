@@ -183,6 +183,13 @@ class OSApplicationFactory:
         )
         state = RunStateInteractor(task_repository, host, evidence)
         tasks = TaskInteractor(task_repository, preparation, state)
+        from .device_manager.instruments.run_bindings import RunProfileBindingInteractor
+        from .device_manager.instruments.sqlite_repository import FileModuleProfileRepository, FileRunProfileBindingRepository
+        run_profiles = RunProfileBindingInteractor(
+            FileModuleProfileRepository(context.database_path.parent/'drafts.instrument-profiles.sqlite3'),
+            FileRunProfileBindingRepository(context.database_path), port)
+        tasks.profile_bindings = run_profiles
+        gateway.profile_bindings = run_profiles
         execution = ExecutionHostInteractor(tasks, host, state)
         material = MaterialInteractor(LocalMaterialRepository(connections[5]), codec)
         operation_repository = SqliteOperationRepository(connections[6])
@@ -312,6 +319,11 @@ class OSApplicationFactory:
         from .program_manager.interactors.workspace import WorkspaceCheckpointInteractor
         tasks = TaskInteractor(repository, PreparationInteractor(host, self.build_workspace_catalog(context),
             WorkspaceCheckpointInteractor(RuntimeCheckpointCodecInteractor())), state)
+        from .device_manager.instruments.run_bindings import RunProfileBindingInteractor
+        from .device_manager.instruments.sqlite_repository import FileModuleProfileRepository, FileRunProfileBindingRepository
+        tasks.profile_bindings = RunProfileBindingInteractor(
+            FileModuleProfileRepository(context.database_path.parent/'drafts.instrument-profiles.sqlite3'),
+            FileRunProfileBindingRepository(context.database_path))
         execution = ExecutionHostInteractor(tasks, host, state)
         material = MaterialInteractor(LocalMaterialRepository(connections[1]), RuntimeCheckpointCodecInteractor())
         from .program_manager.repositories.setup import SqliteRunSetupRepository

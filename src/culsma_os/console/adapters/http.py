@@ -9,6 +9,8 @@ from urllib.parse import unquote, urlsplit
 from culsma_os.program_manager.models import ConsoleReadError, ConsoleReadRequest, ConsoleProgramRequest, ConsoleProgramError, SetupInteractionRequest
 from culsma_os.workspace_manager.models import StationConfigurationRequest, ConfigurationError, ProgramBindingRequest, LabwareRequest
 from culsma_os.auth.models import ConsoleAccessError
+from culsma_os.device_manager.instruments.models import ModuleProfileError
+from .instrument_profiles import InstrumentProfileRequestMapper
 from culsma_os.resource_manager.models import SupplyReplacementRequest,SupplyReplacementError
 from culsma_os.file_system.models import FileReadRequest,FileReadError
 from culsma_os.lifecycle_manager.models import ConsoleActivationRequest
@@ -18,7 +20,8 @@ from culsma_os.console_interaction.models import ViewInteractionError, ViewState
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None, file_reads=None, developer_tests=None, file_workspace=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None, file_reads=None, developer_tests=None, file_workspace=None, instrument_profiles=None):
+        self.instrument_profiles = instrument_profiles
         self.view_reads, self.view_requests, self.renderer_sessions = view_reads, view_requests, renderer_sessions
         self.settings = settings
         self.file_workspace=file_workspace
@@ -124,7 +127,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                 return
             result = self.server.commands.execute(self.route(url.path))
             self.respond(200, json.dumps(result.as_dict()).encode())
-        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError,FileReadError) as error:
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError,FileReadError,ModuleProfileError) as error:
             status = {"forbidden": 403, "not_found": 404, "invalid_request": 400,
                       "read_only": 405, "unavailable": 503, "bad_response": 502, "unauthenticated":401, "conflict":409}[error.kind]
             self.respond(status, json.dumps({"schema": "culsma_console_v1", "ok": False,
@@ -152,9 +155,10 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         return StationConfigurationRequest('import_layout',driver=payload['driver'],layout_source=payload['layout_source'])
 
     def program_request(self, payload):
-        allowed = {'action','program_id','snapshot_id','request_id','run_id','configuration_fingerprint','source_scope'}
+        allowed = {'action','program_id','snapshot_id','request_id','run_id','configuration_fingerprint','source_scope','profile_bindings'}
         if (not isinstance(payload,dict) or set(payload)-allowed or not isinstance(payload.get('action'),str)
-                or any(value is not None and not isinstance(value,str) for value in payload.values())):
+                or any(value is not None and not isinstance(value,str) for key,value in payload.items() if key != 'profile_bindings')
+                or payload.get('profile_bindings') is not None and not isinstance(payload['profile_bindings'],dict)):
             raise ConsoleReadError('PROGRAM_REQUEST_INVALID','invalid_request')
         return ConsoleProgramRequest(**payload)
 
@@ -243,7 +247,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         try:
             url = urlsplit(self.path)
             self.validate_context(True)
-            endpoints = {'/api/v1/files/workspace':(self.server.file_workspace,self.workspace_request,'culsma_workspace_v1'),'/api/v1/developer/fault-test':(self.server.developer_tests,self.developer_request,'culsma_developer_test_v1'),'/api/v1/files':(self.server.file_reads,self.file_request,'culsma_files_v1'),'/api/v1/consumables':(self.server.supplies,self.supply_request,'culsma_supply_v1'),'/api/v1/console/views/read':(self.server.view_reads,self.view_read_request,'culsma_view_interaction_v1'),
+            endpoints = {'/api/v1/instrument-profiles': (self.server.instrument_profiles, InstrumentProfileRequestMapper().parse, 'culsma_instrument_profiles_v1'),'/api/v1/files/workspace':(self.server.file_workspace,self.workspace_request,'culsma_workspace_v1'),'/api/v1/developer/fault-test':(self.server.developer_tests,self.developer_request,'culsma_developer_test_v1'),'/api/v1/files':(self.server.file_reads,self.file_request,'culsma_files_v1'),'/api/v1/consumables':(self.server.supplies,self.supply_request,'culsma_supply_v1'),'/api/v1/console/views/read':(self.server.view_reads,self.view_read_request,'culsma_view_interaction_v1'),
                          '/api/v1/console/views/request':(self.server.view_requests,self.view_request,'culsma_view_interaction_v1'),
                          '/api/v1/console/renderer':(self.server.renderer_sessions,self.renderer_request,'culsma_view_interaction_v1'),
                          '/api/v1/configuration/labware':(self.server.labware,self.labware_request,'culsma_configuration_v1'),'/api/v1/setup':(self.server.setup_commands,self.setup_request,'culsma_setup_console_v1'),
@@ -277,7 +281,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             interactor, parse_request, schema = endpoints[url.path]
             result = interactor.execute(self.headers.get('Authorization'),parse_request(payload))
             self.respond(200,json.dumps({'schema':schema,'data':result}).encode())
-        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError,FileReadError) as error:
+        except (ConsoleReadError,ConfigurationError,ConsoleAccessError,ConsoleProgramError,ViewInteractionError,SupplyReplacementError,FileReadError,ModuleProfileError) as error:
             status = {'forbidden':403,'unauthenticated':401,'conflict':409,'not_found':404,'invalid_request':400,'unavailable':503,'bad_response':502}[error.kind]
             self.respond(status,json.dumps({'ok':False,'error':{'code':error.code,
                 'diagnostics':getattr(error,'diagnostics',())}}).encode())

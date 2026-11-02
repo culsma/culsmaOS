@@ -19,6 +19,8 @@ class ProfileSelectionInteractor:
             raise ModuleProfileError('PROFILE_DEVICE_MISMATCH')
         profile = self.profiles.get_revision(request.profile)
         self.validate_profile_matches_module(request, profile, kind)
+        from .applicability import ProfileApplicabilityInteractor
+        ProfileApplicabilityInteractor().require_matching_operation(profile.applicability, request.operation_context, request.run_id, request.step_id)
         return profile
 
     def validate_profile_matches_module(self, request, profile, kind):
@@ -40,7 +42,7 @@ class ProfileSelectionInteractor:
 
     def verify_selection_matches_request(self, request, profile, related, result: ResolvedModuleMethod):
         expected = ResolvedModuleMethod(request.run_id, request.step_id, profile, related,
-                                        request.configuration_revision, request.layout_revision)
+                                        request.configuration_revision, request.layout_revision, request.operation_context)
         if result != expected:
             raise ModuleProfileError('PROFILE_RESOLUTION_MISMATCH')
         return result

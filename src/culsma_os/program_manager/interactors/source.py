@@ -79,6 +79,8 @@ class ProgramSourceInteractor:
                 'configuration':'running_service','diagnostics':[d.to_dict() for d in diagnostics],
                 'allocations':[{'allocation_id':step.step_id,'name':step.args.get('container_name',step.args.get('bind'))} for step in steps if step.op=='AllocContainer'],
                 'operations':sorted(set(step.op for step in steps)),
+                'execution_steps':[{'step_id':step.step_id,'operation':step.op,
+                    'line':getattr(step.span,'line',None)} for step in steps if step.op in {'Mutation','sep','agit','env_hold'}],
                 'source':self.sources.read_source(snapshot,program_id)}
 
 

@@ -150,6 +150,16 @@
       "route": "/api/v1/session",
       "exception": "process_bootstrap",
       "reason": "Session credentials are issued privately by the application lifecycle."
+    },
+    {
+      "route": "/api/v1/instrument-profiles",
+      "tools": [
+        "instrument_profile_catalogue",
+        "list_instrument_profiles",
+        "read_instrument_profile",
+        "validate_instrument_profile",
+        "save_instrument_profile"
+      ]
     }
   ]
 }

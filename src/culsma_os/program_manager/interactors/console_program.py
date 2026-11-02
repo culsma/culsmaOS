@@ -16,6 +16,8 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
         if not isinstance(request,ConsoleProgramRequest) or not isinstance(request.action,str):
             raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
         if not isinstance(request.source_scope,str) or request.source_scope not in self.scopes or request.source_scope!='programs' and request.action not in {'inspect','preview','submit','start'}:raise ConsoleProgramError('PROGRAM_SOURCE_SCOPE_INVALID')
+        if request.profile_bindings is not None and (request.action not in {'start','submit'} or not isinstance(request.profile_bindings, dict)):
+            raise ConsoleProgramError('PROFILE_RUN_BINDINGS_INVALID')
         source=self.scopes[request.source_scope]
         values = {'program_id':request.program_id,'snapshot_id':request.snapshot_id,
                   'request_id':request.request_id,'run_id':request.run_id}
@@ -51,6 +53,8 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
             'library_roots':[str(snapshot.directory)],'request_id':request.request_id}
         if request.configuration_fingerprint is not None:
             payload['configuration_fingerprint'] = request.configuration_fingerprint
+        if request.profile_bindings is not None:
+            payload['profile_bindings'] = request.profile_bindings
         result = self.command(payload)
         return {'run':result,'snapshot_id':snapshot.snapshot_id,'program_id':request.program_id,
                 'configuration':'running_service','effect':'admitted_to_resident_queue'}

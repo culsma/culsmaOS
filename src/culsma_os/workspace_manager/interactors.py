@@ -651,6 +651,13 @@ class ConfigurationDraftInteractor:
     def __init__(self, repository: StationConfigurationRepository, profiles):
         self.repository, self.profiles = repository, profiles
 
+    def read_for_instrument_profiles(self, draft_id, revision):
+        import re
+        if (not isinstance(draft_id, str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}', draft_id) is None
+                or type(revision) is not int or revision < 1):
+            raise ConfigurationError('CONFIGURATION_REQUEST_INVALID')
+        return self.repository.get(draft_id, revision).as_dict()
+
     def validated(self, draft_id, revision):
         import re
         if (not isinstance(draft_id,str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',draft_id) is None

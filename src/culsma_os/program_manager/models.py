@@ -16,6 +16,7 @@ class RunRequest:
     plan: PlanProgram
     state: RuntimeState
     setup_preferences: dict | None = None
+    profile_bindings: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -284,6 +285,7 @@ class ResidentCommand:
     supply_origin: str | None = None
     developer_scenario: str | None = None
     profile_request: dict | None = None
+    profile_bindings: dict | None = None
 
 class ResidentAdmissionError(ValueError):
     def __init__(self, code, diagnostics=()):
@@ -329,6 +331,7 @@ class ConsoleProgramRequest:
 
     configuration_fingerprint: str | None = None
     source_scope: str = "programs"
+    profile_bindings: dict | None = None
 
 class ConsoleProgramError(ValueError):
     def __init__(self, code, kind='invalid_request', diagnostics=()):

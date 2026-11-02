@@ -40,18 +40,20 @@ class InstrumentProfileDesignTests(unittest.TestCase):
                 self.assertEqual(cls.required_capability, 'configuration:drafts')
                 self.assertFalse(inspect.isabstract(cls))
 
-    def test_skeleton_imports_only_its_own_contracts_and_auth_boundary(self):
+    def test_instrument_imports_preserve_contract_auth_and_storage_ownership(self):
         package = importlib.import_module('culsma_os.device_manager.instruments')
         root = Path(package.__file__).parent
         allowed = {'__future__', 'abc', 'dataclasses', 'typing', 'culsma.pipeline.plan_nodes', 'culsma.common.source', 'culsma_os.auth.interactors',
                    'collections.abc', 'math', 'types', 'json', 'uuid', 'culsma_os.workspace_manager.models', 'culsma_os.driver_framework.models', 'culsma_os.program_manager.models'}
+        storage_imports = {'pathlib', 'contextlib', 'sqlite3'}
         for path in root.rglob('*.py'):
+            path_allowed = allowed | (storage_imports if path.name == 'sqlite_repository.py' else set()) | ({'re'} if path.name == 'profile_api.py' else set())
             for node in ast.walk(ast.parse(path.read_text())):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
-                        self.assertIn(alias.name, allowed, str(path))
+                        self.assertIn(alias.name, path_allowed, str(path))
                 elif isinstance(node, ast.ImportFrom) and not node.level:
-                    self.assertTrue(node.module in allowed or node.module.startswith('culsma_os.device_manager.instruments.'), str(path))
+                    self.assertTrue(node.module in path_allowed or node.module.startswith('culsma_os.device_manager.instruments.'), str(path))
                 if isinstance(node, ast.ImportFrom):
                     self.assertNotIn('CallerContext', [a.name for a in node.names])
 
@@ -66,7 +68,10 @@ class InstrumentProfileDesignTests(unittest.TestCase):
                 if isinstance(node, ast.ImportFrom) and 'device_manager.instruments' in (node.module or ''):
                     module = node.module
                     # Persistence remains private to Device Manager/composition.
-                    self.assertFalse(module.endswith(('.repository', '.sqlite_repository', '.selection')), str(path))
+                    composition = module.endswith('.sqlite_repository') and (
+                        path.relative_to(source).as_posix() == 'console/providers.py' and {a.name for a in node.names} == {'FileModuleProfileRepository'} or
+                        path.relative_to(source).as_posix() == 'bootstrap.py' and {a.name for a in node.names} == {'FileModuleProfileRepository', 'FileRunProfileBindingRepository'})
+                    self.assertFalse(module.endswith(('.repository', '.sqlite_repository', '.selection')) and not composition, str(path))
                     if module.endswith('.interactors'):
                         relative = path.relative_to(source).as_posix()
                         self.assertTrue(relative == 'bootstrap.py' or relative.startswith((

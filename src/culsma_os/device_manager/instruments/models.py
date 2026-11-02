@@ -1,6 +1,9 @@
 """Profile data contracts. Construction is not device validation or execution approval."""
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Mapping, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .applicability import ProfileApplicability, ProfileOperationContext
 from .values import freeze_value
 
 
@@ -44,6 +47,7 @@ class ModuleProfileDraft:
     definition_revision: str
     display_name: str
     parameters: Mapping[str, object]
+    applicability: "ProfileApplicability | None" = None
 
 
     def __post_init__(self):
@@ -58,6 +62,7 @@ class ModuleProfileRevision:
     definition_revision: str
     display_name: str
     parameters: Mapping[str, object]
+    applicability: "ProfileApplicability | None" = None
 
 
     def __post_init__(self):
@@ -97,6 +102,7 @@ No physical coordinates or material state are duplicated here.
     related_profiles: tuple[ProfileReference, ...]
     configuration_revision: str
     layout_revision: str
+    operation_context: "ProfileOperationContext | None" = None
 
 
 @dataclass(frozen=True)
@@ -114,6 +120,7 @@ mandatory. This result alone cannot authorize or start an action.
     related_profiles: tuple[ModuleProfileRevision, ...]
     configuration_revision: str
     layout_revision: str
+    operation_context: "ProfileOperationContext | None" = None
 
 
 class ModuleProfileError(ValueError):
@@ -121,3 +128,16 @@ class ModuleProfileError(ValueError):
         super().__init__(code)
         self.code = code
         self.diagnostics = diagnostics
+        self.kind = ('not_found' if code == 'PROFILE_REVISION_NOT_FOUND' else
+                     'conflict' if code.endswith(('_CONFLICT', '_STALE')) else
+                     'unavailable' if code.endswith(('_UNAVAILABLE', '_UNSUPPORTED')) else 'invalid_request')
+
+
+@dataclass(frozen=True)
+class TranslatedInstrumentMethod:
+    """One step's driver-owned payload. Preparation only, never execution evidence."""
+    method: ResolvedModuleMethod
+    configuration: Mapping[str, object]
+
+    def __post_init__(self):
+        object.__setattr__(self, 'configuration', freeze_value(self.configuration))

@@ -2,6 +2,8 @@
 from typing import Any, Literal
 from functools import wraps
 from .settings_mcp import MCPSettingsTools
+from .instrument_profiles import MCPInstrumentProfileTools
+from culsma_os.device_manager.instruments.models import ModuleProfileError
 from culsma_os.device_manager.models import DeviceProfileQueryError
 from culsma_os.workspace_manager.models import ConfigurationError
 from culsma_os.auth.models import ConsoleAccessError
@@ -16,8 +18,9 @@ from culsma_os.console_interaction.models import ViewStateReadRequest, ViewReque
 from culsma_os.program_manager.models import SetupInteractionRequest, ConsoleProgramRequest, ConsoleReadRequest
 
 
-class MCPServerAdapter(MCPSettingsTools):
-    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None, file_workspace=None, configuration=None, bindings=None, activation=None, labware=None, developer_tests=None, station_selection=None):
+class MCPServerAdapter(MCPSettingsTools, MCPInstrumentProfileTools):
+    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None, file_workspace=None, configuration=None, bindings=None, activation=None, labware=None, developer_tests=None, station_selection=None, instrument_profiles=None):
+        self.instrument_profiles = instrument_profiles
         self.station_selection = station_selection
         self.setup, self.programs, self.observation = setup, programs, observation
         self.configuration, self.bindings, self.activation = configuration, bindings, activation
@@ -92,7 +95,7 @@ class MCPServerAdapter(MCPSettingsTools):
             try:
                 return method(*args, **kwargs)
             except (ConsoleAccessError, StationSelectionError, FileReadError, ViewInteractionError,
-                    ConsoleReadError, ConsoleProgramError, SupplyReplacementError, ConfigurationError, DeviceProfileQueryError) as error:
+                    ConsoleReadError, ConsoleProgramError, SupplyReplacementError, ConfigurationError, DeviceProfileQueryError, ModuleProfileError) as error:
                 raise ToolError(f'{error.code} ({error.kind})') from None
         return call
 
@@ -133,14 +136,16 @@ class MCPServerAdapter(MCPSettingsTools):
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest('preview', program_id, source_scope=source_scope))
 
     def submit_program(self, program_id: str, snapshot_id: str, request_id: str,
-                       configuration_fingerprint: str | None = None, source_scope: str = 'programs') -> dict[str, Any]:
+                       configuration_fingerprint: str | None = None, source_scope: str = 'programs',
+                      profile_bindings: dict[str, dict[str, str]] | None = None) -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest('submit', program_id, snapshot_id,
-            request_id, configuration_fingerprint=configuration_fingerprint,source_scope=source_scope))
+            request_id, configuration_fingerprint=configuration_fingerprint,source_scope=source_scope,profile_bindings=profile_bindings))
 
     def start_program(self, program_id: str, snapshot_id: str, request_id: str,
-                      configuration_fingerprint: str | None = None, source_scope: str = 'programs') -> dict[str, Any]:
+                      configuration_fingerprint: str | None = None, source_scope: str = 'programs',
+                      profile_bindings: dict[str, dict[str, str]] | None = None) -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest('start', program_id, snapshot_id,
-            request_id, configuration_fingerprint=configuration_fingerprint,source_scope=source_scope))
+            request_id, configuration_fingerprint=configuration_fingerprint,source_scope=source_scope,profile_bindings=profile_bindings))
 
     def control_run(self, run_id: str, action: Literal['pause','resume','cancel'], request_id: str) -> dict[str, Any]:
         return self.programs.execute(self.raw_credential, ConsoleProgramRequest(action, request_id=request_id, run_id=run_id))
