@@ -38,9 +38,10 @@ class NativeConsoleInteractor extends ChangeNotifier {
   bool busy = false, disposed = false;
   bool refreshing = false;
   final activity = <Map<String, dynamic>>[];
-  bool checkingRun = false, submittingRun = false;
+  bool checkingRun = false, submittingRun = false, startRequested = false;
   Completer<void>? refreshCompletion;
-  bool get reviewBusy => checkingRun || submittingRun;
+  bool get startingSimulation => startRequested || submittingRun;
+  bool get reviewBusy => checkingRun || startingSimulation;
   Timer? timer;
   Future<bool> Function(String)? revealTarget;
   NativeConsoleInteractor(
@@ -439,15 +440,22 @@ class NativeConsoleInteractor extends ChangeNotifier {
 
   /// An explicit simulation action; never reinterpret a hardware station as simulated.
   Future<void> runSimulation() async {
-    await refreshCompletion?.future;
-    if (disposed) return;
-    if (!review.simulationAvailable(station, inspection)) {
-      message =
-          'No simulation workstation is available. No experiment has started.';
-      notifyListeners();
-      return;
+    if (disposed || startRequested || submittingRun) return;
+    startRequested = true;
+    notifyListeners();
+    try {
+      await refreshCompletion?.future;
+      if (disposed) return;
+      if (!review.simulationAvailable(station, inspection)) {
+        message =
+            'No simulation workstation is available. No experiment has started.';
+        return;
+      }
+      await confirmLaunch();
+    } finally {
+      startRequested = false;
+      if (!disposed) notifyListeners();
     }
-    await confirmLaunch();
   }
 
   /// Confirmation is bound to the checked snapshot and station configuration.

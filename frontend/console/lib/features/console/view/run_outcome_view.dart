@@ -6,6 +6,7 @@ import 'run_control_panel.dart';
 import 'evidence_panel.dart';
 import 'run_report_panel.dart';
 import 'fault_context.dart';
+import 'run_progress_panel.dart';
 
 /// Renders backend guidance. Recovery eligibility is never inferred from raw errors.
 class NativeRunOutcomeView extends StatelessWidget {
@@ -116,6 +117,7 @@ class NativeRunOutcomeView extends StatelessWidget {
                   ? 'Review the recorded results below.'
                   : 'Review the workstation and run controls below.'),
         ),
+        NativeRunProgressPanel(run: run),
         NativeFaultContext(guidance: guidance),
         if (guidance['device_activity'] == 'none_recorded')
           const Padding(

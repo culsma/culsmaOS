@@ -23,7 +23,7 @@ class NativeRunReviewView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                c.submittingRun
+                c.startingSimulation
                     ? 'Starting the simulation…'
                     : c.checkingRun
                     ? 'Checking the experiment…'
@@ -35,10 +35,17 @@ class NativeRunReviewView extends StatelessWidget {
               const SizedBox(height: 8),
               Text(c.selectedFile ?? ''),
               const SizedBox(height: 8),
-              const Text(
-                'Review the loading plan below. No experiment has started.',
+              Text(
+                c.startingSimulation
+                    ? 'Submitting the run. Its progress and result will open automatically. Please do not start it again.'
+                    : 'Review the loading plan below. No experiment has started.',
               ),
-              if (c.reviewBusy) const LinearProgressIndicator(),
+              if (c.reviewBusy) ...[
+                const SizedBox(height: 12),
+                const LinearProgressIndicator(
+                  semanticsLabel: 'Preparing simulation',
+                ),
+              ],
               if (checked) ...[
                 const SizedBox(height: 12),
                 Wrap(
@@ -57,8 +64,16 @@ class NativeRunReviewView extends StatelessWidget {
                       onPressed: c.reviewBusy || c.dirty || !simulation
                           ? null
                           : c.runSimulation,
-                      icon: const Icon(Icons.science_outlined),
-                      label: const Text('Run simulation'),
+                      icon: c.startingSimulation
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.science_outlined),
+                      label: Text(
+                        c.startingSimulation ? 'Starting…' : 'Run simulation',
+                      ),
                     ),
                     TextButton(
                       onPressed: c.reviewBusy ? null : c.cancelLaunch,

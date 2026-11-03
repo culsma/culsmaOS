@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:culsma_console/features/console/interactor/run_review_interactor.dart';
@@ -7,6 +8,38 @@ import 'package:culsma_console/features/layout/interactor/layout_controller.dart
 import 'package:culsma_console/api/console_api.dart';
 
 void main() {
+  test(
+    'simulation click reports progress before waiting for a background refresh',
+    () async {
+      final api = LocalConsoleApi(
+        DesktopConnection(Uri.parse('http://127.0.0.1:1'), 'unused'),
+      );
+      final layout = LayoutController(api);
+      final c = NativeConsoleInteractor(api, layout);
+      c.station = {
+        'devices': {
+          'devices': [
+            {'mode': 'simulation'},
+          ],
+        },
+      };
+      c.launchReview = {'program_id': 'transfer.culs'};
+      final waiting = Completer<void>();
+      c.refreshCompletion = waiting;
+      final request = c.runSimulation();
+      expect(c.startingSimulation, isTrue);
+      expect(c.reviewBusy, isTrue);
+      await c.runSimulation(); // A second click cannot issue another run.
+      expect(c.startRequested, isTrue);
+      waiting.complete();
+      await request;
+      expect(c.startingSimulation, isFalse);
+      expect(c.pendingStart, isNull);
+      c.dispose();
+      layout.dispose();
+      api.close();
+    },
+  );
   final review = NativeRunReviewInteractor();
   final fixture = jsonDecode(
     File(
