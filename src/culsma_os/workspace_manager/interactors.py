@@ -787,7 +787,7 @@ class WorkspacePlanningInteractor:
             address = fixed.get(demand['allocation_id'])
             candidates = [p for p in locations if self.compatible(demand, p)]
             rows.append({'allocation_id': demand['allocation_id'],
-                'name': demand.get('name') or demand['allocation_id'],
+                'name': (f"{demand['carrier']} / {demand.get('well', '')}" if demand.get('carrier') else demand.get('name') or demand['allocation_id']),
                 'fixed': deepcopy(address), 'required_capacity_uL': demand['capacity_uL'],
                 'kind': demand['kind'], 'geometry': deepcopy(demand.get('geometry')),
                 'compatible_locations': [{'labware': p['labware'], 'well': p['well'],
@@ -799,7 +799,13 @@ class WorkspacePlanningInteractor:
                 overlaps.setdefault(key, []).append(row['name'])
         collisions = [(key, names) for key, names in overlaps.items() if len(names) > 1]
         if collisions:
-            message = '; '.join(f"{', '.join(names)} are fixed to {key[0]} / {key[1]}" for key, names in collisions)
+            messages = []
+            for key, names in collisions:
+                location = next((p for p in locations if (p['labware'], p['well']) == key), {})
+                placement = location.get('placement', {})
+                label = f"track {placement['track']}, site {placement.get('site', '?')} ({key[0]} / {key[1]})" if placement.get('track') else f'{key[0]} / {key[1]}'
+                messages.append(f"{', '.join(names)} are fixed to {label}")
+            message = '; '.join(messages)
             action = 'Choose different positions or change a fixed placement to automatic.'
         elif code == 'SETUP_NO_FEASIBLE_LOCATION':
             message = '; '.join(f"{r['name']} requires {r['kind']} capacity {r['required_capacity_uL']} µL"

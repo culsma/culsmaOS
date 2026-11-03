@@ -37,6 +37,12 @@ class NativeSetupPanel extends StatelessWidget {
       );
     final editable = run['status'] == 'awaiting_setup',
         valid = plan['fingerprint'] is String;
+    final history = plan['activity'] as List? ?? [];
+    final latestError =
+        history.isNotEmpty && history.first['status'] == 'failed'
+        ? history.first['error']?.toString()
+        : null;
+    final problem = c.errors[id] ?? latestError;
     final deck = RecordedDeck.fromLayout({
       'status': 'available',
       'layout': plan['layout'],
@@ -63,11 +69,11 @@ class NativeSetupPanel extends StatelessWidget {
             const Text(
               'These are declared loading requirements. The system cannot detect physical loading.',
             ),
-            if (c.errors[id] != null)
+            if (problem != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  c.errors[id]!,
+                  'Placement change could not be applied. The previous plan is retained.\n$problem',
                   style: const TextStyle(color: Color(0xff924e25)),
                 ),
               ),
