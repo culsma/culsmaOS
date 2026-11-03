@@ -326,3 +326,28 @@ def test_mismatched_receipt_is_not_accepted_as_confirmed_device_evidence(tmp_pat
     assert device['consumables']['tips']['known_consumed']==0
     assert device['consumables']['tips']['available_from_records'] is None
 
+
+
+@pytest.mark.parametrize('scope', ['run', 'unknown'])
+def test_simulation_history_never_claims_current_stock_or_replenishment(tmp_path, scope):
+    from dataclasses import replace
+    fixture = InspectionFixture(tmp_path)
+    device = replace(fixture.device, simulation_scope=scope)
+    with sqlite3.connect(fixture.context.database_path) as connection:
+        connection.execute('UPDATE os_devices SET snapshot=?', (json.dumps(asdict(device)),))
+    fixture.attempt('transfer', 'completed', {'tips': 120}, kind='transfer')
+    before = fixture.dump()
+    result = fixture.query()['devices'][0]
+    tips = result['consumables']['tips']
+    assert result['simulation_scope'] == scope
+    assert tips['known_consumed'] == 120 and tips['status'] == 'history_only'
+    assert tips['available_from_records'] is None and tips['remaining_upper_bound'] is None
+    assert tips['current_load_consumed'] is None and tips['loaded_capacity'] is None
+    assert fixture.dump() == before
+
+
+def test_legacy_simulator_scope_is_unknown_not_assumed_station_stock():
+    from culsma_os.device_manager.repository import SqliteDeviceRepository
+    data = asdict(DeviceConfigurationSnapshot('old', 'simulation', 'r1', ()))
+    del data['simulation_scope']
+    assert SqliteDeviceRepository.decode_snapshot(json.dumps(data)).simulation_scope == 'unknown'

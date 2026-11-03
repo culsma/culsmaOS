@@ -216,26 +216,7 @@ class NativeSystemInformationView extends StatelessWidget {
               'Evidence accounting': device['evidence_accounting'],
               'Position basis': device['positions']?['status'],
             }),
-            NativeInfoTable(
-              columns: const [
-                'Resource',
-                'Lifetime used',
-                'Current box used',
-                'Loaded capacity',
-                'Available from records',
-              ],
-              rows: [
-                for (final row in (device['consumables'] as Map? ?? {}).entries)
-                  [
-                    row.key,
-                    row.value['known_consumed'],
-                    row.value['current_load_consumed'],
-                    row.value['loaded_capacity'] ??
-                        row.value['configured_capacity'],
-                    row.value['available_from_records'] ?? 'Unknown',
-                  ],
-              ],
-            ),
+            NativeConsumableTable(device: device),
             const Text('Recorded plate locations'),
             NativeInfoTable(
               columns: const ['Labware', 'Recorded position'],
@@ -372,4 +353,47 @@ class NativeSystemInformationView extends StatelessWidget {
       ],
     );
   }
+}
+
+class NativeConsumableTable extends StatelessWidget {
+  final Map device;
+  const NativeConsumableTable({super.key, required this.device});
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (device['mode'] == 'simulation' &&
+          device['simulation_scope'] != 'station')
+        const Text(
+          'Simulation history across experiments. Current loading and tip quantities are shown in each experiment loading plan; history does not reduce a new simulation load.',
+        ),
+      NativeInfoTable(
+        columns:
+            device['mode'] == 'simulation' &&
+                device['simulation_scope'] != 'station'
+            ? const ['Resource', 'Historical use across experiments']
+            : const [
+                'Resource',
+                'Lifetime used',
+                'Current box used',
+                'Loaded capacity',
+                'Available from records',
+              ],
+        rows: [
+          for (final row in (device['consumables'] as Map? ?? {}).entries)
+            [
+              row.key,
+              row.value['known_consumed'],
+              if (!(device['mode'] == 'simulation' &&
+                  device['simulation_scope'] != 'station')) ...[
+                row.value['current_load_consumed'],
+                row.value['loaded_capacity'] ??
+                    row.value['configured_capacity'],
+                row.value['available_from_records'] ?? 'Unknown',
+              ],
+            ],
+        ],
+      ),
+    ],
+  );
 }

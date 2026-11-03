@@ -258,6 +258,13 @@ class ResourceInspectionInteractor:
             loaded=len(load['positions']) if load else capacity
             active=totals.get(name,0)-baseline
             unknown=uncertain or active<0
+            if device.mode == 'simulation' and device.simulation_scope != 'station':
+                result[name] = {'configured_capacity': capacity, 'known_consumed': totals.get(name, 0),
+                    'scope': device.simulation_scope, 'status': 'history_only',
+                    'loaded_capacity': None, 'current_load_id': None, 'current_load_consumed': None,
+                    'remaining_upper_bound': None, 'available_from_records': None,
+                    'guidance': 'Historical consumption across experiments. Read the experiment loading plan for this run; this total is not current stock.'}
+                continue
             result[name]={'configured_capacity':capacity,'loaded_capacity':loaded,'known_consumed':totals.get(name,0),
                 'current_load_id':load['request_id'] if load else 'initial','current_load_consumed':active,
                 'remaining_upper_bound':max(0,loaded-active),

@@ -123,7 +123,7 @@ class DeviceInspectionInteractor:
                       if operation.evidence is None or operation.evidence.outcome not in {'completed', 'rejected'}]
         return {'device_id': device.device_id, 'mode': device.mode,
                 'configuration_revision': device.configuration_revision,
-                'calibration_revision': device.calibration_revision,
+                'calibration_revision': device.calibration_revision, 'simulation_scope': device.simulation_scope,
                 'positions': positions, 'evidence_accounting': evidence.accounting, 'unresolved_operations': unresolved,
                 'consumables': self.resources.consumables(device, evidence, resources,
                     unresolved or positions['unresolved_motion'])}

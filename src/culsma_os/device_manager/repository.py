@@ -41,6 +41,7 @@ class SqliteDeviceRepository:
     @staticmethod
     def decode_snapshot(payload):
         data = json.loads(payload)
+        data.setdefault('simulation_scope', 'unknown' if data.get('mode') == 'simulation' else 'station')
         data["shared_resources"] = tuple(data["shared_resources"])
         if "tip_capacity" in data:
             capacity = data.pop("tip_capacity")

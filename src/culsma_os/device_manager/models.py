@@ -33,8 +33,13 @@ class DeviceConfigurationSnapshot:
     motion_capabilities: dict = field(default_factory=dict)
     transfer_requirements: tuple[str, ...] = ()
     setup_required: bool = False
+    simulation_scope: str = "station"
 
     def __post_init__(self):
+        if self.simulation_scope not in {'station', 'run', 'unknown'}:
+            raise ValueError('DEVICE_SIMULATION_SCOPE_INVALID')
+        if self.simulation_scope == 'run' and self.mode != 'simulation':
+            raise ValueError('SIMULATION_SCOPE_REQUIRES_SIMULATION')
         if type(self.setup_required) is not bool:
             raise ValueError("DEVICE_SETUP_CAPABILITY_INVALID")
         if self.supports_transfer is not None and type(self.supports_transfer) is not bool:

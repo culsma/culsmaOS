@@ -139,6 +139,7 @@ void main() {
             {
               'device_id': 'robot',
               'mode': 'simulation',
+              'simulation_scope': 'station',
               'positions': {'status': 'unknown', 'current': null},
               'consumables': {
                 'tips': {'known_consumed': 12, 'available_from_records': null},
