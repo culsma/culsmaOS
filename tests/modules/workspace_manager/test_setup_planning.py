@@ -103,3 +103,29 @@ def test_configured_preferences_can_be_overridden_and_incompatible_defaults_are_
     catalogue['preferred_bindings']['a']={'labware':'missing','well':'1'}
     fallback=planner.plan([f.demand('a')],catalogue)
     assert fallback['bindings']['a']['well']=='1' and not fallback['items'][0]['preferred_satisfied']
+
+
+def test_conflict_explains_materials_fixed_address_and_safe_correction():
+    from culsma_os.workspace_manager.models import WorkspacePlanningError
+    f = PlanningFixture
+    address = {'labware': 'rack', 'well': '1'}
+    with pytest.raises(WorkspacePlanningError) as caught:
+        WorkspacePlanningInteractor().plan([{**f.demand('a'), 'name': 'Stock'}, {**f.demand('b'), 'name': 'Water'}],
+            f.catalogue(f.location('rack')), {'fixed': {'a': address, 'b': address}})
+    error = caught.value
+    assert error.code == 'SETUP_NO_FEASIBLE_LAYOUT'
+    assert 'Stock, Water' in str(error) and 'rack / 1' in str(error)
+    diagnostic = error.diagnostics[0]
+    assert diagnostic['physical_observation'] is False
+    assert 'automatic' in diagnostic['action']
+    assert [r['name'] for r in diagnostic['items']] == ['Stock', 'Water']
+
+
+def test_no_location_diagnostic_records_capacity_and_candidates_without_inventing_reason():
+    f = PlanningFixture
+    from culsma_os.workspace_manager.models import WorkspacePlanningError
+    with pytest.raises(WorkspacePlanningError) as caught:
+        WorkspacePlanningInteractor().plan([f.demand('stock', capacity_uL=500)], f.catalogue(f.location('small')))
+    item = caught.value.diagnostics[0]['items'][0]
+    assert item['required_capacity_uL'] == 500 and item['compatible_locations'] == []
+    assert '500' in str(caught.value)

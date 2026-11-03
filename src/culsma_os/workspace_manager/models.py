@@ -146,3 +146,10 @@ class LabwareRequest:
     action: str
     expected_fingerprint: str
     change: dict | None = None
+
+
+class WorkspacePlanningError(ValueError):
+    """Portable planning evidence shared by App, API and MCP."""
+    def __init__(self, code, message, diagnostics):
+        self.code, self.message, self.diagnostics = code, message, diagnostics
+        super().__init__(f'{code}: {message}')

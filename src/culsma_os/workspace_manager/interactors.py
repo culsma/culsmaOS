@@ -1,6 +1,7 @@
 from copy import deepcopy
 from math import isfinite
 from .repository import WorkspaceInspectionRepository
+from .models import WorkspacePlanningError
 from hashlib import sha256
 import json
 from culsma.runtime.material.args import arg_string
@@ -757,14 +758,14 @@ class WorkspacePlanningInteractor:
                      for d, p in zip(group, rows)),
                 tuple(order[p['labware'], p['well']] for p in rows)))
             if not options:
-                raise ValueError('SETUP_NO_FEASIBLE_LOCATION')
+                raise self.explain_conflict('SETUP_NO_FEASIBLE_LOCATION', group, locations, fixed)
             choices.append((group, options))
         # Constrained units first, then stable input order; bounded complete search.
         choices.sort(key=lambda value: len(value[1]))
         budget = [10000]
         selected = self.assign(choices, 0, set(), {}, set(), budget)
         if selected is None:
-            raise ValueError('SETUP_NO_FEASIBLE_LAYOUT')
+            raise self.explain_conflict('SETUP_NO_FEASIBLE_LAYOUT', demands, locations, fixed)
         bindings, items = {}, []
         for demand in demands:
             location = selected[demand['allocation_id']]
@@ -778,6 +779,38 @@ class WorkspacePlanningInteractor:
                 **({'layout': deepcopy(catalogue['layout'])} if catalogue.get('layout') is not None else {}),
                 'supplies': deepcopy(catalogue.get('supplies', [])),
                 'scope': 'Declared layout and initial material only; not sensed inventory, calibration or collision proof'}
+
+    def explain_conflict(self, code, demands, locations, fixed):
+        """Describe declared constraints; never infer physical occupancy."""
+        rows = []
+        for demand in demands:
+            address = fixed.get(demand['allocation_id'])
+            candidates = [p for p in locations if self.compatible(demand, p)]
+            rows.append({'allocation_id': demand['allocation_id'],
+                'name': demand.get('name') or demand['allocation_id'],
+                'fixed': deepcopy(address), 'required_capacity_uL': demand['capacity_uL'],
+                'kind': demand['kind'], 'geometry': deepcopy(demand.get('geometry')),
+                'compatible_locations': [{'labware': p['labware'], 'well': p['well'],
+                    'placement': deepcopy(p.get('placement', {}))} for p in candidates]})
+        overlaps = {}
+        for row in rows:
+            if row['fixed']:
+                key = (row['fixed']['labware'], row['fixed']['well'])
+                overlaps.setdefault(key, []).append(row['name'])
+        collisions = [(key, names) for key, names in overlaps.items() if len(names) > 1]
+        if collisions:
+            message = '; '.join(f"{', '.join(names)} are fixed to {key[0]} / {key[1]}" for key, names in collisions)
+            action = 'Choose different positions or change a fixed placement to automatic.'
+        elif code == 'SETUP_NO_FEASIBLE_LOCATION':
+            message = '; '.join(f"{r['name']} requires {r['kind']} capacity {r['required_capacity_uL']} µL"
+                + (f" at {r['fixed']['labware']} / {r['fixed']['well']}" if r['fixed'] else '') for r in rows)
+            action = 'Check the selected position, declared availability, container capacity and plate geometry. Change the placement or configure compatible labware.'
+        else:
+            message = 'The declared positions cannot accommodate these items together: ' + ', '.join(r['name'] for r in rows)
+            action = 'Free or configure compatible positions, or relax fixed placements. Wells from one plate must stay on that plate.'
+        return WorkspacePlanningError(code, message + '. ' + action,
+            [{'code': code, 'message': message, 'action': action, 'items': rows,
+              'basis': 'declared_layout', 'physical_observation': False}])
 
     def loading_checklist(self, items):
         labware = {}

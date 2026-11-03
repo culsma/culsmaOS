@@ -154,7 +154,8 @@ class RunSetupInteractor:
                 else:
                     result = self.confirm(run_id, request['fingerprint'], request.get('acknowledged', False))
             except (ValueError, KeyError) as error:
-                self.repository.settle_request(request['request_id'], error=str(error))
+                self.repository.settle_request(request['request_id'], error=str(error),
+                    result={'diagnostics': getattr(error, 'diagnostics', [])})
             else:
                 self.repository.settle_request(request['request_id'], result=result)
 
@@ -227,7 +228,7 @@ class RunSetupPreviewInteractor:
             result = {**base, 'status': 'available', 'plan': plan, 'requirements': demands}
         except ValueError as error:
             result = {**base, 'status': 'blocked', 'plan': None, 'requirements': demands,
-                      'diagnostic': str(error)}
+                      'diagnostic': str(error), 'diagnostics': getattr(error, 'diagnostics', [])}
         self.configuration.verify(self.context)
         if self.configuration.fingerprint != identity:
             raise ValueError('HOST_CONFIGURATION_STALE')
