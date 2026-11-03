@@ -67,6 +67,18 @@ class DeviceInteractor:
         if self.consumables is not None:
             self.consumables.simulation_run_id = run_id
 
+    def prepare_simulation_loading(self, run_id, plan):
+        """Pass the same planned loading to an optional independent run simulator."""
+        configure = getattr(self.readiness, 'configure_simulation_loading', None)
+        if (configure is None or getattr(self.readiness, 'simulation_scope', 'station') != 'run'):
+            return
+        if self.configured_snapshot.mode != 'simulation' or plan['run_id'] != run_id:
+            raise ValueError('SIMULATION_LOADING_SCOPE_INVALID')
+        from copy import deepcopy
+        from .models import SimulationLoadingRequest
+        configure(SimulationLoadingRequest(run_id, self.configured_snapshot.configuration_revision,
+            plan['fingerprint'], tuple(deepcopy(plan['loadout'])), tuple(deepcopy(plan['supplies']))))
+
     def restore_consumables(self, device_id, evidence):
         consumption = self.consumables.restore(self.readiness,device_id) if self.consumables else evidence.known_consumption(device_id)
         # A new load can have the same count as the previous restoration.

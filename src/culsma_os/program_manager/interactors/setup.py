@@ -55,6 +55,7 @@ class RunSetupInteractor:
                 raise ValueError('SETUP_PREFLIGHT_REJECTED')
             document['preflight'] = deepcopy(projected.get('preflight'))
             document['fingerprint'] = self.codec.fingerprint(document)
+            self.device.prepare_simulation_loading(run_id, document)
             document.update(phase='loading' if previous['phase'] in {'loading', 'confirmed'} else 'planned', confirmation=None)
             return self.repository.save(run_id, document, previous['revision'])
 
@@ -135,6 +136,7 @@ class RunSetupInteractor:
                 or confirmation['run_store'] != reservation.run_store
                 or confirmation['resources'] != list(reservation.resources)):
             raise ValueError('SETUP_CONFIRMATION_REQUIRED')
+        self.device.prepare_simulation_loading(run_id, value)
 
     def process_requests(self):
         for request in self.repository.pending_requests():

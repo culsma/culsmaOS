@@ -63,6 +63,21 @@ class DeviceAccessPort(Protocol):
     def validate_ready(self, context) -> None: ...
 
 
+@dataclass(frozen=True)
+class SimulationLoadingRequest:
+    """Initial loading only; execution predictions and final state are excluded."""
+
+    run_id: str
+    configuration_revision: str
+    plan_fingerprint: str
+    loadout: tuple[dict, ...]
+    supplies: tuple[dict, ...]
+
+
+class SimulationLoadingPort(Protocol):
+    def configure_simulation_loading(self, request: SimulationLoadingRequest) -> None: ...
+
+
 class RunScopedSimulationPort(Protocol):
     """Optional simulator capability. Scope selection retains prior run records."""
 

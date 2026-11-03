@@ -57,3 +57,21 @@ def test_shared_setup_uses_fixed_authorization_and_thin_transport_adapters():
     web=(source/'console/web/setup.js').read_text()
     assert 'setInterval' not in web and 'setupFingerprint' in web
     assert "action:'setup.confirm'" in web and "field:'/setup/loaded'" in web
+
+
+def test_simulation_initial_loading_is_a_generic_optional_device_port():
+    source = ROOT/'src/culsma_os'
+    models = ast.parse((source/'device_manager/models.py').read_text())
+    request = next(n for n in models.body if isinstance(n, ast.ClassDef) and n.name == 'SimulationLoadingRequest')
+    fields = {n.target.id for n in request.body if isinstance(n, ast.AnnAssign)}
+    assert fields == {'run_id', 'configuration_revision', 'plan_fingerprint', 'loadout', 'supplies'}
+    setup = ast.parse((source/'program_manager/interactors/setup.py').read_text())
+    cls = next(n for n in setup.body if isinstance(n, ast.ClassDef) and n.name == 'RunSetupInteractor')
+    for name in ('plan', 'require_dispatch'):
+        method = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == name)
+        assert any(isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+            and n.func.attr == 'prepare_simulation_loading' for n in ast.walk(method))
+    for path in ('device_manager/interactors.py', 'device_manager/models.py', 'program_manager/interactors/setup.py'):
+        tree = ast.parse((source/path).read_text())
+        imports = [n.module or '' for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)]
+        assert not any(i.startswith(('culsma_driver_hamilton', 'culsma_opentrons')) for i in imports)
