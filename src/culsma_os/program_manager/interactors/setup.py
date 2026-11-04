@@ -222,8 +222,9 @@ class RunSetupPreviewInteractor:
             return {**base, 'status': 'unsupported', 'plan': None}
         catalogue = self.reader.execute(self.context.config_path)
         checkpoint = self.host.create(compiled.plan, compiled.state, 'preview')
-        demands = self.requirements.inspect(checkpoint)
+        demands = []
         try:
+            demands = self.requirements.inspect(checkpoint)
             plan = self.planner.plan(demands, catalogue)
             result = {**base, 'status': 'available', 'plan': plan, 'requirements': demands}
         except ValueError as error:
