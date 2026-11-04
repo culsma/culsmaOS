@@ -15,6 +15,22 @@ from culsma.pipeline.plan_nodes import PlanStepTree
 from mcp import Client, StdioServerParameters
 
 
+
+def summarize_requirements(steps):
+    """Describe typed plan requirements; never infer hardware or fabricate a readout."""
+    from culsma.runtime.material.args import arg_string
+    separations = [s for s in steps if s.op == 'sep']
+    return {
+        'separation_programs': dict(Counter(s.args.get('program', {}).get('name', 'unresolved') for s in separations)),
+        'named_separation_outputs': sum('bind' in s.args for s in separations),
+        'measurement_operations': dict(Counter(s.op for s in steps if s.op in {'img', 'ecp', 'phy'})),
+        'container_kinds': dict(Counter(arg_string(s.args.get('kind')) or 'unresolved' for s in steps if s.op == 'AllocContainer')),
+        'environment_fields': sorted({key for s in steps for key in (s.gate or {}).get('env', {})}),
+        'agitation_requests': [{'step_id': s.step_id, 'arguments': s.args} for s in steps if s.op == 'agit'],
+        'scope': 'Declared language requirements only; not proof of instrument support or scientific validity',
+    }
+
+
 def compile_case(source):
     compiled = CompilationInteractor().compile([source])
     steps = [s for p in compiled.plan.plans for s in PlanStepTree.leaves(p.steps)]
@@ -22,6 +38,7 @@ def compile_case(source):
     by_id = {s.step_id:s for s in steps}
     return {
         'operations': dict(Counter(s.op for s in steps)),
+        'requirements': summarize_requirements(steps),
         'language_diagnostics': [{'code':d.code,'message':d.message,'severity':d.severity} for d in compiled.plan.diagnostics],
         'host_diagnostics': [{'code':d.code,'message':d.message,'step_id':d.node_id,
             'operation':by_id[d.node_id].op,'span':str(by_id[d.node_id].span)} for d in diagnostics],
