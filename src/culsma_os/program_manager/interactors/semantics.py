@@ -42,7 +42,6 @@ class HostedRuntimeInteractor:
             "control_continue",
         }
         diagnostics = []
-        seen_external = False
         for protocol in plan.plans:
             for step in PlanStepTree.leaves(protocol.steps):
                 program = step.args.get("program", {})
@@ -52,18 +51,15 @@ class HostedRuntimeInteractor:
                     or (program.get("name") == "centrifuge_program"
                         and self.processing_capabilities is not None
                         and not self.processing_capabilities.get("centrifuge"))))
-                if step.op not in allowed or unsupported_separation or (
-                    seen_external and step.op in declarations
-                ):
+                if step.op not in allowed or unsupported_separation:
                     diagnostics.append(
                         Diagnostic(
                             "HOST_OPERATION_UNSUPPORTED",
-                            f"Hosted profile supports leading declarations, liquid Transfer, explicit thermal hold, orbital agitation, centrifugation and in-place magnetic/centrifugal separation; unsupported {step.op}",
+                            f"Hosted profile supports declarations throughout execution, liquid Transfer, explicit thermal hold, orbital agitation, centrifugation and in-place magnetic/centrifugal separation; unsupported {step.op}",
                             step.span,
                             node_id=step.step_id,
                         )
                     )
-                seen_external = seen_external or step.op in {"Mutation", "env_hold", "agit", "sep"}
         return diagnostics
 
     def create(self, plan, state, scope_id):

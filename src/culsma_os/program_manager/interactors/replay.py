@@ -30,6 +30,7 @@ class ReplayEffectInteractor:
         self.codec = codec
         self.cursor = 0
         self.pending = None
+        self.last_effect_material = None
         self.steps = {s.step_id: s for p in data["plan"].plans for s in PlanStepTree.leaves(p.steps)}
         self.values = RuntimeValueResolver()
         self.material = MaterialCompute()
@@ -78,7 +79,15 @@ class ReplayEffectInteractor:
             raise HostContractError("HOST_MATERIAL_PROPOSAL_INVALID")
         prepared = PreparedRuntimeStep(runtime_step, deepcopy(step), proposal)
         effect_id = f'{self.data["scope_id"]}:{step.step_id}'
-        return PendingEffect(effect_id, prepared, before)
+        return self.prepare_boundary(effect_id, prepared, before)
+
+    def prepare_boundary(self, effect_id, prepared, before):
+        """Bind local semantic changes to the preceding external material boundary."""
+        base = None
+        if self.last_effect_material is not None and self.last_effect_material != before and self.codec is not None:
+            base = self.codec.fingerprint(self.last_effect_material)
+        self.last_effect_material = deepcopy(prepared.material_result.material_state)
+        return PendingEffect(effect_id, prepared, before, base)
 
     def resolve_environment(self, step):
         gate = deepcopy(step.gate or {})
@@ -91,7 +100,7 @@ class ReplayEffectInteractor:
         return replace(step, gate=gate)
 
     def prepare_group_effect(self, request):
-        members = tuple(PendingEffect(
+        members = tuple(self.prepare_boundary(
             f'{self.data["scope_id"]}:{member.runtime_step.step_id}',
             PreparedRuntimeStep(member.runtime_step, member.driver_step, member.material_result),
             deepcopy(member.before_material_state),

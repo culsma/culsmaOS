@@ -598,10 +598,11 @@ class BatchRunExecutionInteractor:
         first = members[0]
         ops = self.operations
         allocations = self.execution.allocations(run_id)
-        layout = ops.space.bind(run_id, first.before_material_state, allocations)
+        initial_material = self.execution.batch_initial_material(members)
+        layout = ops.space.bind(run_id, initial_material, allocations)
         snapshot = ops.device.get(ops.transfer.device_id)
         base = ops.transfer.prepare_context(run_id, layout, snapshot,
-            first.before_material_state if any(hasattr(o.intent, 'aliquots') for o in operations) else None)
+            initial_material if any(hasattr(o.intent, 'aliquots') for o in operations) else None)
         resources = set(base.resource_ids)
         for capability in snapshot.processing_capabilities.values():
             resources.update(f'{snapshot.mode}:{snapshot.device_id}:module:{name}' for name in capability)

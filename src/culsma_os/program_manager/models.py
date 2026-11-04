@@ -90,6 +90,7 @@ class PendingEffect:
     effect_id: str
     prepared: PreparedRuntimeStep
     before_material_state: dict[str, Any]
+    declaration_base_fingerprint: str | None = None
 
 
 @dataclass(frozen=True)

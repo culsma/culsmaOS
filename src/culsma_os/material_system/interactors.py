@@ -16,7 +16,24 @@ class MaterialInteractor:
         existing = self.repository.receipt(pending.effect_id)
         if existing:
             return existing.version
-        return self.repository.bind(run_id, mode, pending.before_material_state)
+        return self.adopt_declared_state(run_id, mode, pending.effect_id + ':declarations',
+            pending.declaration_base_fingerprint, pending.before_material_state)
+
+    def adopt_declared_state(self, run_id, mode, boundary_id, base, state):
+        """Accept a ProgramManager-verified local boundary, never physical evidence."""
+        try:
+            stored_mode, stored, version = self.repository.get(run_id)
+        except KeyError:
+            if base is not None:
+                raise ValueError('MATERIAL_DECLARATION_BASE_MISMATCH')
+            return self.repository.bind(run_id, mode, state)
+        if stored == state:
+            return self.repository.bind(run_id, mode, state)
+        if (stored_mode != mode or base is None or self.codec.fingerprint(stored) != base
+                or self.repository.uncertainties(run_id)):
+            raise ValueError('MATERIAL_DECLARATION_BASE_MISMATCH')
+        return self.repository.adopt_declarations(run_id, mode, boundary_id,
+            stored, version, state, base, self.codec.fingerprint(state))
 
     def reconcile(self, pending, evidence):
         if evidence.effect_id != pending.effect_id:

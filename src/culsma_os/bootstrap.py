@@ -190,8 +190,8 @@ class OSApplicationFactory:
             FileRunProfileBindingRepository(context.database_path), port)
         tasks.profile_bindings = run_profiles
         gateway.profile_bindings = run_profiles
-        execution = ExecutionHostInteractor(tasks, host, state)
         material = MaterialInteractor(LocalMaterialRepository(connections[5]), codec)
+        execution = ExecutionHostInteractor(tasks, host, state, material=material)
         operation_repository = SqliteOperationRepository(connections[6])
         from .scheduler.conditions import ProcessingConditionInteractor
         from .scheduler.interactors import MotionSchedulerInteractor

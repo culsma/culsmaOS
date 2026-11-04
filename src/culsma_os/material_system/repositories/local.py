@@ -10,6 +10,7 @@ class LocalMaterialRepository:
             connection.execute(
                 "CREATE TABLE IF NOT EXISTS os_material(run_id TEXT PRIMARY KEY,mode TEXT,state TEXT,version INTEGER)"
             )
+            connection.execute("CREATE TABLE IF NOT EXISTS os_material_declarations(boundary_id TEXT PRIMARY KEY,run_id TEXT,before_fingerprint TEXT,after_fingerprint TEXT,version INTEGER)")
             connection.execute(
                 "CREATE TABLE IF NOT EXISTS os_material_changes(effect_id TEXT PRIMARY KEY,receipt TEXT)"
             )
@@ -31,6 +32,22 @@ class LocalMaterialRepository:
                 "INSERT INTO os_material VALUES(?,?,?,0)", (run_id, mode, encoded)
             )
             return 0
+
+    def adopt_declarations(self, run_id, mode, boundary_id, before, version, after, before_fingerprint, after_fingerprint):
+        with self.connection:
+            self.connection.execute('BEGIN IMMEDIATE')
+            existing = self.connection.execute('SELECT run_id,before_fingerprint,after_fingerprint,version FROM os_material_declarations WHERE boundary_id=?', (boundary_id,)).fetchone()
+            if existing:
+                if existing[:3] != (run_id, before_fingerprint, after_fingerprint):
+                    raise ValueError('MATERIAL_DECLARATION_CONFLICT')
+                return existing[3]
+            changed = self.connection.execute('UPDATE os_material SET state=?,version=version+1 WHERE run_id=? AND mode=? AND version=? AND state=?',
+                (json.dumps(after, sort_keys=True), run_id, mode, version, json.dumps(before, sort_keys=True))).rowcount
+            if changed != 1:
+                raise ValueError('MATERIAL_DECLARATION_CONFLICT')
+            self.connection.execute('INSERT INTO os_material_declarations VALUES(?,?,?,?,?)',
+                (boundary_id, run_id, before_fingerprint, after_fingerprint, version + 1))
+            return version + 1
 
     def receipt(self, effect_id):
         row = self.connection.execute(

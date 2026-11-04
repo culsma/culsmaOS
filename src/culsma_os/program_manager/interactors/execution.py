@@ -4,10 +4,11 @@ from copy import deepcopy
 
 class ExecutionHostInteractor:
 
-    def __init__(self, tasks, host: SemanticHostPort, state, codec=None):
+    def __init__(self, tasks, host: SemanticHostPort, state, codec=None, material=None):
         self.tasks = tasks
         self.host = host
         self.state = state
+        self.material = material
         from .codec import RuntimeCheckpointCodecInteractor
         self.codec = codec or RuntimeCheckpointCodecInteractor()
 
@@ -22,6 +23,13 @@ class ExecutionHostInteractor:
         if data["pending"]:
             return self.state.mark_waiting(run_id, checkpoint)
         outcome = "succeeded" if self.host.result(checkpoint).ok else "failed"
+        if outcome == 'succeeded' and self.material is not None and data['confirmed']:
+            last = data['confirmed'][-1].resolution
+            from ..models import GroupEffectResolution
+            if isinstance(last, GroupEffectResolution):
+                last = last.members[-1]
+            self.material.adopt_declared_state(run_id, last.mode, run_id + ':final-declarations',
+                last.proposed_state_fingerprint, data['state'].artifacts.get('material_state', {'containers': {}}))
         return self.state.begin_finalization(run_id, checkpoint, outcome)
 
     def pending(self, run_id):
@@ -31,14 +39,14 @@ class ExecutionHostInteractor:
         return self.host.result(self.tasks.get(run_id).checkpoint)
 
     def allocations(self, run_id):
-        """Return completed allocation declarations from the verified existing checkpoint."""
+        """Return allocation definitions; pending material state determines existence."""
+        from culsma.pipeline.plan_nodes import PlanStepTree
         data, _ = self.host.restore(self.tasks.get(run_id).checkpoint)
         return tuple(
             deepcopy(step)
             for protocol in data["plan"].plans
-            for step in protocol.steps
+            for step in PlanStepTree.leaves(protocol.steps)
             if step.op == "AllocContainer"
-            and data["state"].step_status.get(step.step_id) == "completed"
         )
 
 
@@ -56,6 +64,18 @@ class ExecutionHostInteractor:
         from .batch import BatchProjectionInteractor
         return BatchProjectionInteractor(self.host).prepare(self.tasks.get(run_id).checkpoint)
 
+
+    def batch_initial_material(self, members):
+        """Workspace reservation only; never registers projected future material."""
+        containers, plates = {}, {}
+        for member in members:
+            for identity, container in member.before_material_state.get('containers', {}).items():
+                containers.setdefault(identity, deepcopy(container))
+            for identity, plate in member.before_material_state.get('plates', {}).items():
+                if identity in plates and plates[identity] != plate:
+                    raise ValueError('BATCH_PLATE_DECLARATION_CONFLICT')
+                plates[identity] = deepcopy(plate)
+        return {'containers': containers, 'plates': plates}
 
     def describe_batch(self, units):
         return {'units': self.codec.dumps(units), 'units_fingerprint': self.codec.fingerprint(units)}
