@@ -28,7 +28,7 @@ class HostedRuntimeInteractor:
 
     def validate_plan(self, plan):
         declarations = ReplayEffectInteractor.bootstrap_ops | {
-            "FinalizeContainerContents"
+            "FinalizeContainerContents", "replace"
         }
         allowed = declarations | {
             "Mutation",
