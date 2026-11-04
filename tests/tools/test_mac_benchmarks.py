@@ -35,3 +35,12 @@ let measured=img(sample=s,quantity=fluorescence);return measured;'''
     assert report['requirements']['environment_fields']==['co2','duration','thermal']
     assert [d['operation'] for d in report['host_diagnostics']]==['img']
     assert 'result' not in report
+
+
+def test_audit_retains_early_semantic_errors_even_when_lowered_plan_has_none(tmp_path):
+    source='''let source=tube(capacity=60mL,load=[content(kind=formulation,type=buffer,code="OLD"):100uL]);
+let plate1=plate(format="96well",capacity=2000uL);let a=plate1[A1];a << [source:20uL];
+a[0].materials.replace({a[0].materials[0]:content(kind=formulation,type=buffer,code="NEW"):20uL});return a;'''
+    path=tmp_path/'invalid.culs';path.write_text(source)
+    report=load_audit_module().compile_case(path)
+    assert any(d['code']=='SEM_MATERIAL_REPLACE_INVALID' and d['severity']=='error' for d in report['language_diagnostics'])

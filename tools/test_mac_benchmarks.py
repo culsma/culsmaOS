@@ -39,7 +39,8 @@ def compile_case(source):
     return {
         'operations': dict(Counter(s.op for s in steps)),
         'requirements': summarize_requirements(steps),
-        'language_diagnostics': [{'code':d.code,'message':d.message,'severity':d.severity} for d in compiled.plan.diagnostics],
+        'language_diagnostics': [{'code':d.code,'message':d.message,'severity':d.severity}
+            for d in [*compiled.semantic.diagnostics,*compiled.typed.diagnostics,*compiled.plan.diagnostics]],
         'host_diagnostics': [{'code':d.code,'message':d.message,'step_id':d.node_id,
             'operation':by_id[d.node_id].op,'span':str(by_id[d.node_id].span)} for d in diagnostics],
         'separation_programs': dict(Counter(s.args.get('program',{}).get('name','unknown') for s in steps if s.op=='sep')),
@@ -101,7 +102,7 @@ async def audit(app, root, output, execute):
                 row['error']={'type':type(error).__name__,'message':str(error)[:2500]}
                 if row.get('start',{}).get('run'):save();raise
             save()
-            print(json.dumps({'case':row['case'],'outcome':row.get('outcome'),'language_errors':len(row.get('compile',{}).get('language_diagnostics',[])),
+            print(json.dumps({'case':row['case'],'outcome':row.get('outcome'),'language_errors':sum(d['severity']=='error' for d in row.get('compile',{}).get('language_diagnostics',[])),
                 'host_gaps':dict(Counter(d['operation'] for d in row.get('compile',{}).get('host_diagnostics',[]))), 'error':row.get('error')}),flush=True)
         report['source_bytes_unchanged']=before=={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
         final=await call('configuration_status')

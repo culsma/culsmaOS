@@ -14,7 +14,7 @@ from culsma_os.material_system.repositories.local import LocalMaterialRepository
 SOURCE = '''let source=tube(capacity=60mL,load=[content(kind=formulation,type=buffer,code="OLD"):100uL]);
 let plate1=plate(label="Outputs",format="96well",capacity=2000uL);
 let a=plate1[A1];a << [source:20uL];
-a[0].materials.replace({a[0].materials[0]:content(kind=formulation,type=buffer,code="NEW"):20uL});
+source.materials.replace({source.materials[0]:content(kind=formulation,type=buffer,code="NEW"):80uL});
 a << [source:10uL];return a;'''
 
 @pytest.mark.parametrize('trailing',[False,True])
@@ -22,6 +22,7 @@ def test_replacement_is_local_and_replay_uses_verified_material_boundary(tmp_pat
     source=SOURCE.replace('a << [source:10uL];','') if trailing else SOURCE
     path=tmp_path/'replace.culs';path.write_text(source)
     compiled=CompilationInteractor().compile([path]);host=HostedRuntimeInteractor()
+    assert not [d for d in [*compiled.semantic.diagnostics,*compiled.typed.diagnostics,*compiled.plan.diagnostics] if d.severity=="error"]
     assert not host.validate_plan(compiled.plan)
     reference=run(compiled.plan,StubDriver(),deepcopy(compiled.state));assert reference.ok
     checkpoint=host.create(compiled.plan,compiled.state,'run')
