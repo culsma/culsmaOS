@@ -1,0 +1,10 @@
+{
+  "setting": "System Settings / Simulation / Enable workflow simulation",
+  "default": "off",
+  "scope": "Persisted per workstation and driver. A reviewed start requires the same settings revision. Running experiments use their saved plan.",
+  "routing": "Device actions use the selected workstation. With the setting on, the currently registered internal model handles fluorescence img without a custom schema, instrument program or raw data export. Other missing operations are rejected at admission.",
+  "evidence": "Workflow checkpoint version 5 records the internal provider and frozen synthetic values. The run result distinguishes planned readouts from recorded synthetic observations. No device receipt is generated for a synthetic readout.",
+  "execution": "Only a simulation execution host may advance a workflow checkpoint. Device validation remains strict. A synthetic result cannot be used as physical evidence.",
+  "benchmark_02": "The original customized colony schemas, raw image output and colony picking are outside this provider. The separate phase-split acceptance remains available through the explicit external simulation handoff API.",
+  "mcp": "set_workflow_simulation(enabled, expected_revision) delegates to the same authorized setting Interactor as System Settings. Read the current policy and revision through station_status. It never changes execution evidence into physical evidence."
+}

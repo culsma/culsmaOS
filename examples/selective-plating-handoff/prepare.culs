@@ -1,0 +1,55 @@
+// Benchmark 02 simulation fixture. Five wells substitute for agar dishes.
+protocol Module02_PickAndExpandCandidateColony(selected_colony) returns (candidate_culture) {
+  // Allocate one culture tube for the operator-selected colony reference.
+  let candidate_culture = tube(label = "CandidateColonyCulture", capacity = 5mL, load = [
+    content(kind = "chemical", type = "culture_medium", code = "LB_AMPICILLIN", attrs = { ampicillin_concentration: 100ug_per_mL }):4mL
+  ]);
+
+  // Transfer the supplied colony-position handle into its culture.
+  candidate_culture << [selected_colony];
+  return candidate_culture;
+}
+
+protocol Module02_SelectivePlatingAndCandidateColonyIsolation() returns (candidate_colony_cultures) {
+  // Source step S1: Use 100 uL of each of five recovered DH5alpha transformation suspensions: recombinant ligation, vector-only ligation control, no-ligase vector control, uncut pUC19 positive transformation control, and no-DNA control.
+  let recombinant_ligation_suspension = tube(label = "RecombinantLigationSuspension", load = [
+    content(kind = "biosample", type = "microbial_cells", code = "DH5A_RECOMBINANT_LIGATION", attrs = { state: recovered_transformation_suspension }):100uL
+  ]);
+  let vector_only_suspension = tube(label = "VectorOnlyLigationControlSuspension", load = [
+    content(kind = "biosample", type = "microbial_cells", code = "DH5A_VECTOR_ONLY_LIGATION_CONTROL", attrs = { state: recovered_transformation_suspension }):100uL
+  ]);
+  let no_ligase_suspension = tube(label = "NoLigaseVectorControlSuspension", load = [
+    content(kind = "biosample", type = "microbial_cells", code = "DH5A_NO_LIGASE_VECTOR_CONTROL", attrs = { state: recovered_transformation_suspension }):100uL
+  ]);
+  let positive_control_suspension = tube(label = "UncutPuc19PositiveControlSuspension", load = [
+    content(kind = "biosample", type = "microbial_cells", code = "DH5A_UNCUT_PUC19_POSITIVE_CONTROL", attrs = { state: recovered_transformation_suspension }):100uL
+  ]);
+  let no_dna_suspension = tube(label = "NoDnaControlSuspension", load = [
+    content(kind = "biosample", type = "microbial_cells", code = "DH5A_NO_DNA_CONTROL", attrs = { state: recovered_transformation_suspension }):100uL
+  ]);
+
+let plate_audit = plate(format="96well",capacity=100uL);
+let recombinant_ligation_plate = plate_audit[A1];
+let vector_only_plate = plate_audit[A2];
+let no_ligase_plate = plate_audit[A3];
+let positive_control_plate = plate_audit[A4];
+let no_dna_plate = plate_audit[A5];
+  // Source step S3: Label one selective plate for each transformation suspension.
+  let selective_plate_group = plate_audit[A1:A5];
+
+  // Source step S4: Transfer 100 uL of each recovered transformation suspension onto its corresponding selective plate.
+  // Source step S5: Spread each suspension evenly across the agar surface using a sterile spreading tool.
+  recombinant_ligation_plate << [recombinant_ligation_suspension:100uL] with constraint(spread, aseptic);
+  vector_only_plate << [vector_only_suspension:100uL] with constraint(spread, aseptic);
+  no_ligase_plate << [no_ligase_suspension:100uL] with constraint(spread, aseptic);
+  positive_control_plate << [positive_control_suspension:100uL] with constraint(spread, aseptic);
+  no_dna_plate << [no_dna_suspension:100uL] with constraint(spread, aseptic);
+
+  // Source step S6: Incubate the selective plates at 37 C for 16 h.
+  with env(thermal = 37C, duration = 16h) {
+    hold(sample = selective_plate_group);
+  }
+
+  return selective_plate_group;
+}
+Module02_SelectivePlatingAndCandidateColonyIsolation();

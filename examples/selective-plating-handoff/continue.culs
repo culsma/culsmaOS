@@ -1,0 +1,30 @@
+// Benchmark 02 continuation fixture. Returned candidate samples are represented by 100 uL simulated suspensions.
+let candidate1 = tube(capacity=2000uL, load=[content(kind=biosample,type=microbial_cells,code="SIM_CANDIDATE_1"):100uL]);
+let candidate2 = tube(capacity=2000uL, load=[content(kind=biosample,type=microbial_cells,code="SIM_CANDIDATE_2"):100uL]);
+let candidate3 = tube(capacity=2000uL, load=[content(kind=biosample,type=microbial_cells,code="SIM_CANDIDATE_3"):100uL]);
+let candidate4 = tube(capacity=2000uL, load=[content(kind=biosample,type=microbial_cells,code="SIM_CANDIDATE_4"):100uL]);
+let candidate5 = tube(capacity=2000uL, load=[content(kind=biosample,type=microbial_cells,code="SIM_CANDIDATE_5"):100uL]);
+let candidate6 = tube(capacity=2000uL, load=[content(kind=biosample,type=microbial_cells,code="SIM_CANDIDATE_6"):100uL]);
+let candidate7 = tube(capacity=2000uL, load=[content(kind=biosample,type=microbial_cells,code="SIM_CANDIDATE_7"):100uL]);
+let candidate8 = tube(capacity=2000uL, load=[content(kind=biosample,type=microbial_cells,code="SIM_CANDIDATE_8"):100uL]);
+let culture_plate = plate(format="96well",capacity=200uL);
+let culture1 = culture_plate[A1];
+let culture2 = culture_plate[A2];
+let culture3 = culture_plate[A3];
+let culture4 = culture_plate[A4];
+let culture5 = culture_plate[A5];
+let culture6 = culture_plate[A6];
+let culture7 = culture_plate[A7];
+let culture8 = culture_plate[A8];
+culture1 << [candidate1:100uL];
+culture2 << [candidate2:100uL];
+culture3 << [candidate3:100uL];
+culture4 << [candidate4:100uL];
+culture5 << [candidate5:100uL];
+culture6 << [candidate6:100uL];
+culture7 << [candidate7:100uL];
+culture8 << [candidate8:100uL];
+let cultures = culture_plate[A1:A8];
+with env(thermal=37C,duration=16h) {
+  agit(sample=cultures,mode=shake,duration=16h,rate=200rpm);
+}

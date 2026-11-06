@@ -1,0 +1,17 @@
+{
+  "status": "current-simulation-slice",
+  "scope": "Two explicit local simulation stages joined by a durable external fixture receipt. Both stages use normal OS execution.",
+  "invariants": {
+    "EXT-SIM-01": "External fixture results are accepted only by an opted-in simulation session. A continuation is marked simulation-only at admission and can execute only in an opted-in session with the same station configuration.",
+    "EXT-SIM-02": "The request binds the completed source run, registered source material, selected source references, station configuration and the frozen continuation plan. Acceptance requires matching request identity, evidence fields and return sample lineage and loading.",
+    "EXT-SIM-03": "The same handoff and identical receipt are idempotent. At most one continuation can be submitted for a handoff. Restart never dispatches the source stage again.",
+    "EXT-SIM-04": "The provider returns explicit synthetic observations and sample data. Those observations and sample links stay with the handoff record; continuation material comes from the sealed, validated return declarations."
+  },
+  "diagnostics": {
+    "admission": "EXTERNAL_SIMULATION_DISABLED / EXTERNAL_SIMULATION_REQUIRED / EXTERNAL_SOURCE_NOT_COMPLETED / EXTERNAL_RETURN_BINDINGS_INVALID",
+    "receipt": "EXTERNAL_RECEIPT_MISMATCH / EXTERNAL_RETURN_SAMPLES_MISMATCH / EXTERNAL_RECEIPT_CONFLICT",
+    "continuation": "EXTERNAL_RECEIPT_REQUIRED / EXTERNAL_STATION_CHANGED / RUN_SIMULATION_MODE_REQUIRED"
+  },
+  "conformance": "tests/integration/test_external_simulation_handoff.py",
+  "limits": "Explicit phase split, local Python API, one continuation per source run. Typed img replay, physical custody, physical evidence intake, and automatic device fallback are outside this simulation slice."
+}

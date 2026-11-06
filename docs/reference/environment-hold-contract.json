@@ -1,0 +1,31 @@
+{
+  "decision": "THERMAL-ENVIRONMENT-20261104",
+  "status": "current",
+  "scope": "Preserve public Culsma environment requirements for hold and orbital agitation in the OS execution contract",
+  "invariants": {
+    "ENV01": "Program temperature, duration, CO2, O2 and humidity must not be discarded or inferred from a profile",
+    "ENV02": "Only drivers advertising the requested environment quantities may receive a hold",
+    "ENV03": "Program setpoints override profile defaults; simulator acknowledgement is not a physical measurement",
+    "ENV04": "Missing instruments and uncommissioned physical routes stay rejected",
+    "ENV05": "Orbital agitation retains its exact environment target set and declared duration; unsupported combined conditions fail before dispatch",
+    "AGIT01": "A program that omits shake motion can use an orbital shaker only if the selected device capability explicitly declares orbital as its default motion. Explicit motion is never changed."
+  },
+  "ownership": {
+    "ProgramManager": "Normalize language environment quantities to immutable execution intent",
+    "DeviceManager": "Validate requested conditions against driver capability declarations",
+    "External driver": "Translate supported setpoints and retain effective conditions in evidence"
+  },
+  "diagnostics": {
+    "normalization": "PROCESSING_ENVIRONMENT_UNSUPPORTED / PROCESSING_ENVIRONMENT_VALUE_INVALID before dispatch",
+    "capability": "PROCESSING_ENVIRONMENT_CONDITION_UNSUPPORTED before dispatch",
+    "driver": "Existing driver scope and commissioning diagnostics remain authoritative",
+    "AGIT01": "Reject explicit unsupported motion in intent normalization and an undeclared default at device binding before dispatch."
+  },
+  "conformance": {
+    "ENV01,ENV03": "culsma-driver-hamilton/tests/simulation/test_cytomat_exchange_protocol.py::test_normal_os_program_uses_native_cytomat_route",
+    "ENV02": "tests/modules/device_manager/instruments/temperature/test_processing_thermal.py::TestThermalProcessing::test_rejects_before_module_actions",
+    "ENV04": "culsma-driver-hamilton/tests/simulation/test_corning24_protocol.py::test_model_capacity_cannot_be_inflated_to_satisfy_an_incompatible_program",
+    "ENV05": "tests/modules/program_manager/test_processing_environments.py; tests/modules/device_manager/instruments/shaker/test_environment_capabilities.py; culsma-driver-hamilton/tests/simulation/test_hhs_environment.py",
+    "AGIT01": "tests/modules/device_manager/instruments/shaker/test_environment_capabilities.py::test_unspecified_motion_requires_selected_device_default; tests/modules/device_manager/instruments/shaker/test_processing_agitation.py::TestAgitationProcessing::test_combined_heat_and_shake_through_os"
+  }
+}
