@@ -69,6 +69,8 @@ class NativeRunOutcomeView extends StatelessWidget {
     final guidance = run['user_guidance'] as Map? ?? {};
     final actions = guidance['actions'] as List? ?? [];
     final result = run['result'] as Map? ?? {};
+    final workflow = result['os']?['workflow_simulation'] as Map?;
+    final internal = workflow?['steps'] as List? ?? [];
     final preparation = guidance['kind'] == 'preparation';
     final currentSupply = console.supplies.data;
     final available = currentSupply?['stock']?['available'] as List?;
@@ -117,6 +119,26 @@ class NativeRunOutcomeView extends StatelessWidget {
                   ? 'Review the recorded results below.'
                   : 'Review the workstation and run controls below.'),
         ),
+        if (workflow != null)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Workflow simulation'),
+            subtitle: Text(
+              internal.isEmpty
+                  ? 'All device actions used the workstation simulation.'
+                  : 'Device actions use the workstation simulation. Readouts listed below are synthetic.',
+            ),
+          ),
+        for (final row in internal)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Fluorescence · internal simulation'),
+            subtitle: Text(
+              row['status'] == 'completed'
+                  ? 'Synthetic signal: ${row['result']['signal']}'
+                  : 'Planned · no result recorded',
+            ),
+          ),
         NativeRunProgressPanel(run: run),
         NativeFaultContext(guidance: guidance),
         if (guidance['device_activity'] == 'none_recorded')

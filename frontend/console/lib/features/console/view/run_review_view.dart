@@ -12,6 +12,8 @@ class NativeRunReviewView extends StatelessWidget {
     final c = console;
     final preparation = c.inspection?['preparation'];
     final plan = preparation?['plan'] as Map? ?? {};
+    final workflow = preparation?['workflow_simulation'] as Map?;
+    final internal = workflow?['routes'] as Map? ?? {};
     final checked = c.launchReview != null;
     final simulation = c.review.simulationAvailable(c.station, c.inspection);
     return Column(
@@ -100,6 +102,19 @@ class NativeRunReviewView extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             children: [
               if (checked) ...[
+                if (workflow != null)
+                  ListTile(
+                    title: Text(
+                      workflow['enabled'] == true
+                          ? 'Workflow simulation'
+                          : 'Device validation',
+                    ),
+                    subtitle: Text(
+                      internal.isEmpty
+                          ? 'All planned device actions use the workstation.'
+                          : 'The workstation runs the device actions. Internal simulation supplies ${internal.length} synthetic readout(s).',
+                    ),
+                  ),
                 NativePreparationLayout(
                   key: ValueKey(
                     'preparation-layout-${c.inspection?['snapshot_id']}',

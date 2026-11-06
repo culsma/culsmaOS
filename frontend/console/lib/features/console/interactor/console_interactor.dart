@@ -386,6 +386,30 @@ class NativeConsoleInteractor extends ChangeNotifier {
     (_) => Random.secure().nextInt(256).toRadixString(16).padLeft(2, '0'),
   ).join();
 
+  Future<void> setWorkflowSimulation(bool enabled, int revision) async {
+    if (disposed || working) return;
+    busy = true;
+    message = null;
+    messageDetails = null;
+    notifyListeners();
+    try {
+      await api.command('/api/v1/configuration/workflow-simulation', {
+        'enabled': enabled,
+        'revision': revision,
+      });
+    } catch (error) {
+      message =
+          'Could not update workflow simulation. Check the current setting before trying again.';
+      messageDetails = error.toString();
+    } finally {
+      busy = false;
+      if (!disposed) {
+        notifyListeners();
+        await refresh();
+      }
+    }
+  }
+
   /// Double-click checks an immutable source snapshot; it never dispatches work.
   Future<void> launch(String id, {String sourceScope = 'programs'}) async {
     if (working || pendingStart != null) return;
@@ -423,6 +447,9 @@ class NativeConsoleInteractor extends ChangeNotifier {
         'program_id': id,
         if (sourceScope != 'programs') 'source_scope': sourceScope,
         'snapshot_id': result['snapshot_id'],
+        if (result['preparation']?['workflow_simulation']?['revision'] is int)
+          'workflow_revision':
+              result['preparation']['workflow_simulation']['revision'],
         if (result['preparation']?['configuration_fingerprint'] != null)
           'configuration_fingerprint':
               result['preparation']['configuration_fingerprint'],
@@ -536,6 +563,10 @@ class NativeConsoleInteractor extends ChangeNotifier {
       message = error.responseUnknown
           ? 'Run response unknown. Check the retained request; no automatic retry.'
           : 'The experiment could not be started. Check the workstation and open the protocol again when it is ready.';
+      if (error.code == 'WORKFLOW_SIMULATION_SETTING_STALE') {
+        message =
+            'Simulation settings changed. Open the protocol again to review the new execution plan.';
+      }
       messageDetails = error.code;
     } catch (error) {
       message =
