@@ -12,7 +12,6 @@ import culsma
 from culsma_os.program_manager.interactors.compilation import CompilationInteractor
 from culsma_os.program_manager.interactors.semantics import HostedRuntimeInteractor
 from culsma.pipeline.plan_nodes import PlanStepTree
-from mcp import Client, StdioServerParameters
 
 
 
@@ -48,6 +47,7 @@ def compile_case(source):
 
 
 async def audit(app, root, output, execute):
+    from mcp import Client, StdioServerParameters
     cases = sorted(root.glob('modules/[0-9][0-9]-*/protocol.culs')) + sorted(root.glob('composites/[0-9][0-9]-*/protocol.culs'))
     assert len(cases)==12, f'Expected 9 modules and 3 composites, found {len(cases)}'
     files = sorted({p for source in cases for p in source.parent.glob('*.culs')})
