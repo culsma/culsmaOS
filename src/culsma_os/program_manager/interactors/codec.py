@@ -73,8 +73,9 @@ class RuntimeCheckpointCodecInteractor:
                 "c": type(value).__name__,
                 "v": {
                     f.name: self.encode(getattr(value, f.name)) for f in fields(value)
-                    if not (isinstance(value, PendingEffect) and f.name == 'declaration_base_fingerprint'
-                            and value.declaration_base_fingerprint is None)
+                    if not (isinstance(value, PendingEffect)
+                            and f.name in {'declaration_base_fingerprint', 'in_place_outputs'}
+                            and getattr(value, f.name) is None)
                 },
             }
         if isinstance(value, dict) and all(isinstance(k, str) for k in value):

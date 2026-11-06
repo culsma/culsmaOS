@@ -54,7 +54,7 @@ class SpaceInteractor:
     def resolve_binding(self, identity, container, declarations, material_state=None, positions=None):
         metadata = container.get("metadata", {})
         kind = metadata.get("kind")
-        if kind not in {"tube", "well"}:
+        if kind not in {None, "tube", "well"}:
             raise ValueError("WORKSPACE_CONTAINER_KIND_UNSUPPORTED")
         allocation = metadata.get("allocation_step_id")
         if allocation is None:
@@ -269,7 +269,7 @@ class LabwareMotionInteractor:
         for offset, route in enumerate(routes.get(step.step_id, ())[start:]):
             ordinal = start + offset
             if layout is None:
-                layout = self.space.preview(run_id, pending.before_material_state, allocations)
+                layout = self.space.preview(run_id, pending.physical_material_state(), allocations)
             labware, destination = route["labware"], route["destination"]
             candidates = [b for b in layout.bindings if b.labware == labware]
             carriers = {(b.carrier_namespace, b.carrier_id, b.carrier_instance_id) for b in candidates}
@@ -691,7 +691,9 @@ class WorkspacePlanningInteractor:
                     or type(item.get('capacity_uL')) not in (int, float)
                     or not isfinite(item['capacity_uL']) or item['capacity_uL'] <= 0
                     or not isinstance(item.get('kinds'), list) or not item['kinds']
-                    or set(item['kinds']) - {'tube', 'well'}):
+                    or set(item['kinds']) - {'tube', 'well'}
+                    or ('occupancy_group' in item and (type(item['occupancy_group']) is not str
+                        or not item['occupancy_group']))):
                 raise ValueError('SETUP_CATALOGUE_INVALID')
             key = item['labware'], item['well']
             if key in seen:
@@ -702,7 +704,11 @@ class WorkspacePlanningInteractor:
     def compatible(self, demand, location):
         if location.get('available', True) is not True:
             return False
-        if demand['kind'] not in location['kinds'] or demand['capacity_uL'] > location['capacity_uL']:
+        # A generic language container imposes no tube/plate shape requirement.
+        # Candidates still come exclusively from driver-declared liquid locations.
+        if demand['kind'] != 'container' and demand['kind'] not in location['kinds']:
+            return False
+        if max(demand['capacity_uL'], demand.get('initial_volume_uL', 0)) > location['capacity_uL']:
             return False
         if demand.get('carrier') is not None:
             return (location.get('geometry') == demand['geometry'] and location['well'] == demand['well'])
@@ -756,6 +762,8 @@ class WorkspacePlanningInteractor:
             options.sort(key=lambda rows: (
                 -sum(preferred.get(d['allocation_id']) == {'labware': p['labware'], 'well': p['well']}
                      for d, p in zip(group, rows)),
+                sum(p['capacity_uL'] - d['capacity_uL'] for d, p in zip(group, rows)
+                    if d['kind'] == 'container'),
                 tuple(order[p['labware'], p['well']] for p in rows)))
             if not options:
                 raise self.explain_conflict('SETUP_NO_FEASIBLE_LOCATION', group, locations, fixed)
@@ -837,7 +845,8 @@ class WorkspacePlanningInteractor:
             return selected
         group, options = choices[index]
         for rows in options:
-            keys = {(p['labware'], p['well']) for p in rows}
+            # Multiple aspiration points can share a single physical liquid container.
+            keys = {(p['labware'], p.get('occupancy_group', p['well'])) for p in rows}
             labware = {p['labware'] for p in rows}
             whole_plate = group[0].get('carrier') is not None
             if (len(keys) != len(rows) or keys & occupied or labware & plates

@@ -21,6 +21,24 @@ from tests.support.transfer_engine.multichannel import MultichannelOSFixture, SO
 from tests.support.transfer_engine.transfer_no_action import NoActionFixture
 
 
+def test_whole_surface_transfer_is_not_an_empty_liquid_movement(tmp_path):
+    from culsma_os.program_manager.interactors.compilation import CompilationInteractor
+    from culsma_os.program_manager.interactors.semantics import HostedRuntimeInteractor
+    from culsma_os.program_manager.interactors.transfer_intents import TransferIntentInteractor
+
+    source = tmp_path / 'pick.culs'
+    source.write_text(
+        'let colony=surface(carrier_id="dish",carrier_position="candidate_1"); '
+        'let culture=tube(capacity=5mL); culture << [colony];'
+    )
+    program = CompilationInteractor().compile((source,))
+    host = HostedRuntimeInteractor()
+    pending = host.pending(host.advance(host.create(program.plan, program.state, 'colony-pick')))
+
+    with pytest.raises(ValueError, match='^TRANSFER_SURFACE_PICKING_UNSUPPORTED$'):
+        TransferIntentInteractor().resolve_execution(pending)
+
+
 class TestTransferNoAction:
     @pytest.mark.parametrize('body,load',[
         ('target << [source:0uL];',f'{BUFFER}:200uL'),

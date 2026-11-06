@@ -12,6 +12,13 @@ class ProcessingMaterialVolume:
 
 
 @dataclass(frozen=True)
+class EnvironmentCondition:
+    name: str
+    value: float
+    unit: str
+
+
+@dataclass(frozen=True)
 class ThermalHoldIntent:
     capability: ClassVar[str] = "thermal_hold"
     step_id: str
@@ -19,6 +26,7 @@ class ThermalHoldIntent:
     temperature_celsius: float
     duration_seconds: float
     material_volumes: tuple[ProcessingMaterialVolume, ...] = ()
+    environment_conditions: tuple[EnvironmentCondition, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -28,6 +36,8 @@ class OrbitalShakeIntent:
     targets: tuple[ResolvedContainerRef, ...]
     rate_rpm: int
     duration_seconds: float
+    environment_conditions: tuple[EnvironmentCondition, ...] = ()
+    requires_motion_default: bool = False
 
 
 @dataclass(frozen=True)

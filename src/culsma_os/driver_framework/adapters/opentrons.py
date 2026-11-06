@@ -64,9 +64,16 @@ class OpentronsExecutionAdapter:
                 return self.session.prepare_magnetic_separation(vendor_intent,
                     tuple(SimulatorBinding(ResolvedContainerRef(b.reference.container_id), WellAddress(b.labware, b.well)) for b in bindings))
             if isinstance(intent, OrbitalShakeIntent):
+                shake_parameters = {}
+                if intent.environment_conditions:
+                    conditions = intent.environment_conditions
+                    if len(conditions) != 1 or (conditions[0].name, conditions[0].unit) != ("thermal", "C"):
+                        raise DevicePreparationError("OPENTRONS_SHAKE_ENVIRONMENT_UNSUPPORTED",
+                            "Heater-Shaker supports a single temperature setpoint")
+                    shake_parameters["temperature_celsius"] = conditions[0].value
                 return self.session.prepare_orbital_shake(
                     VendorShakeIntent(intent.step_id, tuple(ResolvedContainerRef(t.container_id) for t in intent.targets),
-                                      intent.rate_rpm, intent.duration_seconds),
+                                      intent.rate_rpm, intent.duration_seconds, **shake_parameters),
                     tuple(SimulatorBinding(ResolvedContainerRef(b.reference.container_id), WellAddress(b.labware, b.well)) for b in bindings))
             return self.session.prepare_temperature_hold(
                 TemperatureHoldIntent(intent.step_id, tuple(ResolvedContainerRef(t.container_id) for t in intent.targets),

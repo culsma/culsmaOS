@@ -19,7 +19,8 @@ from culsma_os.program_manager.models import SetupInteractionRequest, ConsolePro
 
 
 class MCPServerAdapter(MCPSettingsTools, MCPInstrumentProfileTools):
-    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None, file_workspace=None, configuration=None, bindings=None, activation=None, labware=None, developer_tests=None, station_selection=None, instrument_profiles=None):
+    def __init__(self, setup, programs, observation, view_reads=None, view_requests=None, supplies=None, file_reads=None, file_workspace=None, configuration=None, bindings=None, activation=None, labware=None, developer_tests=None, station_selection=None, instrument_profiles=None, workflow_simulation=None):
+        self.workflow_simulation = workflow_simulation
         self.instrument_profiles = instrument_profiles
         self.station_selection = station_selection
         self.setup, self.programs, self.observation = setup, programs, observation

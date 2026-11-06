@@ -433,7 +433,7 @@ class MotionSchedulerInteractor:
             try:
                 revision, positions = self.motion.positions()
                 intents, _ = self.motion.route_intents(pending, self.execution.allocations(run_id), positions, revision, start=ordinal)
-                layout = self.motion.space.bind(run_id, pending.before_material_state, self.execution.allocations(run_id))
+                layout = self.motion.space.bind(run_id, pending.physical_material_state(), self.execution.allocations(run_id))
             except Exception as error:
                 self.state.mark_preparation_failed(run_id, error, 'MOTION_PRE_DISPATCH_REJECTED')
                 return False

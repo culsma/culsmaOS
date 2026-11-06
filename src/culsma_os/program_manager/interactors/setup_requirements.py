@@ -4,6 +4,7 @@ from culsma.pipeline.plan_nodes import PlanStepTree
 from culsma.runtime.material.args import arg_string
 from .semantics import HostedRuntimeInteractor
 from .replay import ReplayEffectInteractor
+from .workflow_simulation import WorkflowSimulationInteractor
 from culsma.driver.base import DriverResult
 from culsma.driver.groups import GroupDriverResult
 from culsma.runtime.executor import run
@@ -26,7 +27,7 @@ class SetupRequirementsInteractor:
     def inspect(self, checkpoint):
         data = self.codec.loads(checkpoint)
         host = HostedRuntimeInteractor()
-        if any(d.severity == 'error' for d in host.validate_plan(data['plan'])):
+        if any(d.severity == 'error' for d in host.validate_plan(data['plan'], WorkflowSimulationInteractor.routes(data))):
             raise ValueError('SETUP_PROGRAM_UNSUPPORTED')
         projection = deepcopy(data['initial_state'])
         effects = SetupDeclarationProjectionInteractor(data, projection, self.codec)
@@ -34,25 +35,27 @@ class SetupRequirementsInteractor:
         if not result.ok:
             raise ValueError('SETUP_PROGRAM_UNSUPPORTED')
         effects.capture_initial_containers()
-        if effects.derived_outputs:
+        unplaced = [output for output in effects.derived_outputs.values()
+                    if output['program_kind'] != 'magnetic_program']
+        if unplaced:
             raise SetupRequirementsError('SETUP_SEPARATION_OUTPUT_MAPPING_REQUIRED',
                 'Named separation outputs are material fractions, not declared labware. '
                 'The current execution path has no physical-location mapping for these fractions.',
-                effects.derived_outputs.values())
+                unplaced)
         material = {'containers': effects.containers}
         allocations = {s.step_id: s for p in data['plan'].plans for s in PlanStepTree.leaves(p.steps) if s.op == 'AllocContainer'}
         demands = []
         for identity, container in material['containers'].items():
             metadata = container.get('metadata', {})
             allocation = metadata.get('allocation_step_id')
-            if allocation not in allocations or metadata.get('kind') not in {'tube', 'well'}:
+            if allocation not in allocations or metadata.get('kind') not in {None, 'tube', 'well'}:
                 raise ValueError('SETUP_EXTERNAL_MATERIAL_UNSUPPORTED')
             step = allocations[allocation]
-            row = {'allocation_id': allocation, 'container_id': identity, 'kind': metadata['kind'],
+            row = {'allocation_id': allocation, 'container_id': identity, 'kind': metadata.get('kind') or 'container',
                    'name': metadata.get('allocation_name') or identity, 'capacity_uL': metadata['capacity_uL'],
                    'initial_volume_uL': container.get('volume_uL', 0),
                    'initial_contents': deepcopy(container.get('component_quantities', container.get('components', {})))}
-            if metadata['kind'] == 'well':
+            if metadata.get('kind') == 'well':
                 namespace, carrier = arg_string(step.args.get('container_namespace')), arg_string(step.args.get('carrier_id'))
                 from culsma_os.workspace_manager.interactors import SpaceInteractor
                 row.update(carrier=namespace + ':' + carrier, well=arg_string(step.args.get('carrier_position')),
@@ -87,6 +90,9 @@ class SetupDeclarationProjectionInteractor(ReplayEffectInteractor):
                     'part': slot, 'program_kind': delta.get('program_kind')}
 
     def execute(self, step):
+        simulated = WorkflowSimulationInteractor.execute_step(self.data, step)
+        if simulated is not None:
+            return simulated
         if step.op == 'sep':
             self.record_separation_outputs(step)
         if step.op not in self.bootstrap_ops:

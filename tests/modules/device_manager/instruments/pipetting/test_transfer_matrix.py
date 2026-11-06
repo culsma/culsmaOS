@@ -65,6 +65,22 @@ class TestTransferMatrix:
         finally:
             app.close()
 
+    def test_whole_solution_moves_declared_volume_and_preserves_solute_mass(self, tmp_path):
+        fixture = TransferMatrixFixture()
+        load = (
+            'content(kind=bio_molecule_or_virus, type=protein, code="ANTIBODY", '
+            'concentration=0.5mg / 1mL):200uL'
+        )
+        plan = fixture.compile(fixture.source('target << [source];', load), tmp_path)
+        app = OSApplicationFactory().build(fixture.context(tmp_path, plan))
+        try:
+            result = app.execute(plan, init_state(plan))
+            fixture.assert_completed(app, plan, result, (0, 200), (200,))
+            target = list(result.state.artifacts['material_state']['containers'].values())[1]
+            assert target['component_quantities']['ANTIBODY']['value'] == pytest.approx(0.1)
+        finally:
+            app.close()
+
     def test_cell_count_uses_carrier_volume(self, tmp_path, record_property):
         fixture = TransferMatrixFixture()
         load = f'{CELLS}:100000cells, {MEDIUM}:300uL, content(kind=chemical, type=inorganic_compound, code="SALT"):10mg'

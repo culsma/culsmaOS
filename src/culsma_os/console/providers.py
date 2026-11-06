@@ -106,6 +106,7 @@ class ConsoleApplicationFactory:
         from culsma_os.workspace_manager.interactors import LabwareConfigurationInteractor
         from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
         from culsma_os.developer_tools.interactors import DeveloperTestInteractor
+        from culsma_os.lifecycle_manager.interactors import ConsoleWorkflowSimulationSettingInteractor
         return self.observe_operations(settings, ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
             StationConfigurationInteractor(tokens,repository,profiles),ConsoleSessionInteractor(tokens),
             ConsoleProgramInteractor(tokens,source,ResidentClientAdapter(settings.socket_path,timeout=10),{"installation":self.installation_source(settings)}),
@@ -119,9 +120,12 @@ class ConsoleApplicationFactory:
             file_reads=self.build_files(settings,tokens,source),
             file_workspace=self.build_workspace(tokens,source),
             developer_tests=DeveloperTestInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
-            instrument_profiles=self.build_instrument_profiles(settings,tokens,repository)))
+            instrument_profiles=self.build_instrument_profiles(settings,tokens,repository),
+            workflow_simulation=ConsoleWorkflowSimulationSettingInteractor(
+                tokens, ResidentClientAdapter(settings.socket_path,timeout=10))))
 
     def build_mcp(self, settings, profiles=None):
+        from culsma_os.lifecycle_manager.interactors import ConsoleWorkflowSimulationSettingInteractor
         from .adapters.mcp import MCPServerAdapter
         from .interactors import MCPHostInteractor
         tokens = TokenInteractor(SessionCredentialRepository())
@@ -144,5 +148,6 @@ class ConsoleApplicationFactory:
             labware=LabwareConfigurationInteractor(tokens,repository,resident),
             developer_tests=DeveloperTestInteractor(tokens,resident),
             station_selection=self.build_station_selection(settings,tokens),
-            instrument_profiles=self.build_instrument_profiles(settings,tokens,repository))
+            instrument_profiles=self.build_instrument_profiles(settings,tokens,repository),
+            workflow_simulation=ConsoleWorkflowSimulationSettingInteractor(tokens,resident))
         return MCPHostInteractor(tokens,self.observe_operations(settings,bridge))

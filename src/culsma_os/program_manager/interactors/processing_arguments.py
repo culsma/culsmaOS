@@ -29,3 +29,8 @@ class ProcessingArgumentsInteractor:
         if not identities or len(set(identities)) != len(identities):
             raise ValueError("PROCESSING_TARGET_INVALID")
         return tuple(ResolvedContainerRef(identity) for identity in identities)
+
+
+    def physical_targets(self, pending, targets):
+        return tuple(ResolvedContainerRef(pending.exclusive_physical_id(target.container_id))
+                     for target in targets)

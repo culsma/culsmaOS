@@ -160,6 +160,13 @@
         "validate_instrument_profile",
         "save_instrument_profile"
       ]
+    },
+    {
+      "route": "/api/v1/configuration/workflow-simulation",
+      "tools": [
+        "set_workflow_simulation",
+        "station_status"
+      ]
     }
   ]
 }

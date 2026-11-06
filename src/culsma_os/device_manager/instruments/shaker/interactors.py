@@ -18,5 +18,13 @@ class ShakerExecutionPreparationInteractor(InstrumentExecutionPreparationInterac
 
     def validate_intent(self, intent, capability):
         super().validate_intent(intent, capability)
-        if not 200 <= intent.rate_rpm <= 3000 or int(intent.rate_rpm) != intent.rate_rpm:
+        if intent.requires_motion_default and capability.get("default_motion") != "orbital":
+            raise ValueError("PROCESSING_AGITATION_MOTION_DEFAULT_REQUIRED")
+        from math import isfinite
+        limits = capability.get('rate_range_rpm', [200, 3000])
+        if (not isinstance(limits, (tuple, list)) or len(limits) != 2
+                or any(type(v) not in (int, float) or not isfinite(v) for v in limits)
+                or limits[0] > limits[1]):
+            raise ValueError('PROCESSING_AGITATION_CAPABILITY_INVALID')
+        if (type(intent.rate_rpm) is not int or not limits[0] <= intent.rate_rpm <= limits[1]):
             raise ValueError('PROCESSING_AGITATION_RATE_UNSUPPORTED')

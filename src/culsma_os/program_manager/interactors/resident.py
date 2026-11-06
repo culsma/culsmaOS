@@ -6,7 +6,7 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None, fault_tests=None, profile_queries=None, capabilities=None):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None, fault_tests=None, profile_queries=None, capabilities=None, workflow_setting=None, workflow_planner=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
         self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
@@ -18,8 +18,14 @@ class ResidentCommandInteractor:
         self.fault_tests = fault_tests
         self.profile_queries = profile_queries
         self.capabilities = capabilities
+        self.workflow_setting = workflow_setting
+        self.workflow_planner = workflow_planner
 
     def execute(self, request):
+        if request.action == 'workflow-simulation-setting':
+            if self.workflow_setting is None:
+                raise ValueError('WORKFLOW_SIMULATION_SETTING_UNAVAILABLE')
+            return self.workflow_setting.update(request.workflow_enabled, request.workflow_revision)
         if request.action == 'configuration-profile':
             if self.profile_queries is None:raise ValueError('DEVICE_PROFILE_QUERY_UNAVAILABLE')
             return self.profile_queries.execute(request.profile_request)
@@ -48,6 +54,8 @@ class ResidentCommandInteractor:
             return self.configuration.request(request,self.context,self.status)
         if request.action == 'host-status':
             value = self.status.snapshot()
+            if self.workflow_setting is not None:
+                value['workflow_simulation'] = self.workflow_setting.status()
             return {**value, 'capabilities': self.capabilities.describe()} if self.capabilities else value
         if request.action == 'layout-status' and self.layout is not None:
             return self.layout.execute()
@@ -79,7 +87,12 @@ class ResidentCommandInteractor:
         if request.action == 'preview':
             if self.setup_preview is None:
                 raise ValueError('SETUP_PREVIEW_UNAVAILABLE')
-            return self.setup_preview.preview(self.compile(request))
+            compiled = self.compile(request)
+            workflow = self.simulation_plan(request, compiled.plan)
+            self.validate_routes(compiled.plan, workflow)
+            if self.workflow_setting is None:
+                return self.setup_preview.preview(compiled)
+            return self.setup_preview.preview(compiled, workflow)
         if request.action in {'submit','start'}:
             if self.supplies:self.supplies.require_settled()
             return self.submit(request)
@@ -117,10 +130,23 @@ class ResidentCommandInteractor:
         errors = [d for d in diagnostics if d.severity == 'error']
         if errors:
             raise ResidentAdmissionError('PROGRAM_DIAGNOSTICS_REJECTED', (d.to_dict() for d in errors))
-        errors = [d for d in self.semantics.validate_plan(compiled.plan) if d.severity == 'error']
+        return compiled
+
+    def simulation_plan(self, request, plan):
+        if self.workflow_setting is None:
+            return None
+        setting = self.workflow_setting.status()
+        # Manual submits keep the strict path. The console starts simulations explicitly.
+        enabled = setting["enabled"] and request.action in {"preview", "start"}
+        return {"enabled": enabled, "mode": "simulation", "revision": setting["revision"],
+                "driver": self.context.driver_name,
+                "routes": self.workflow_planner.plan(plan, enabled)}
+
+    def validate_routes(self, plan, workflow):
+        routes = workflow["routes"] if workflow is not None else {}
+        errors = [d for d in self.semantics.validate_plan(plan, routes) if d.severity == 'error']
         if errors:
             raise ResidentAdmissionError('HOST_PLAN_UNSUPPORTED', (d.to_dict() for d in errors))
-        return compiled
 
     def submit(self, request):
         compiled = self.compile(request)
@@ -131,6 +157,8 @@ class ResidentCommandInteractor:
         startup = 'automatic' if request.action == 'start' else 'manual'
         if startup == 'automatic':
             identity = (identity, startup)
+        if request.workflow_revision is not None:
+            identity = (identity, 'workflow_revision', request.workflow_revision)
         submission = QueueSubmission(request.request_id or str(uuid4()),
             self.codec.fingerprint(identity), str(request.source.resolve()), startup)
         previous = self.queue.submission(submission.request_id)
@@ -140,7 +168,12 @@ class ResidentCommandInteractor:
             return {**self.describe(previous.run_id), 'request_id': previous.request_id, 'accepted': True}
         if request.configuration_fingerprint is not None and request.configuration_fingerprint != self.configuration.fingerprint:
             raise ValueError('HOST_CONFIGURATION_STALE')
-        run_id = self.tasks.submit(RunRequest(compiled.plan, compiled.state, profile_bindings=request.profile_bindings), submission)
+        workflow = self.simulation_plan(request, compiled.plan)
+        if request.workflow_revision is not None and (workflow is None or request.workflow_revision != workflow["revision"]):
+            raise ValueError("WORKFLOW_SIMULATION_SETTING_STALE")
+        self.validate_routes(compiled.plan, workflow)
+        run_id = self.tasks.submit(RunRequest(compiled.plan, compiled.state, profile_bindings=request.profile_bindings,
+            workflow_simulation=workflow if workflow and workflow["enabled"] else None), submission)
         return {**self.describe(run_id), 'request_id': submission.request_id, 'accepted': True}
 
     def close(self):

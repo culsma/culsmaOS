@@ -28,7 +28,8 @@ class CentrifugePreparationInteractor:
         if proposal is None or not proposal.ok or proposal.delta.get("op") != "agit":
             raise ValueError("PROCESSING_MATERIAL_PROPOSAL_INVALID")
         targets = self.arguments.targets(pending.before_material_state, [args["sample"]])
-        return CentrifugeIntent(step.step_id, targets, drive, args["drive"]["unit"], duration)
+        return CentrifugeIntent(step.step_id, self.arguments.physical_targets(pending, targets),
+                                drive, args["drive"]["unit"], duration)
 
 
 class AgitationPreparationInteractor:
@@ -78,7 +79,8 @@ class CentrifugeSeparationPreparationInteractor:
                 or proposal.delta.get("program_kind") != "centrifuge_program"
                 or proposal.delta.get("source") != targets[0].container_id):
             raise ValueError("PROCESSING_CENTRIFUGE_PROPOSAL_UNSUPPORTED")
-        return CentrifugeSeparationIntent(step.step_id, targets, drive, quantity["unit"])
+        return CentrifugeSeparationIntent(step.step_id, self.arguments.physical_targets(pending, targets),
+                                          drive, quantity["unit"])
 
 
 

@@ -53,6 +53,19 @@ class ExecutionHostInteractor:
     def preflight_report(self, run_id):
         return deepcopy(self.host.restore(self.tasks.get(run_id).checkpoint)[0].get("preflight"))
 
+    def workflow_simulation_report(self, run_id):
+        data, _ = self.host.restore(self.tasks.get(run_id).checkpoint)
+        workflow = data.get("workflow_simulation")
+        if workflow is None:
+            return None
+        observations = data["state"].artifacts.get("data_objects", {})
+        completed = {row.get("step_id") for row in observations.values()
+                     if isinstance(row, dict) and row.get("driver_payload", {}).get("synthetic") is True}
+        return {"revision": workflow["revision"], "driver": workflow["driver"], "steps": [
+            ({**route, "status": "completed"} if step_id in completed else
+             {**{key: value for key, value in route.items() if key != "result"}, "status": "planned"})
+            for step_id, route in workflow["routes"].items()]}
+
     def status(self, run_id):
         return self.tasks.get(run_id).status
 
@@ -69,7 +82,8 @@ class ExecutionHostInteractor:
         """Workspace reservation only; never registers projected future material."""
         containers, plates = {}, {}
         for member in members:
-            for identity, container in member.before_material_state.get('containers', {}).items():
+            physical = member.physical_material_state()
+            for identity, container in physical.get('containers', {}).items():
                 containers.setdefault(identity, deepcopy(container))
             for identity, plate in member.before_material_state.get('plates', {}).items():
                 if identity in plates and plates[identity] != plate:

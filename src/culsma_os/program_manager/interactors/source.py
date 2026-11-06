@@ -56,7 +56,7 @@ class ProgramSourceInteractor:
                     raise ConsoleProgramError('PROGRAM_IMPORT_NOT_FOUND')
                 pending.append(target)
 
-    def inspect_snapshot(self, snapshot, program_id):
+    def inspect_snapshot(self, snapshot, program_id, *, check_host=True):
         if program_id not in snapshot.files:
             raise ConsoleProgramError('PROGRAM_NOT_FOUND','not_found')
         try:
@@ -72,7 +72,7 @@ class ProgramSourceInteractor:
                     'scope':self.validation_scope,'diagnostics':[self.compilation_diagnostic(error,code)],
                     'allocations':[],'operations':[]}
         diagnostics = [*compiled.semantic.diagnostics,*compiled.typed.diagnostics,*compiled.plan.diagnostics,
-                       *self.semantics.validate_plan(compiled.plan)]
+                       *(self.semantics.validate_plan(compiled.plan) if check_host else ())]
         steps = [step for protocol in compiled.plan.plans for step in PlanStepTree.leaves(protocol.steps)]
         return {'program_id':program_id,'snapshot_id':snapshot.snapshot_id,
                 'valid':not any(d.severity=='error' for d in diagnostics),'scope':self.validation_scope,
@@ -80,7 +80,7 @@ class ProgramSourceInteractor:
                 'allocations':[{'allocation_id':step.step_id,'name':step.args.get('container_name',step.args.get('bind'))} for step in steps if step.op=='AllocContainer'],
                 'operations':sorted(set(step.op for step in steps)),
                 'execution_steps':[{'step_id':step.step_id,'operation':step.op,
-                    'line':getattr(step.span,'line',None)} for step in steps if step.op in {'Mutation','sep','agit','env_hold'}],
+                    'line':getattr(step.span,'line',None)} for step in steps if step.op in {'Mutation','sep','agit','env_hold','img'}],
                 'source':self.sources.read_source(snapshot,program_id)}
 
 

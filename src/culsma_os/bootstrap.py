@@ -119,13 +119,16 @@ class OSApplicationFactory:
             factory = matches[0].load()()
         return factory
 
-    def build(self, context):
+    def build(self, context, *, external_simulation=False):
         from dataclasses import replace
         from .resource_manager.interactors import StationPathInteractor
         station_path = StationPathInteractor().database_path(context)
         context = replace(context, device_state_dir=StationPathInteractor().device_state_directory(context))
         factory = self.device_factory(context)
         port, snapshot, positions, capacities, receipt_mapper = factory.build(context)
+        if external_simulation and snapshot.mode != "simulation":
+            port.close()
+            raise ValueError("EXTERNAL_SIMULATION_REQUIRED")
         database = DatabaseConnection(context.database_path)
         connections = [database.open() for _ in range(8)]
         connections.extend(DatabaseConnection(station_path).open() for _ in range(2))
@@ -161,7 +164,7 @@ class OSApplicationFactory:
         preflight = ProgramPreflightInteractor(space, snapshot,
             {"Mutation": transfer, "env_hold": processing, "agit": processing, "sep": processing},
             motion=motion, conditions=condition_projection)
-        host = HostedRuntimeInteractor(processing_capabilities=snapshot.processing_capabilities, preflight=preflight)
+        host = HostedRuntimeInteractor(processing_capabilities=snapshot.processing_capabilities, preflight=preflight, execution_mode=snapshot.mode)
         preparation = PreparationInteractor(host, self.build_workspace_catalog(context), WorkspaceCheckpointInteractor(codec))
         import os
         from .resource_manager.interactors import StationPathInteractor
@@ -253,10 +256,16 @@ class OSApplicationFactory:
             snapshot.device_id,
             conditions,
             finalization,
-            execution_strategy=strategy,
+            execution_strategy=strategy, external_simulation=external_simulation,
         )
         report = RunReportInteractor(tasks, execution, material, setup)
-        client = CulsmaOSClient(tasks, lifecycle, execution, report)
+        handoff = None
+        if external_simulation:
+            from .program_manager.interactors.external_simulation import ExternalSimulationHandoffInteractor
+            from .program_manager.repositories.external_simulation import SqliteExternalSimulationRepository
+            handoff = ExternalSimulationHandoffInteractor(
+                SqliteExternalSimulationRepository(connections[0]), tasks, report, host, snapshot, station_id, space)
+        client = CulsmaOSClient(tasks, lifecycle, execution, report, handoff)
         return OSApplication(
             OSRunHostInteractor(
                 tasks, lifecycle, execution, material, connections, gateway,
@@ -439,10 +448,17 @@ class ResidentCommandFactory:
         from .device_manager.interactors import DeviceProfileInteractor
         from .driver_framework.interactors import DriverProfileInteractor
         profile_queries = ResidentDeviceProfileInteractor(DeviceProfileInteractor(DriverProfileInteractor()))
+        from .lifecycle_manager.repository import SqliteWorkflowSimulationSettingRepository
+        from .lifecycle_manager.interactors import WorkflowSimulationSettingInteractor
+        from .developer_tools.adapters.workflow_readout import WorkflowReadoutSimulator
+        from .program_manager.interactors.workflow_simulation import WorkflowSimulationInteractor
+        workflow_planner = WorkflowSimulationInteractor(WorkflowReadoutSimulator())
+        workflow = WorkflowSimulationSettingInteractor(SqliteWorkflowSimulationSettingRepository(
+            supply_connection, context.driver_name))
         from .device_manager.interactors import StationCapabilitiesInteractor
         capabilities = StationCapabilitiesInteractor(context.driver_name, layout=layout_reader is not None,
             loading_plan=workspace_reader is not None, labware_editor=labware_editor is not None,
             simulated_tip_replacement=replacement_port is not None, fault_test=test_port is not None)
         return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
             HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
-            devices,configuration,setup_requests,layout,labware,preview,supplies,fault_tests,profile_queries,capabilities)
+            devices,configuration,setup_requests,layout,labware,preview,supplies,fault_tests,profile_queries,capabilities,workflow,workflow_planner)

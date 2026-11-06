@@ -4,12 +4,13 @@ class LifecycleInteractor:
 
     def __init__(
         self, tasks, runs, operations, recovery, state, device, evidence, device_id, conditions=None, finalization=None,
-        *, execution_strategy
+        *, execution_strategy, external_simulation=False
     ):
         self.tasks = tasks
         self.runs = runs
         self.operations = operations
         self.execution_strategy = execution_strategy
+        self.external_simulation = external_simulation
         self.recovery = recovery
         self.state = state
         self.device = device
@@ -32,10 +33,22 @@ class LifecycleInteractor:
         self.ready = True
         return decisions
 
+    def require_run_mode(self, record):
+        if not record.simulation_only:
+            return
+        snapshot = self.device.configured_snapshot
+        if getattr(snapshot, 'mode', None) != 'simulation':
+            raise ValueError('RUN_SIMULATION_MODE_REQUIRED')
+        if not self.external_simulation:
+            raise ValueError('EXTERNAL_SIMULATION_DISABLED')
+        if snapshot.execution_identity(self.reservations.station_id) != record.simulation_station:
+            raise ValueError('EXTERNAL_STATION_CHANGED')
+
     def advance_once(self, run_id):
         if not self.ready:
             raise ValueError("OS_NOT_STARTED")
         self.state.publish_pending_events()
+        self.require_run_mode(self.tasks.get(run_id))
         record = self.execution_strategy.execute(run_id)
         if record.status not in {"ready", "waiting"}:
             return self.finish_terminal(record)
@@ -63,6 +76,7 @@ class LifecycleInteractor:
     def take_over_run(self, run_id):
         from culsma_os.recovery_manager.models import RecoveryDecision
         record = self.tasks.get(run_id)
+        self.require_run_mode(record)
         owner = self.reservations.get(run_id)
         if owner is not None and owner.status == "released":
             self.finalization.finalize(run_id)
@@ -563,3 +577,38 @@ class StationSelectionInteractor(AuthorizedInteractor):
             return {'status':host['status'],'driver':host.get('capabilities',{}).get('driver')}
         except ConsoleReadError:
             return {'status':'unavailable','driver':None}
+
+
+class WorkflowSimulationSettingInteractor:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def status(self):
+        return self.repository.read()
+
+    def update(self, enabled, revision):
+        if type(enabled) is not bool or type(revision) is not int or revision < 0:
+            raise ValueError("WORKFLOW_SIMULATION_SETTING_INVALID")
+        return self.repository.update(enabled, revision)
+
+
+class ConsoleWorkflowSimulationSettingInteractor(AuthorizedInteractor):
+    required_capability = "configuration:activate"
+
+    def __init__(self, tokens, resident):
+        super().__init__(tokens)
+        self.resident = resident
+
+    def perform(self, request):
+        from .models import WorkflowSimulationSettingRequest
+        from culsma_os.program_manager.models import ConsoleProgramError
+        if (not isinstance(request, WorkflowSimulationSettingRequest) or type(request.enabled) is not bool
+                or type(request.revision) is not int or request.revision < 0):
+            raise ConsoleProgramError("WORKFLOW_SIMULATION_SETTING_INVALID")
+        try:
+            return self.resident.execute({"action": "workflow-simulation-setting",
+                "workflow_enabled": request.enabled, "workflow_revision": request.revision})
+        except OSError as error:
+            raise ConsoleProgramError("PROGRAM_HOST_RESPONSE_UNAVAILABLE", "unavailable") from error
+        except ValueError as error:
+            raise ConsoleProgramError(str(error), "conflict") from error

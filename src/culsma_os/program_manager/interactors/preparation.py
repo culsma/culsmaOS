@@ -12,5 +12,9 @@ class PreparationInteractor:
         if errors:
             raise ValueError("PROGRAM_DIAGNOSTICS_REJECTED")
         workspace = self.catalog.resolve(request.plan) if self.catalog is not None else None
-        checkpoint = self.host.create(request.plan, request.state, run_id)
+        if request.workflow_simulation is None:
+            checkpoint = self.host.create(request.plan, request.state, run_id)
+        else:
+            checkpoint = self.host.create(request.plan, request.state, run_id,
+                                          workflow_simulation=request.workflow_simulation)
         return self.checkpoints.attach(checkpoint, workspace) if workspace is not None else checkpoint

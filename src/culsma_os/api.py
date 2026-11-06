@@ -5,11 +5,12 @@ from culsma_os.program_manager.models import RunRequest
 
 class CulsmaOSClient:
 
-    def __init__(self, tasks, lifecycle, execution, report):
+    def __init__(self, tasks, lifecycle, execution, report, external_simulation=None):
         self.tasks = tasks
         self.lifecycle = lifecycle
         self.execution = execution
         self.report = report
+        self.external_simulation = external_simulation
 
     def start(self):
         return self.lifecycle.start_and_reconcile()

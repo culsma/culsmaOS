@@ -129,3 +129,61 @@ def test_no_location_diagnostic_records_capacity_and_candidates_without_inventin
     item = caught.value.diagnostics[0]['items'][0]
     assert item['required_capacity_uL'] == 500 and item['compatible_locations'] == []
     assert '500' in str(caught.value)
+
+
+@pytest.mark.parametrize('kinds', [['tube'], ['well']])
+def test_generic_container_uses_smallest_sufficient_available_location(kinds):
+    f = PlanningFixture
+    demand = f.demand('buffer', kind='container', capacity_uL=20000, initial_volume_uL=10000)
+    locations = [f.location('large', capacity=60000, kinds=kinds),
+                 f.location('small', capacity=10000, kinds=kinds),
+                 f.location('fit', capacity=25000, kinds=kinds),
+                 {**f.location('occupied', capacity=20000, kinds=kinds), 'available': False}]
+    result = WorkspacePlanningInteractor().plan([demand], f.catalogue(*locations))
+    assert result['bindings']['buffer']['labware'] == 'fit'
+    assert result['items'][0]['kind'] == 'container'
+    assert result['loadout'][0]['containers'][0]['volume_uL'] == 10000
+
+
+@pytest.mark.parametrize('preference', ['fixed', 'preferred'])
+def test_generic_container_respects_position_preferences_before_capacity_ranking(preference):
+    f = PlanningFixture
+    result = WorkspacePlanningInteractor().plan(
+        [f.demand('buffer', kind='container', capacity_uL=20000)],
+        f.catalogue(f.location('fit', capacity=20000), f.location('preferred', capacity=60000)),
+        {preference: {'buffer': {'labware': 'preferred', 'well': '1'}}})
+    assert result['bindings']['buffer']['labware'] == 'preferred'
+
+
+def test_generic_container_cannot_take_reserved_plate_or_reuse_another_position():
+    f = PlanningFixture
+    demands = [f.demand('buffer', kind='container'),
+               f.demand('plate', kind='well', carrier='p', well='A1', geometry=[8, 12]),
+               f.demand('tube')]
+    catalogue = f.catalogue(f.location('plate', 'A1', kinds=['well'], geometry=[8, 12]),
+                            f.location('plate', 'A2', kinds=['well'], geometry=[8, 12]),
+                            f.location('tubes', '1'), f.location('tubes', '2'))
+    result = WorkspacePlanningInteractor().plan(demands, catalogue)
+    assert result['bindings']['buffer']['labware'] == 'tubes'
+    assert result['bindings']['buffer'] != result['bindings']['tube']
+
+
+@pytest.mark.parametrize('values', [dict(capacity_uL=20000, initial_volume_uL=10000),
+                                    dict(capacity_uL=100, initial_volume_uL=20000)])
+def test_generic_container_requires_both_declared_capacity_and_initial_volume(values):
+    f = PlanningFixture
+    with pytest.raises(ValueError, match='SETUP_NO_FEASIBLE_LOCATION'):
+        WorkspacePlanningInteractor().plan([f.demand('buffer', kind='container', **values)],
+            f.catalogue(f.location('small', capacity=10000)))
+
+
+def test_generic_buffers_never_share_aspiration_points_of_one_reservoir():
+    f = PlanningFixture
+    locations = [{**f.location(name, str(i), capacity=60000), 'occupancy_group': 'reservoir'}
+                 for name in ('r1', 'r2') for i in (1, 2)]
+    demands = [f.demand(name, kind='container', capacity_uL=20000) for name in ('buffer', 'waste')]
+    planner = WorkspacePlanningInteractor()
+    result = planner.plan(demands, f.catalogue(*locations))
+    assert len({a['labware'] for a in result['bindings'].values()}) == 2
+    with pytest.raises(ValueError, match='SETUP_NO_FEASIBLE_LAYOUT'):
+        planner.plan(demands, f.catalogue(*locations[:2]))

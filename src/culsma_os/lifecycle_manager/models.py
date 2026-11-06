@@ -27,6 +27,12 @@ class ConsoleActivationRequest:
 
 
 @dataclass(frozen=True)
+class WorkflowSimulationSettingRequest:
+    enabled: bool
+    revision: int
+
+
+@dataclass(frozen=True)
 class StationSelectionRequest:
     action: str
     profile_id: str | None = None

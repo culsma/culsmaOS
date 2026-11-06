@@ -36,7 +36,7 @@ class ResidentProtocolAdapter:
 
     @staticmethod
     def request(payload):
-        allowed = {'action','run_id','source','material_state','library_roots','request_id','configuration','configuration_origin','configuration_fingerprint','driver','setup_fingerprint','setup_preferences','setup_acknowledged','setup_origin','labware_change','supply_change','supply_origin','developer_scenario','profile_request','profile_bindings'}
+        allowed = {'action','run_id','source','material_state','library_roots','request_id','configuration','configuration_origin','configuration_fingerprint','driver','setup_fingerprint','setup_preferences','setup_acknowledged','setup_origin','labware_change','supply_change','supply_origin','developer_scenario','profile_request','profile_bindings','workflow_enabled','workflow_revision'}
         if not isinstance(payload, dict) or set(payload) - allowed or not isinstance(payload.get('action'), str):
             raise ValueError('HOST_REQUEST_INVALID')
         for key in ('run_id','source','material_state','request_id','configuration_fingerprint','driver','developer_scenario'):
@@ -50,6 +50,9 @@ class ResidentProtocolAdapter:
             raise ValueError('HOST_REQUEST_INVALID')
         if payload.get('setup_origin') is not None and not isinstance(payload['setup_origin'], str):
             raise ValueError('HOST_REQUEST_INVALID')
+        if (payload.get('workflow_enabled') is not None and type(payload['workflow_enabled']) is not bool
+                or payload.get('workflow_revision') is not None and type(payload['workflow_revision']) is not int):
+            raise ValueError('HOST_REQUEST_INVALID')
         roots = payload.get('library_roots', [])
         if not isinstance(roots, list) or not all(isinstance(p, str) and p for p in roots):
             raise ValueError('HOST_REQUEST_INVALID')
@@ -60,7 +63,8 @@ class ResidentProtocolAdapter:
             Path(payload['material_state']) if payload.get('material_state') else None,
             tuple(Path(p) for p in roots), payload.get('request_id'),payload.get('configuration'),
             payload.get('configuration_origin'),payload.get('configuration_fingerprint'),payload.get('driver'),
-            payload.get('setup_fingerprint'),payload.get('setup_preferences'),payload.get('setup_acknowledged',False),payload.get('setup_origin'),payload.get('labware_change'),payload.get('supply_change'),payload.get('supply_origin'),payload.get('developer_scenario'),payload.get('profile_request'),payload.get('profile_bindings'))
+            payload.get('setup_fingerprint'),payload.get('setup_preferences'),payload.get('setup_acknowledged',False),payload.get('setup_origin'),payload.get('labware_change'),payload.get('supply_change'),payload.get('supply_origin'),payload.get('developer_scenario'),payload.get('profile_request'),payload.get('profile_bindings'),
+            payload.get('workflow_enabled'),payload.get('workflow_revision'))
 
 
 class ResidentSocketAdapter:

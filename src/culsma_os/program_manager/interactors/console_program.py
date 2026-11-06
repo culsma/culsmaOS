@@ -24,6 +24,9 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
         if request.configuration_fingerprint is not None:
             if not isinstance(request.configuration_fingerprint,str) or request.action not in {'submit','start'} or re.fullmatch(r'[a-f0-9]{64}',request.configuration_fingerprint) is None:
                 raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
+        if request.workflow_revision is not None and (
+                request.action != 'start' or type(request.workflow_revision) is not int or request.workflow_revision < 0):
+            raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
         required = {'list':set(),'inspect':{'program_id'},'preview':{'program_id'},'submit':{'program_id','snapshot_id','request_id'},'start':{'program_id','snapshot_id','request_id'},
                     'control-status':{'run_id','request_id'},'pause':{'run_id','request_id'},'resume':{'run_id','request_id'},'cancel':{'run_id','request_id'}}
         if (request.action not in required or {key for key,value in values.items() if value is not None} != required[request.action]
@@ -38,14 +41,21 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
             return {'acknowledgement':self.command({'action':request.action,'run_id':request.run_id,'request_id':request.request_id}),
                     'effect':'control_status' if request.action=='control-status' else 'queued_control_request'}
         snapshot = source.snapshot(None if request.action in {'inspect','preview'} else request.snapshot_id,request.program_id)
-        inspection = source.inspect_snapshot(snapshot,request.program_id)
+        inspection = source.inspect_snapshot(snapshot,request.program_id,check_host=request.action == "inspect")
         if request.action == 'inspect':
             return inspection
         if request.action == 'preview':
             if not inspection['valid']:
                 return inspection
-            preparation = self.command({'action':'preview','source':str(snapshot.directory/request.program_id),
-                                        'library_roots':[str(snapshot.directory)]})
+            try:
+                preparation = self.command({'action':'preview','source':str(snapshot.directory/request.program_id),
+                                            'library_roots':[str(snapshot.directory)]})
+            except ConsoleProgramError as error:
+                if error.code != "HOST_PLAN_UNSUPPORTED":
+                    raise
+                return {**inspection, "valid": False, "diagnostics": list(error.diagnostics),
+                        "preparation": {"status": "blocked", "diagnostic": error.diagnostics[0]["message"]
+                                        if error.diagnostics else error.code}}
             return {**inspection, 'preparation': preparation}
         if not inspection['valid']:
             raise ConsoleProgramError('PROGRAM_DIAGNOSTICS_REJECTED',diagnostics=inspection['diagnostics'])
@@ -55,6 +65,8 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
             payload['configuration_fingerprint'] = request.configuration_fingerprint
         if request.profile_bindings is not None:
             payload['profile_bindings'] = request.profile_bindings
+        if request.workflow_revision is not None:
+            payload['workflow_revision'] = request.workflow_revision
         result = self.command(payload)
         return {'run':result,'snapshot_id':snapshot.snapshot_id,'program_id':request.program_id,
                 'configuration':'running_service','effect':'admitted_to_resident_queue'}

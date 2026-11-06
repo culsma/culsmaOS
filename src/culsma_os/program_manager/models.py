@@ -17,6 +17,7 @@ class RunRequest:
     state: RuntimeState
     setup_preferences: dict | None = None
     profile_bindings: dict | None = None
+    workflow_simulation: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -29,11 +30,16 @@ class RunRecord:
     body_outcome: str | None = None
     body_error: str | None = None
     faults: tuple[dict, ...] = ()
+    simulation_station: dict[str, str] | None = None
+
+    @property
+    def simulation_only(self) -> bool:
+        return self.simulation_station is not None
 
 
 class SemanticHostPort(Protocol):
 
-    def create(self, plan, state, scope_id) -> str: ...
+    def create(self, plan, state, scope_id, *, workflow_simulation=None) -> str: ...
 
     def advance(self, checkpoint: str) -> str: ...
 
@@ -71,7 +77,7 @@ class ConditionPreflightPort(Protocol):
 
 
 class ProgramPreflightPort(Protocol):
-    def inspect(self, plan, state, scope_id): ...
+    def inspect(self, plan, state, scope_id, *, workflow=None): ...
 
 
 class RunConflict(ValueError):
@@ -91,6 +97,36 @@ class PendingEffect:
     prepared: PreparedRuntimeStep
     before_material_state: dict[str, Any]
     declaration_base_fingerprint: str | None = None
+    in_place_outputs: dict[str, tuple[str, str, str]] | None = None
+
+    def physical_id(self, logical_id):
+        output = (self.in_place_outputs or {}).get(logical_id)
+        return output[0] if output is not None else logical_id
+
+    def exclusive_physical_id(self, logical_id):
+        location = self.physical_id(logical_id)
+        if self.in_place_outputs:
+            for identity, container in self.before_material_state["containers"].items():
+                if identity != logical_id and self.physical_id(identity) == location and (
+                        container["volume_uL"] > 0 or any(
+                            q.get("status") == "unknown" or q.get("value")
+                            for q in container.get("component_quantities", {}).values()
+                        )):
+                    raise ValueError("WORKSPACE_SEPARATION_PARTS_SHARE_LOCATION")
+        return location
+
+    def physical_material_state(self):
+        """Build the device's volume view while keeping the language ledger intact."""
+        if not self.in_place_outputs:
+            return self.before_material_state
+        containers = dict(self.before_material_state["containers"])
+        for identity, (location, _, _) in self.in_place_outputs.items():
+            part = containers.pop(identity, None)
+            if part is not None:
+                source = containers[location]
+                containers[location] = {**source,
+                    "volume_uL": source["volume_uL"] + part["volume_uL"]}
+        return {**self.before_material_state, "containers": containers}
 
 
 @dataclass(frozen=True)
@@ -287,6 +323,8 @@ class ResidentCommand:
     developer_scenario: str | None = None
     profile_request: dict | None = None
     profile_bindings: dict | None = None
+    workflow_enabled: bool | None = None
+    workflow_revision: int | None = None
 
 class ResidentAdmissionError(ValueError):
     def __init__(self, code, diagnostics=()):
@@ -333,6 +371,7 @@ class ConsoleProgramRequest:
     configuration_fingerprint: str | None = None
     source_scope: str = "programs"
     profile_bindings: dict | None = None
+    workflow_revision: int | None = None
 
 class ConsoleProgramError(ValueError):
     def __init__(self, code, kind='invalid_request', diagnostics=()):

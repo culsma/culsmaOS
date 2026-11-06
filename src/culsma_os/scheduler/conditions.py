@@ -111,7 +111,7 @@ class ProcessingConditionProjectionInteractor:
         intent = self.processing.resolve_intent(pending)
         if not isinstance(intent, MagneticSeparationIntent):
             return retained
-        layout = self.space.preview(self.space.scope_for_effect(pending), pending.before_material_state, allocations)
+        layout = self.space.preview(self.space.scope_for_effect(pending), pending.physical_material_state(), allocations)
         _, module = self.processing.bind_intent(intent, layout, self.snapshot, projected[1])
         capability = self.snapshot.processing_capabilities[intent.capability][module]
         destination = capability.get('release_destination')

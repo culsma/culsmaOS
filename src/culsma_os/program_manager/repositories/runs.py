@@ -32,6 +32,8 @@ class SqliteTaskRepository:
                 connection.execute("ALTER TABLE os_runs ADD COLUMN body_error TEXT")
             if "faults" not in columns:
                 connection.execute("ALTER TABLE os_runs ADD COLUMN faults TEXT NOT NULL DEFAULT '[]'")
+            if "simulation_station" not in columns:
+                connection.execute("ALTER TABLE os_runs ADD COLUMN simulation_station TEXT")
             connection.execute(
                 "CREATE TABLE IF NOT EXISTS os_run_outbox(event_id TEXT PRIMARY KEY,run_id TEXT,status TEXT,revision INTEGER,published INTEGER DEFAULT 0)"
             )
@@ -39,15 +41,19 @@ class SqliteTaskRepository:
     def save(self, record, *, queue_submission=None):
         with self.connection:
             row = self.connection.execute(
-                "SELECT revision FROM os_runs WHERE run_id=?", (record.run_id,)
+                "SELECT revision,simulation_station FROM os_runs WHERE run_id=?", (record.run_id,)
             ).fetchone()
             if row is None:
                 if record.revision != 0:
                     raise RunConflict("RUN_REVISION_CONFLICT")
-                self.connection.execute(
-                    "INSERT INTO os_runs(run_id,status,checkpoint,revision,error,body_outcome,body_error,faults) VALUES (?,?,?,?,?,?,?,?)",
-                    (record.run_id, record.status, record.checkpoint, 1, record.error, record.body_outcome, record.body_error, json.dumps(record.faults)),
-                )
+                inserted = self.connection.execute(
+                    """INSERT INTO os_runs(run_id,status,checkpoint,revision,error,body_outcome,body_error,faults,simulation_station)
+                       VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(run_id) DO NOTHING""",
+                    (record.run_id, record.status, record.checkpoint, 1, record.error, record.body_outcome,
+                     record.body_error, json.dumps(record.faults), json.dumps(record.simulation_station)),
+                ).rowcount
+                if inserted != 1:
+                    raise RunConflict("RUN_REVISION_CONFLICT")
                 self.connection.execute(
                     "INSERT INTO os_run_outbox(event_id,run_id,status,revision) VALUES(?,?,?,?)",
                     (f"{record.run_id}:1", record.run_id, record.status, 1),
@@ -57,6 +63,9 @@ class SqliteTaskRepository:
                         "INSERT INTO os_run_queue(run_id,source,request_id,fingerprint,startup) VALUES(?,?,?,?,?)",
                         (record.run_id, queue_submission.source, queue_submission.request_id, queue_submission.fingerprint, queue_submission.startup))
                 return replace(record, revision=1)
+            station = json.loads(row[1]) if row[1] is not None else None
+            if record.simulation_station != station:
+                raise RunConflict("RUN_SIMULATION_STATION_IMMUTABLE")
             changed = self.connection.execute(
                 "UPDATE os_runs SET status=?,checkpoint=?,revision=revision+1,error=?,body_outcome=?,body_error=?,faults=? WHERE run_id=? AND revision=?",
                 (
@@ -85,19 +94,19 @@ class SqliteTaskRepository:
 
     def get(self, run_id):
         row = self.connection.execute(
-            "SELECT run_id,status,checkpoint,revision,error,body_outcome,body_error,faults FROM os_runs WHERE run_id=?",
+            "SELECT run_id,status,checkpoint,revision,error,body_outcome,body_error,faults,simulation_station FROM os_runs WHERE run_id=?",
             (run_id,),
         ).fetchone()
         if row is None:
             raise KeyError(run_id)
-        return RunRecord(*row[:-1], faults=tuple(json.loads(row[-1])))
+        return RunRecord(*row[:-2], faults=tuple(json.loads(row[-2])), simulation_station=json.loads(row[-1]) if row[-1] is not None else None)
 
     def unfinished(self):
         return tuple(
             (
-                RunRecord(*row[:-1], faults=tuple(json.loads(row[-1])))
+                RunRecord(*row[:-2], faults=tuple(json.loads(row[-2])), simulation_station=json.loads(row[-1]) if row[-1] is not None else None)
                 for row in self.connection.execute(
-                    "SELECT run_id,status,checkpoint,revision,error,body_outcome,body_error,faults FROM os_runs WHERE status NOT IN ('completed','failed','cancelled') OR body_outcome IS NULL"
+                    "SELECT run_id,status,checkpoint,revision,error,body_outcome,body_error,faults,simulation_station FROM os_runs WHERE status NOT IN ('completed','failed','cancelled') OR body_outcome IS NULL"
                 )
             )
         )

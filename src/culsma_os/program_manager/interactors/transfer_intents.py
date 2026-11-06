@@ -44,7 +44,7 @@ class TransferIntentInteractor:
             raise ValueError("TRANSFER_TARGET_UNRESOLVED")
         aliquots = self.resolve_aliquots(pending, target)
         return TransferExecutionDecision(TransferIntent(
-            step.step_id, ResolvedContainerRef(target), aliquots, step.span, requirements
+            step.step_id, ResolvedContainerRef(pending.exclusive_physical_id(target)), aliquots, step.span, requirements
         ) if aliquots else None)
 
     def resolve_aliquots(self, pending, target):
@@ -68,13 +68,20 @@ class TransferIntentInteractor:
                 continue
             if delta.get("source") != identity or delta.get("target") != target:
                 raise ValueError("TRANSFER_MATERIAL_REFERENCE_MISMATCH")
-            if self.is_empty_movement(delta, pending.before_material_state["containers"][identity]):
+            source_container = pending.before_material_state["containers"][identity]
+            if delta.get("mode") == "full" and source_container.get("metadata", {}).get("kind") == "surface":
+                # Surface locations can refer to externally observed material with no liquid ledger entry.
+                raise ValueError("TRANSFER_SURFACE_PICKING_UNSUPPORTED")
+            if self.is_empty_movement(delta, source_container):
                 continue
             if delta.get("mode") == "full":
-                self.require_liquid_source(pending.before_material_state["containers"][identity])
+                self.require_liquid_source(source_container)
             volume = self.resolve_physical_volume(delta)
             if volume > 0:
-                aliquots.append(TransferAliquot(ResolvedContainerRef(identity), volume))
+                source_position = pending.exclusive_physical_id(identity)
+                if source_position == pending.physical_id(target):
+                    raise ValueError("TRANSFER_SEPARATION_PARTS_SHARE_LOCATION")
+                aliquots.append(TransferAliquot(ResolvedContainerRef(source_position), volume))
         return tuple(aliquots)
 
     def is_empty_movement(self, delta, source):
@@ -100,7 +107,13 @@ class TransferIntentInteractor:
     def require_liquid_source(self, container):
         """A bulk volume proxy for dry mass is not a pipettable liquid declaration."""
         quantities = container.get("component_quantities", {})
-        if any(quantity.get("dimension") == "mass" for quantity in quantities.values() if isinstance(quantity, dict)):
+        if any(
+            quantity.get("dimension") == "mass"
+            and (quantity.get("solution_solute") is not True
+                 or quantity.get("cross_axis_projection") is not False)
+            for quantity in quantities.values()
+            if isinstance(quantity, dict)
+        ):
             raise ValueError("TRANSFER_LIQUID_VOLUME_REQUIRED")
         if not any(
             quantity.get("dimension") == "volume"
@@ -135,6 +148,11 @@ class MagneticTransferInteractor:
     def handles(self, pending):
         from culsma.runtime.material.contents_state import is_container_contents_index
         step = pending.prepared.runtime_step
+        proposal = pending.prepared.material_result
+        if proposal is not None and pending.in_place_outputs and any(
+                pending.in_place_outputs.get(delta.get("source"), (None, None, None))[2] == "1"
+                for delta in proposal.delta.get("sources", ())):
+            return True
         if "field" in (step.gate or {}).get("env", {}):
             return True
         return any(is_container_contents_index(s.get("left") if isinstance(s, dict) and s.get("kind") == "IRPair" else s)
@@ -154,7 +172,7 @@ class MagneticTransferInteractor:
         source = sources[0]
         reference = source.get("left") if source.get("kind") == "IRPair" else source
         if not is_container_contents_index(reference):
-            raise ValueError("TRANSFER_MAGNETIC_SELECTION_UNSUPPORTED")
+            return self.resolve_named_flowthrough(pending, reference)
         selection = MaterialIndexedPartsStateManager().resolve_indexed_part(
             step=step, state=deepcopy(pending.before_material_state), contents_ref=reference)
         if (not isinstance(selection, ContentsPartSelection) or selection.slot != "1"
@@ -180,9 +198,35 @@ class MagneticTransferInteractor:
             raise ValueError("TRANSFER_MAGNETIC_LIQUID_REQUIRED")
         if volume == 0:
             return TransferExecutionDecision(None)
-        return TransferExecutionDecision(MagneticFlowthroughTransferIntent(step.step_id, ResolvedContainerRef(target),
-            (TransferAliquot(source_ref, float(volume)),), step.span,
+        return TransferExecutionDecision(MagneticFlowthroughTransferIntent(step.step_id,
+            ResolvedContainerRef(pending.exclusive_physical_id(target)),
+            (TransferAliquot(ResolvedContainerRef(pending.physical_id(selection.source_id)), float(volume)),), step.span,
             requirements=requirements, producer_step_id=selection.state_record["step_id"]))
+
+    def resolve_named_flowthrough(self, pending, reference):
+        from .magnetic_intents import MagneticEnvironmentInteractor
+        from culsma_os.device_manager.instruments.pipetting.models import MagneticFlowthroughTransferIntent
+        step = pending.prepared.runtime_step
+        state = pending.before_material_state
+        identity = MaterialRefResolver.resolve_target_ref(state, reference)
+        output = (pending.in_place_outputs or {}).get(identity)
+        delta, = pending.prepared.material_result.delta["sources"]
+        target = MaterialRefResolver.resolve_target_ref(state, step.args.get("target"))
+        if (output is None or output[2] != "1" or target is None
+                or delta.get("source") != identity or delta.get("target") != target
+                or pending.physical_id(target) == output[0]):
+            raise ValueError("TRANSFER_MAGNETIC_FLOWTHROUGH_REQUIRED")
+        if any(k in (step.gate or {}) for k in ("env", "env_layers", "env_targets")):
+            MagneticEnvironmentInteractor().validate(step, state, (ResolvedContainerRef(output[0]),))
+        volume = TransferIntentInteractor().resolve_physical_volume(delta)
+        if volume == 0:
+            return TransferExecutionDecision(None)
+        TransferIntentInteractor().require_liquid_source(state["containers"][identity])
+        requirements = TransferConstraintInteractor().resolve((step.gate or {}).get("constraint", {}))
+        return TransferExecutionDecision(MagneticFlowthroughTransferIntent(step.step_id,
+            ResolvedContainerRef(pending.exclusive_physical_id(target)),
+            (TransferAliquot(ResolvedContainerRef(output[0]), volume),), step.span,
+            requirements=requirements, producer_step_id=output[1]))
 
 class CentrifugeTransferInteractor:
     def select(self, pending, reference):

@@ -8,6 +8,7 @@ from culsma_os.driver_framework.adapters.semantic import SemanticReplayDriver
 from culsma_os.driver_framework.models import BatchOperation
 from .preflight import PreflightEffectInteractor
 from .replay import ReplayEffectInteractor
+from .workflow_simulation import WorkflowSimulationInteractor
 
 
 class BatchProjectionInteractor:
@@ -57,7 +58,7 @@ class BatchProjectionEffectInteractor(PreflightEffectInteractor):
         if self.diagnostics or self.retained_conditions:
             raise ValueError('BATCH_RETAINED_CONDITION_UNSUPPORTED' if self.retained_conditions else 'BATCH_PROJECTION_REJECTED')
         positions = self.motion_projection[1] if self.motion_projection is not None else None
-        layout = preflight.space.preview(self.data['scope_id'], pending.before_material_state, self.allocations)
+        layout = preflight.space.preview(self.data['scope_id'], pending.physical_material_state(), self.allocations)
         for ordinal, move in enumerate(moves):
             self.operations.append(BatchOperation(f'{pending.effect_id}/motion/{ordinal}', move, layout.bindings))
         planner = preflight.planners[pending.prepared.runtime_step.op]
@@ -68,6 +69,9 @@ class BatchProjectionEffectInteractor(PreflightEffectInteractor):
             self.operations.append(BatchOperation(pending.effect_id, intent, layout.bindings, description))
 
     def execute(self, step):
+        simulated = WorkflowSimulationInteractor.execute_step(self.data, step)
+        if simulated is not None:
+            return simulated
         if step.op in self.bootstrap_ops:
             return DriverResult(True, 'BATCH_DECLARATION', {'internal': True})
         if self.cursor < len(self.data['confirmed']):

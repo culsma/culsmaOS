@@ -13,15 +13,16 @@ from culsma_os.device_manager.instruments.models import ModuleProfileError
 from .instrument_profiles import InstrumentProfileRequestMapper
 from culsma_os.resource_manager.models import SupplyReplacementRequest,SupplyReplacementError
 from culsma_os.file_system.models import FileReadRequest,FileReadError
-from culsma_os.lifecycle_manager.models import ConsoleActivationRequest
+from culsma_os.lifecycle_manager.models import ConsoleActivationRequest, WorkflowSimulationSettingRequest
 from culsma_os.console_interaction.models import ViewInteractionError, ViewStateReadRequest, ViewRequest, RendererSessionRequest
 
 
 class ConsoleHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None, file_reads=None, developer_tests=None, file_workspace=None, instrument_profiles=None):
+    def __init__(self, settings, commands, configuration=None, sessions=None, programs=None, bindings=None, activation=None, setup=None, setup_confirmation=None, labware=None, view_reads=None, view_requests=None, renderer_sessions=None, supplies=None, file_reads=None, developer_tests=None, file_workspace=None, instrument_profiles=None, workflow_simulation=None):
         self.instrument_profiles = instrument_profiles
+        self.workflow_simulation = workflow_simulation
         self.view_reads, self.view_requests, self.renderer_sessions = view_reads, view_requests, renderer_sessions
         self.settings = settings
         self.file_workspace=file_workspace
@@ -155,9 +156,10 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
         return StationConfigurationRequest('import_layout',driver=payload['driver'],layout_source=payload['layout_source'])
 
     def program_request(self, payload):
-        allowed = {'action','program_id','snapshot_id','request_id','run_id','configuration_fingerprint','source_scope','profile_bindings'}
+        allowed = {'action','program_id','snapshot_id','request_id','run_id','configuration_fingerprint','source_scope','profile_bindings','workflow_revision'}
         if (not isinstance(payload,dict) or set(payload)-allowed or not isinstance(payload.get('action'),str)
-                or any(value is not None and not isinstance(value,str) for key,value in payload.items() if key != 'profile_bindings')
+                or any(value is not None and not isinstance(value,str) for key,value in payload.items() if key not in {'profile_bindings','workflow_revision'})
+                or payload.get('workflow_revision') is not None and type(payload['workflow_revision']) is not int
                 or payload.get('profile_bindings') is not None and not isinstance(payload['profile_bindings'],dict)):
             raise ConsoleReadError('PROGRAM_REQUEST_INVALID','invalid_request')
         return ConsoleProgramRequest(**payload)
@@ -243,6 +245,11 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
             raise ConsoleReadError('DEVELOPER_REQUEST_INVALID','invalid_request')
         return FaultTestRequest(**payload)
 
+    def workflow_simulation_request(self, payload):
+        if not isinstance(payload, dict) or set(payload) != {"enabled", "revision"}:
+            raise ConsoleProgramError("WORKFLOW_SIMULATION_SETTING_INVALID")
+        return WorkflowSimulationSettingRequest(payload["enabled"], payload["revision"])
+
     def do_POST(self):
         try:
             url = urlsplit(self.path)
@@ -256,6 +263,7 @@ class ConsoleHTTPHandler(BaseHTTPRequestHandler):
                          '/api/v1/configuration/program-bindings':(self.server.bindings,self.binding_request,'culsma_configuration_v1'),
                          '/api/v1/configuration/drafts':(self.server.configuration,self.configuration_request,'culsma_configuration_v1'),
                          '/api/v1/configuration/layout-import':(self.server.configuration,self.layout_import_request,'culsma_configuration_v1'),
+                         '/api/v1/configuration/workflow-simulation': (self.server.workflow_simulation,self.workflow_simulation_request,'culsma_workflow_simulation_v1'),
                          '/api/v1/programs':(self.server.programs,self.program_request,'culsma_program_console_v1')}
             if url.path not in endpoints or endpoints[url.path][0] is None:
                 self.reject_method()

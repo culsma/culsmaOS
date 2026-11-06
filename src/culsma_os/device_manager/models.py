@@ -54,6 +54,15 @@ class DeviceConfigurationSnapshot:
             raise ValueError("DEVICE_TRANSFER_SELECTION_CAPABILITIES_INVALID")
 
 
+    def execution_identity(self, station_id):
+        return {
+            "station_id": station_id,
+            "device_id": self.device_id,
+            "configuration_revision": self.configuration_revision,
+            "calibration_revision": self.calibration_revision,
+        }
+
+
 class DeviceReadinessPort(Protocol):
 
     def check_ready(self) -> None: ...

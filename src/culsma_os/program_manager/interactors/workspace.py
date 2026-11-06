@@ -12,27 +12,31 @@ class WorkspaceCheckpointInteractor:
     def attach(self, checkpoint, workspace):
         data = self.codec.loads(checkpoint)
         self.read(data)
-        if data['schema'] == 4:
+        if 'workspace' in data:
             raise HostContractError('HOST_CHECKPOINT_WORKSPACE_IMMUTABLE')
-        data['group_execution'] = data['schema'] == 3
-        data['schema'] = 4
+        if data['schema'] != 5:
+            data['group_execution'] = data['schema'] == 3
+            data['schema'] = 4
         data['workspace'] = deepcopy(workspace)
         data['workspace_fingerprint'] = self.codec.fingerprint(workspace)
         self.read(data)
         return self.codec.dumps(data)
 
     def read(self, data):
-        if type(data.get('schema')) is not int or data['schema'] not in {2, 3, 4}:
+        if type(data.get('schema')) is not int or data['schema'] not in {2, 3, 4, 5}:
             raise HostContractError('HOST_CHECKPOINT_SCHEMA_UNSUPPORTED')
-        if data.get('schema') != 4:
+        if data['schema'] in {2, 3}:
             if 'workspace' in data or 'workspace_fingerprint' in data or 'group_execution' in data:
                 raise HostContractError('HOST_CHECKPOINT_WORKSPACE_INVALID: workspace requires schema 4')
             return None
         workspace = data.get('workspace')
         from culsma.pipeline.plan_nodes import PlanStepTree
         grouped = any(s.op == 'MutationGroup' for p in data['plan'].plans for s in PlanStepTree.walk(p.steps))
-        if (type(data.get('group_execution')) is not bool or data['group_execution'] != grouped
-                or not isinstance(workspace, dict)
+        if type(data.get('group_execution')) is not bool or data['group_execution'] != grouped:
+            raise HostContractError('HOST_CHECKPOINT_WORKSPACE_INVALID')
+        if data['schema'] == 5 and 'workspace' not in data and 'workspace_fingerprint' not in data:
+            return None
+        if (not isinstance(workspace, dict)
                 or workspace.get('schema') != 'culsma_run_workspace_v1'):
             raise HostContractError('HOST_CHECKPOINT_WORKSPACE_INVALID')
         if (self.codec.fingerprint(data['plan']) != data['plan_fingerprint']
@@ -43,7 +47,7 @@ class WorkspaceCheckpointInteractor:
 
     @staticmethod
     def groups_enabled(data):
-        return data.get('group_execution') is True if data.get('schema') == 4 else data.get('schema') == 3
+        return data.get('group_execution') is True if data.get('schema') in {4, 5} else data.get('schema') == 3
 
 
 class ProgramWorkspaceCatalogInteractor:

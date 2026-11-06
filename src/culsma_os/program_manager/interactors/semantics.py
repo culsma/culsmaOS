@@ -15,18 +15,20 @@ from ..models import (
 )
 from .codec import RuntimeCheckpointCodecInteractor
 from .replay import ReplayEffectInteractor
+from .workflow_simulation import WorkflowSimulationInteractor
 from .verification import CheckpointVerificationInteractor
 from .workspace import WorkspaceCheckpointInteractor
 
 
 class HostedRuntimeInteractor:
-    def __init__(self, codec=None, processing_capabilities=None, preflight: ProgramPreflightPort | None = None):
+    def __init__(self, codec=None, processing_capabilities=None, preflight: ProgramPreflightPort | None = None, execution_mode=None):
         self.codec = codec or RuntimeCheckpointCodecInteractor()
         self.preflight = preflight
+        self.execution_mode = execution_mode
         self.processing_capabilities = deepcopy(processing_capabilities)
         self.verification = CheckpointVerificationInteractor()
 
-    def validate_plan(self, plan):
+    def validate_plan(self, plan, routes=None):
         declarations = ReplayEffectInteractor.bootstrap_ops | {
             "FinalizeContainerContents", "replace"
         }
@@ -51,6 +53,8 @@ class HostedRuntimeInteractor:
                     or (program.get("name") == "centrifuge_program"
                         and self.processing_capabilities is not None
                         and not self.processing_capabilities.get("centrifuge"))))
+                if step.op == "img" and step.step_id in (routes or {}) and routes[step.step_id]["operation"] == "img":
+                    continue
                 if step.op not in allowed or unsupported_separation:
                     diagnostics.append(
                         Diagnostic(
@@ -62,7 +66,7 @@ class HostedRuntimeInteractor:
                     )
         return diagnostics
 
-    def create(self, plan, state, scope_id):
+    def create(self, plan, state, scope_id, *, workflow_simulation=None):
         if any(status != 'pending' for status in state.step_status.values()) or state.locks or state.history:
             raise HostContractError('HOST_INITIAL_STATE_NOT_FRESH: continue through the saved checkpoint')
         initial = deepcopy(state)
@@ -75,19 +79,25 @@ class HostedRuntimeInteractor:
             "initial_state": initial,
             "initial_fingerprint": self.codec.fingerprint(initial),
             "state": deepcopy(initial),
-            "diagnostics": list(plan.diagnostics) + self.validate_plan(plan),
+            "diagnostics": list(plan.diagnostics) + self.validate_plan(
+                plan, (workflow_simulation or {}).get("routes")),
             "pending": None,
             "confirmed": [],
             "finished": False,
             "result": None,
         }
+        if workflow_simulation is not None:
+            data["group_execution"] = data["schema"] == 3
+            data["schema"] = 5
+            data["workflow_simulation"] = deepcopy(workflow_simulation)
+            data["workflow_fingerprint"] = self.codec.fingerprint(workflow_simulation)
         return self.codec.dumps(data)
 
     def restore(self, checkpoint):
         data = self.codec.loads(checkpoint)
-        if type(data.get("schema")) is not int or data.get("schema") not in {2, 3, 4}:
+        if type(data.get("schema")) is not int or data.get("schema") not in {2, 3, 4, 5}:
             raise HostContractError(
-                "HOST_CHECKPOINT_SCHEMA_UNSUPPORTED: requires version 2, 3 or 4; historical records remain isolated"
+                "HOST_CHECKPOINT_SCHEMA_UNSUPPORTED: requires version 2, 3, 4 or 5; historical records remain isolated"
             )
         if self.codec.fingerprint(data["plan"]) != data["plan_fingerprint"]:
             raise HostContractError("HOST_CHECKPOINT_PLAN_MISMATCH")
@@ -96,6 +106,14 @@ class HostedRuntimeInteractor:
         contract = data.get('carrier_contract', 0)
         if type(contract) is not int or contract not in {0, 1}:
             raise HostContractError('HOST_CHECKPOINT_LANGUAGE_CONTRACT_UNSUPPORTED')
+        if data["schema"] == 5:
+            workflow = data.get("workflow_simulation")
+            if (not isinstance(workflow, dict) or workflow.get("mode") != "simulation"
+                    or not isinstance(workflow.get("routes"), dict)
+                    or self.codec.fingerprint(workflow) != data.get("workflow_fingerprint")):
+                raise HostContractError("WORKFLOW_SIMULATION_CHECKPOINT_INVALID")
+        elif "workflow_simulation" in data or "workflow_fingerprint" in data:
+            raise HostContractError("WORKFLOW_SIMULATION_CHECKPOINT_INVALID")
         WorkspaceCheckpointInteractor(self.codec).read(data)
         pending = data["pending"]
         waiting = [k for k, v in data["state"].step_status.items() if v == "waiting"]
@@ -170,19 +188,25 @@ class HostedRuntimeInteractor:
         if data["confirmed"] or data["pending"] is not None or data["finished"]:
             return
         known = {(d.code, d.message, d.node_id) for d in data["diagnostics"]}
-        for diagnostic in self.validate_plan(data["plan"]):
+        for diagnostic in self.validate_plan(data["plan"], WorkflowSimulationInteractor.routes(data)):
             key = (diagnostic.code, diagnostic.message, diagnostic.node_id)
             if key not in known:
                 data["diagnostics"].append(diagnostic)
                 known.add(key)
 
         if self.preflight is not None and not any(d.severity == "error" for d in data["diagnostics"]):
-            report, diagnostics = self.preflight.inspect(data["plan"], data["initial_state"], data["scope_id"])
+            options = {"workflow": data["workflow_simulation"]} if "workflow_simulation" in data else {}
+            report, diagnostics = self.preflight.inspect(data["plan"], data["initial_state"], data["scope_id"], **options)
             data["preflight"] = report
             data["diagnostics"].extend(diagnostics)
 
+    def require_workflow_mode(self, data):
+        if data["schema"] == 5 and self.execution_mode != "simulation":
+            raise HostContractError("RUN_SIMULATION_MODE_REQUIRED")
+
     def advance(self, checkpoint):
         data, _ = self.restore(checkpoint)
+        self.require_workflow_mode(data)
         if data["pending"] is not None or data["finished"]:
             return checkpoint
         self.validate_admission(data)
@@ -193,6 +217,7 @@ class HostedRuntimeInteractor:
 
     def resume(self, checkpoint, resolution):
         data, _ = self.restore(checkpoint)
+        self.require_workflow_mode(data)
         pending = data["pending"]
         if pending is None or pending.effect_id != resolution.effect_id:
             raise HostContractError("HOST_RESOLUTION_EFFECT_MISMATCH")

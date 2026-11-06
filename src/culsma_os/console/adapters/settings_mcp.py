@@ -1,7 +1,7 @@
 """MCP settings adapter: typed request mapping to the existing UI use cases."""
 from typing import Any, Literal
 from culsma_os.workspace_manager.models import StationConfigurationRequest, ProgramBindingRequest, LabwareRequest
-from culsma_os.lifecycle_manager.models import ConsoleActivationRequest, StationSelectionRequest
+from culsma_os.lifecycle_manager.models import ConsoleActivationRequest, StationSelectionRequest, WorkflowSimulationSettingRequest
 from culsma_os.developer_tools.models import FaultTestRequest
 
 
@@ -21,6 +21,7 @@ class MCPSettingsTools:
             (self.activation, [(self.configuration_status, True), (self.apply_configuration, False)]),
             (self.labware, [(self.labware_catalogue, True), (self.prepare_labware_change, False)]),
             (self.developer_tests, [(self.test_device_fault, False)]),
+            (self.workflow_simulation, [(self.set_workflow_simulation, False)]),
         ]
         return [(method, readonly) for owner, methods in groups if owner is not None for method, readonly in methods]
 
@@ -92,3 +93,7 @@ class MCPSettingsTools:
     def select_station_for_next_start(self, profile_id: str, expected_selected_profile: str) -> dict[str, Any]:
         """Persist a workstation choice against the selection read earlier. Does not stop or switch the running station. Restart the App and reconnect MCP when indicated; station_status verifies the actual driver."""
         return self.station_selection.execute(self.raw_credential, StationSelectionRequest('select',profile_id,expected_selected_profile))
+
+    def set_workflow_simulation(self, enabled: bool, expected_revision: int) -> dict[str, Any]:
+        """Set the explicit internal workflow simulation policy for the current station. Read its revision in station_status first. Synthetic results are never hardware evidence; disabling restores strict device capability checks for new runs."""
+        return self.workflow_simulation.execute(self.raw_credential, WorkflowSimulationSettingRequest(enabled, expected_revision))

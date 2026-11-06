@@ -72,6 +72,10 @@ class RunReportInteractor:
             "unresolved_material_effects": self.material.uncertainties(run_id),
         }
         report["os"]["preflight"] = self.execution.preflight_report(run_id)
+        workflow = self.execution.workflow_simulation_report(run_id)
+        if workflow is not None:
+            report["os"]["workflow_simulation"] = workflow
+            report["os"]["mode"] = "simulation"
         if self.setup is not None:
             try:
                 report['os']['setup'] = self.setup.get(run_id)

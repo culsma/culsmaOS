@@ -8,6 +8,7 @@ from culsma.runtime.material.compute import MaterialCompute
 from culsma.runtime.values import RuntimeValueResolver
 from culsma.pipeline.plan_nodes import PlanStepTree
 from .workspace import WorkspaceCheckpointInteractor
+from .workflow_simulation import WorkflowSimulationInteractor
 from culsma.driver.groups import GroupDriverResult
 from ..models import (
     PreparedRuntimeStep,
@@ -31,17 +32,23 @@ class ReplayEffectInteractor:
         self.cursor = 0
         self.pending = None
         self.last_effect_material = None
+        self.in_place_outputs = {}
         self.steps = {s.step_id: s for p in data["plan"].plans for s in PlanStepTree.leaves(p.steps)}
         self.values = RuntimeValueResolver()
         self.material = MaterialCompute()
 
     def check(self, step):
-        allowed = step.op in self.bootstrap_ops or step.op in {"Mutation", "env_hold", "agit", "sep"}
+        route = WorkflowSimulationInteractor.routes(self.data).get(step.step_id)
+        allowed = (step.op in self.bootstrap_ops or step.op in {"Mutation", "env_hold", "agit", "sep"}
+                   or route is not None and route["operation"] == step.op)
         return DriverCapabilityResult(
             allowed, "HOST_SUPPORTED" if allowed else "HOST_OPERATION_UNSUPPORTED"
         )
 
     def execute(self, step):
+        simulated = WorkflowSimulationInteractor.execute_step(self.data, step)
+        if simulated is not None:
+            return simulated
         if step.op in self.bootstrap_ops:
             return DriverResult(True, "HOST_LANGUAGE_DECLARATION", {"internal": True})
         if step.op not in {"Mutation", "env_hold", "agit", "sep"}:
@@ -87,7 +94,15 @@ class ReplayEffectInteractor:
         if self.last_effect_material is not None and self.last_effect_material != before and self.codec is not None:
             base = self.codec.fingerprint(self.last_effect_material)
         self.last_effect_material = deepcopy(prepared.material_result.material_state)
-        return PendingEffect(effect_id, prepared, before, base)
+        locations = dict(self.in_place_outputs) or None
+        delta = prepared.material_result.delta
+        if delta.get("op") == "sep" and delta.get("program_kind") == "magnetic_program" and delta.get("slots"):
+            source = delta["source"]
+            if source in self.in_place_outputs:
+                source = self.in_place_outputs[source][0]
+            for slot, output in delta["slots"].items():
+                self.in_place_outputs[output] = (source, prepared.runtime_step.step_id, slot)
+        return PendingEffect(effect_id, prepared, before, base, locations)
 
     def resolve_environment(self, step):
         gate = deepcopy(step.gate or {})

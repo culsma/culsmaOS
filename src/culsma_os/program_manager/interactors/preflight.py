@@ -8,6 +8,7 @@ from culsma.runtime.executor import run
 from culsma_os.driver_framework.adapters.semantic import SemanticReplayDriver
 from ..models import OperationPreflightPort, ConditionPreflightPort
 from .replay import ReplayEffectInteractor
+from .workflow_simulation import WorkflowSimulationInteractor
 
 
 class ProgramPreflightInteractor:
@@ -17,9 +18,11 @@ class ProgramPreflightInteractor:
         self.max_rounds = max_rounds
         self.motion, self.conditions = motion, conditions
 
-    def inspect(self, plan, state, scope_id):
+    def inspect(self, plan, state, scope_id, *, workflow=None):
         projection = deepcopy(state)
         data = {"plan": plan, "scope_id": scope_id, "confirmed": [], "schema": 3}
+        if workflow is not None:
+            data["workflow_simulation"] = workflow
         effects = PreflightEffectInteractor(data, projection, self)
         effects.motion_projection = None
         if self.motion is not None:
@@ -88,6 +91,9 @@ class PreflightEffectInteractor(ReplayEffectInteractor):
             self.diagnostics.append(Diagnostic("PREFLIGHT_OPERATION_REJECTED", str(error), step.span, node_id=step.step_id))
 
     def execute(self, step):
+        simulated = WorkflowSimulationInteractor.execute_step(self.data, step)
+        if simulated is not None:
+            return simulated
         if step.op in self.bootstrap_ops:
             return DriverResult(True, "PREFLIGHT_DECLARATION", {"internal": True})
         self.validate(self.prepare_effect(step))

@@ -13,6 +13,23 @@ class InstrumentExecutionPreparationInteractor:
     def validate_intent(self, intent, capability):
         if intent.capability != self.capability:
             raise ValueError('PROCESSING_INSTRUMENT_INTENT_MISMATCH')
+        self.validate_environment_conditions(intent, capability)
+
+    def validate_environment_conditions(self, intent, capability):
+        from math import isfinite
+        from .execution_models import EnvironmentCondition
+        conditions = getattr(intent, 'environment_conditions', ())
+        advertised = capability.get('environment_conditions', {})
+        if not isinstance(conditions, tuple) or len({c.name for c in conditions if isinstance(c,EnvironmentCondition)}) != len(conditions):
+            raise ValueError('PROCESSING_ENVIRONMENT_CONDITION_INVALID')
+        for condition in conditions:
+            limits = advertised.get(condition.name) if isinstance(advertised,dict) else None
+            if (not isinstance(condition,EnvironmentCondition) or type(condition.value) not in (int,float)
+                    or not isfinite(condition.value) or not isinstance(limits,dict)
+                    or set(limits) != {'unit','minimum','maximum'} or condition.unit != limits['unit']
+                    or any(type(limits[k]) not in (int,float) or not isfinite(limits[k]) for k in ('minimum','maximum'))
+                    or not limits['minimum'] <= condition.value <= limits['maximum']):
+                raise ValueError('PROCESSING_ENVIRONMENT_CONDITION_UNSUPPORTED')
 
     def bind_intent(self, intent, layout, device, physical_positions=None):
         bindings = {b.reference: b for b in layout.bindings}
@@ -30,11 +47,13 @@ class InstrumentExecutionPreparationInteractor:
             module = modules[0]
         else:
             raise ValueError('PROCESSING_MODULE_UNAVAILABLE')
-        if any(b.labware == labware and b.reference not in intent.targets for b in layout.bindings):
+        capability = device.processing_capabilities[intent.capability][module]
+        exposed_wells = self.exposed_wells(intent, bindings, labware, capability)
+        if any(b.labware == labware and b.reference not in intent.targets
+               and (exposed_wells is None or b.well in exposed_wells) for b in layout.bindings):
             raise ValueError('PROCESSING_COLLATERAL_EXPOSURE')
         if self.placement is not None:
             self.placement.require_module(labware, module, physical_positions)
-        capability = device.processing_capabilities[intent.capability][module]
         destination = capability.get('release_destination')
         if destination is not None and physical_positions is not None and destination in physical_positions.values():
             raise ValueError('PROCESSING_RELEASE_DESTINATION_OCCUPIED')
@@ -42,6 +61,16 @@ class InstrumentExecutionPreparationInteractor:
         if self.method_binding is not None:
             intent = self.method_binding.bind(intent, capability)
         return intent, module
+
+    def exposed_wells(self, intent, bindings, labware, capability):
+        """Resolve a separately removable holder; default to whole-labware exposure."""
+        groups = capability.get('exposure_groups', {}).get(labware)
+        if groups is None:
+            return None
+        targets = {bindings[target].well for target in intent.targets}
+        if len(targets) != len(intent.targets) or not any(targets == set(group) for group in groups):
+            raise ValueError('PROCESSING_MODULE_SCOPE')
+        return targets
 
     def prepare_execution(self, effect_id, intent, run_id, layout, device):
         intent, module = self.bind_intent(intent, layout, device)

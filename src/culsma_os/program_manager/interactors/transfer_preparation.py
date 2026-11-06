@@ -33,15 +33,17 @@ class TransferPreparationInteractor(TransferIntentInteractor):
         if intent is None:
             return None
         self.preparation.validate_intent(intent, device)
-        layout = space.preview(scope_id, pending.before_material_state, allocation_steps)
-        self.prepare_context(layout.run_id, layout, device, pending.before_material_state)
+        material = pending.physical_material_state()
+        layout = space.preview(scope_id, material, allocation_steps)
+        self.prepare_context(layout.run_id, layout, device, material)
         return intent
 
     def prepare(self, request):
         pending = request.pending
         intent = self.resolve_intent(pending)
-        layout = self.space.bind(request.run_id, pending.before_material_state, request.allocation_steps)
-        context = self.prepare_context(request.run_id, layout, self.device.get(self.device_id), pending.before_material_state)
+        material = pending.physical_material_state()
+        layout = self.space.bind(request.run_id, material, request.allocation_steps)
+        context = self.prepare_context(request.run_id, layout, self.device.get(self.device_id), material)
         return self.preparation.prepare_execution(pending.effect_id, intent, context, layout.bindings)
 
     def prepare_group(self, request):
@@ -49,8 +51,9 @@ class TransferPreparationInteractor(TransferIntentInteractor):
         if not pending.members:
             raise ValueError("TRANSFER_GROUP_EMPTY")
         # Transfer members change contents, not container identity or geometry.
-        layout = self.space.bind(request.run_id, pending.before_material_state, request.allocation_steps)
-        context = self.prepare_context(request.run_id, layout, self.device.get(self.device_id), pending.before_material_state)
+        material = pending.members[0].physical_material_state()
+        layout = self.space.bind(request.run_id, material, request.allocation_steps)
+        context = self.prepare_context(request.run_id, layout, self.device.get(self.device_id), material)
         intents = tuple(self.resolve_intent(member) for member in pending.members)
         return self.preparation.prepare_group(pending.effect_id, pending.step_id,
             tuple(m.effect_id for m in pending.members), intents, context, layout.bindings)

@@ -18,8 +18,9 @@ class RunStateInteractor:
             return replace(record, status="finalizing", body_outcome=self.terminal_outcomes[record.status], body_error=record.error)
         return record
 
-    def create_run(self, run_id, checkpoint, queue_submission=None, setup_required=False):
-        record = RunRecord(run_id, "awaiting_setup" if setup_required else "ready", checkpoint)
+    def create_run(self, run_id, checkpoint, queue_submission=None, setup_required=False, *, simulation_station=None):
+        record = RunRecord(run_id, "awaiting_setup" if setup_required else "ready", checkpoint,
+            simulation_station=simulation_station)
         if queue_submission is not None:
             return self.repository.save(record, queue_submission=queue_submission)
         return self.repository.save(record)

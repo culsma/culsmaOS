@@ -183,3 +183,29 @@ class FileStationSelectionRepository:
                 os.replace(temporary,self.path)
             finally:
                 temporary.unlink(missing_ok=True)
+
+
+
+class SqliteWorkflowSimulationSettingRepository:
+    def __init__(self, connection, driver):
+        self.connection = connection
+        self.driver = driver
+        with connection:
+            connection.execute("""CREATE TABLE IF NOT EXISTS os_workflow_simulation_settings (
+                driver TEXT PRIMARY KEY, enabled INTEGER NOT NULL CHECK(enabled IN (0, 1)),
+                revision INTEGER NOT NULL)""")
+            connection.execute("INSERT OR IGNORE INTO os_workflow_simulation_settings VALUES (?,0,0)", (driver,))
+
+    def read(self):
+        enabled, revision = self.connection.execute(
+            "SELECT enabled, revision FROM os_workflow_simulation_settings WHERE driver=?", (self.driver,)).fetchone()
+        return {"enabled": bool(enabled), "revision": revision}
+
+    def update(self, enabled, revision):
+        with self.connection:
+            result = self.connection.execute("""UPDATE os_workflow_simulation_settings
+                SET enabled=?, revision=revision+1 WHERE driver=? AND revision=?""",
+                (enabled, self.driver, revision))
+            if result.rowcount != 1:
+                raise ValueError("WORKFLOW_SIMULATION_SETTING_STALE")
+            return self.read()

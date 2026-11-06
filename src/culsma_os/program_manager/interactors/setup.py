@@ -39,6 +39,8 @@ class RunSetupInteractor:
             result = self.planner.plan(self.requirements.inspect(record.checkpoint), self.catalogue, preferences)
             identity = {'plan': data['plan_fingerprint'], 'initial': data['initial_fingerprint'],
                         'configuration': self.snapshot.configuration_revision, 'catalogue': self.codec.fingerprint(self.catalogue)}
+            if 'workflow_fingerprint' in data:
+                identity['workflow'] = data['workflow_fingerprint']
             document = {'schema': 'culsma_run_setup_v1', 'run_id': run_id, 'identity': identity,
                         'preferences': deepcopy(preferences or {}), **result}
             workspace = {'schema': 'culsma_run_workspace_v1', 'id': 'setup-' + run_id,
@@ -46,7 +48,8 @@ class RunSetupInteractor:
                          'routes': self.routes_for_setup(data)}
             if workspace['routes']:
                 document['routes'] = deepcopy(workspace['routes'])
-            checkpoint = self.host.create(data['plan'], data['initial_state'], run_id)
+            options = {"workflow_simulation": data["workflow_simulation"]} if "workflow_simulation" in data else {}
+            checkpoint = self.host.create(data['plan'], data['initial_state'], run_id, **options)
             checkpoint = WorkspaceCheckpointInteractor(self.codec).attach(checkpoint, workspace)
             self.state.replace_setup(run_id, checkpoint)
             self.workspaces.invalidate(run_id)
@@ -69,6 +72,8 @@ class RunSetupInteractor:
         data = self.codec.loads(self.tasks.get(run_id).checkpoint)
         identity = {'plan': data['plan_fingerprint'], 'initial': data['initial_fingerprint'],
                     'configuration': self.snapshot.configuration_revision, 'catalogue': self.codec.fingerprint(self.catalogue)}
+        if 'workflow_fingerprint' in data:
+            identity['workflow'] = data['workflow_fingerprint']
         if (value['fingerprint'] != fingerprint or value['identity'] != identity
                 or data.get('workspace', {}).get('bindings') != value['bindings']
                 or data.get('workspace', {}).get('routes', {}) != value.get('routes', {})):
@@ -210,7 +215,7 @@ class RunSetupPreviewInteractor:
         self.reader, self.configuration, self.context = reader, configuration, context
         self.requirements, self.planner, self.host = requirements, planner, host
 
-    def preview(self, compiled):
+    def preview(self, compiled, workflow=None):
         self.configuration.verify(self.context)
         identity = self.configuration.fingerprint
         # The current resident runtime only admits simulation devices. This is an
@@ -218,10 +223,13 @@ class RunSetupPreviewInteractor:
         base = {'configuration_fingerprint': identity, 'physical_observation': False,
                 'execution_options': {'simulation': True, 'hardware': False},
                 'scope': 'Proposed initial loading; execution preflight and stock checks still run before dispatch.'}
+        if workflow is not None:
+            base["workflow_simulation"] = workflow
         if self.reader is None:
             return {**base, 'status': 'unsupported', 'plan': None}
         catalogue = self.reader.execute(self.context.config_path)
-        checkpoint = self.host.create(compiled.plan, compiled.state, 'preview')
+        options = {"workflow_simulation": workflow} if workflow and workflow["enabled"] else {}
+        checkpoint = self.host.create(compiled.plan, compiled.state, 'preview', **options)
         demands = []
         try:
             demands = self.requirements.inspect(checkpoint)

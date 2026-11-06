@@ -42,7 +42,33 @@ class TestAgitationProcessing:
             assert len(data['confirmed']) == 3
         finally: app.close()
 
-    @pytest.mark.parametrize('kind', ['fractional', 'too-low', 'too-high', 'no-motion', 'linear', 'rotation', 'vortex',
+    @pytest.mark.parametrize('motion', [',motion=orbital', ''])
+    def test_combined_heat_and_shake_through_os(self, tmp_path, motion):
+        body = ('with env(thermal=37C,duration=16h) {'
+                f'agit(sample=w[0],mode=shake{motion},duration=16h,rate=200rpm);}}')
+        source = DECLARATIONS + ' w << [stock:50uL]; ' + body + ' stock << [w[0]:20uL];'
+        plan, _, app = AgitationFixture().build(tmp_path, source)
+        try:
+            result = app.execute(plan, init_state(plan))
+            run_id = AgitationFixture().compare_language(app, plan, result)
+            assert TransferMatrixFixture().volumes(result) == (170, 30)
+            session = app.host.gateway.port.session
+            (receipt,) = session.agitation.receipts
+            assert receipt.outcome == 'completed'
+            assert receipt.payload['request']['temperature_celsius'] == 37
+            assert receipt.payload['request']['rate_rpm'] == 200
+            assert receipt.payload['request']['duration_seconds'] == 57600
+            commands = receipt.payload['commands']
+            assert len(commands) == 7
+            assert '37 °C' in commands[1] and 'reach target temperature' in commands[2]
+            assert '200 RPM' in commands[3] and '960 minutes' in commands[4]
+            assert commands[-2:] == ['Deactivating Shaker', 'Deactivating Heater']
+            assert receipt.payload['sample_temperature_measured'] is False
+            assert app.client.lifecycle.reservations.get(run_id).status == 'released'
+        finally:
+            app.close()
+
+    @pytest.mark.parametrize('kind', ['fractional', 'too-low', 'too-high', 'linear', 'rotation', 'vortex',
                                      'environment', 'collateral', 'no-module', 'wrong-module'])
     def test_rejects_before_actions(self, tmp_path, kind):
         source = DECLARATIONS + SHAKE
@@ -50,11 +76,10 @@ class TestAgitationProcessing:
         if kind == 'fractional': source = source.replace('500rpm', '500.5rpm')
         if kind == 'too-low': source = source.replace('500rpm', '199rpm')
         if kind == 'too-high': source = source.replace('500rpm', '3001rpm')
-        if kind == 'no-motion': source = source.replace(',motion=orbital', '')
         if kind == 'linear': source = source.replace('motion=orbital', 'motion=linear').replace('500rpm', '2Hz')
         if kind == 'rotation': source = source.replace('motion=orbital', 'motion=rotation')
         if kind == 'vortex': source = source.replace('mode=shake,motion=orbital', 'mode=vortex')
-        if kind == 'environment': source = DECLARATIONS + 'with env(thermal=37C) { ' + SHAKE + ' }'
+        if kind == 'environment': source = DECLARATIONS + 'with env(thermal=37C,co2=5%) { ' + SHAKE + ' }'
         if kind == 'collateral': source = DECLARATIONS + 'let other=p[B1]; ' + SHAKE
         if kind == 'no-module':
             def configure(raw):
