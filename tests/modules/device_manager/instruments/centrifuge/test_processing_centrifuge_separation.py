@@ -102,7 +102,7 @@ class TestSeparation:
     @pytest.mark.parametrize('kind',['pellet','missing-capability','environment'])
     def test_typed_selection_rejection(self,tmp_path,kind):
         source=SOURCE
-        if kind=='pellet':source=BASE+SEP+'d << [s.contents[1]:0uL];'
+        if kind=='pellet':source=BASE+'sep(sample=s,program=centrifuge_program(drive=500g),component_fates={BUFFER:{supernatant:50%,pellet:50%}});d << [s.contents[1]];'
         if kind=='environment':source=BASE+'with env(thermal=22C,duration=1s) {'+SEP+'}'
         fixture=SeparationContractFixture(selection=kind!='missing-capability')
         plan,_,app=fixture.open(tmp_path,source)

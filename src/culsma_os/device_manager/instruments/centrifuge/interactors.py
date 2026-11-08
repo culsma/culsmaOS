@@ -25,6 +25,12 @@ class CentrifugeMethodBindingInteractor:
             return intent  # agit already contains its explicit language duration.
         if not isinstance(intent, CentrifugeSeparationIntent):
             raise ValueError("PROCESSING_METHOD_INTENT_UNSUPPORTED")
+        if intent.duration_seconds is not None:
+            if (type(intent.duration_seconds) not in (int, float)
+                    or not isfinite(intent.duration_seconds) or intent.duration_seconds <= 0):
+                raise ValueError("PROCESSING_DURATION_INVALID")
+            return CentrifugeIntent(intent.step_id, intent.targets, intent.drive_value, intent.drive_unit,
+                                    intent.duration_seconds, None, intent.program_kind, intent.environment_conditions)
         profiles = capability.get("method_profiles", {})
         if not isinstance(profiles, dict):
             raise ValueError("PROCESSING_METHOD_PROFILE_INVALID")

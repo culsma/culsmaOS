@@ -204,6 +204,8 @@ class OperationSchedulerInteractor:
                     run_id, result.reason or "EXECUTION_UNKNOWN"
                 )
             self.resource.settle(attempt_id, evidence)
+            if result.ready and self.conditions is not None:
+                self.conditions.after_effect(run_id, pending)
         except Exception as error:
             if self.evidence.find_attempt(pending.effect_id) is None:
                 self.resource.abandon_preparation(permit)

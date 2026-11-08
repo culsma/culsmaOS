@@ -14,7 +14,7 @@ class ThermalHoldPreparationInteractor:
         step = pending.prepared.runtime_step
         gate = step.gate or {}
         if (step.op != "env_hold" or step.args
-                or set(gate) - {"env", "env_targets", "env_layers", "entry", "entry_kind", "entry_name"}
+                or set(gate) - {"env", "env_targets", "env_layers", "entry", "entry_kind", "entry_name", "separation_scopes", "separation_entry", "separation_scope_ends"}
                 or len(gate.get("env_layers", [])) != 1):
             raise ValueError("PROCESSING_SCOPE_UNSUPPORTED")
         env = gate.get("env", {})
@@ -56,7 +56,7 @@ class OrbitalShakePreparationInteractor:
         step = pending.prepared.runtime_step
         required = {"sample", "mode", "rate", "duration"}
         if (step.op != "agit"
-                or set(step.gate or {}) - {"entry", "entry_kind", "entry_name", "env", "env_targets", "env_layers"}
+                or set(step.gate or {}) - {"entry", "entry_kind", "entry_name", "env", "env_targets", "env_layers", "separation_scopes", "separation_entry", "separation_scope_ends"}
                 or not required <= set(step.args) <= required | {"motion"}):
             raise ValueError("PROCESSING_AGITATION_SCOPE_UNSUPPORTED")
         # Checkpoints contain JSON enum values. Rehydrate through the language's public contract.

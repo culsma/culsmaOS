@@ -22,6 +22,9 @@ class PipettingCapabilityInteractor:
         self.require_supported(intent.requirements, device)
         if device.supports_transfer is False:
             raise ValueError('TRANSFER_DEVICE_UNSUPPORTED')
+        from ..execution import InstrumentExecutionPreparationInteractor
+        InstrumentExecutionPreparationInteractor.require_environment_conditions(
+            intent.environment_conditions, device.transfer_environment_conditions, 'TRANSFER')
         kind = getattr(intent, 'selection_kind', None)
         if kind is not None and kind not in device.transfer_selection_capabilities:
             raise ValueError('DRIVER_TRANSFER_SELECTION_UNSUPPORTED')

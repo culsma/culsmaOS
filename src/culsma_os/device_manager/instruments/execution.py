@@ -16,12 +16,15 @@ class InstrumentExecutionPreparationInteractor:
         self.validate_environment_conditions(intent, capability)
 
     def validate_environment_conditions(self, intent, capability):
+        self.require_environment_conditions(getattr(intent, 'environment_conditions', ()),
+                                            capability.get('environment_conditions', {}))
+
+    @staticmethod
+    def require_environment_conditions(conditions, advertised, prefix='PROCESSING'):
         from math import isfinite
         from .execution_models import EnvironmentCondition
-        conditions = getattr(intent, 'environment_conditions', ())
-        advertised = capability.get('environment_conditions', {})
         if not isinstance(conditions, tuple) or len({c.name for c in conditions if isinstance(c,EnvironmentCondition)}) != len(conditions):
-            raise ValueError('PROCESSING_ENVIRONMENT_CONDITION_INVALID')
+            raise ValueError(f'{prefix}_ENVIRONMENT_CONDITION_INVALID')
         for condition in conditions:
             limits = advertised.get(condition.name) if isinstance(advertised,dict) else None
             if (not isinstance(condition,EnvironmentCondition) or type(condition.value) not in (int,float)
@@ -29,7 +32,7 @@ class InstrumentExecutionPreparationInteractor:
                     or set(limits) != {'unit','minimum','maximum'} or condition.unit != limits['unit']
                     or any(type(limits[k]) not in (int,float) or not isfinite(limits[k]) for k in ('minimum','maximum'))
                     or not limits['minimum'] <= condition.value <= limits['maximum']):
-                raise ValueError('PROCESSING_ENVIRONMENT_CONDITION_UNSUPPORTED')
+                raise ValueError(f'{prefix}_ENVIRONMENT_CONDITION_UNSUPPORTED')
 
     def bind_intent(self, intent, layout, device, physical_positions=None):
         bindings = {b.reference: b for b in layout.bindings}
@@ -57,9 +60,9 @@ class InstrumentExecutionPreparationInteractor:
         destination = capability.get('release_destination')
         if destination is not None and physical_positions is not None and destination in physical_positions.values():
             raise ValueError('PROCESSING_RELEASE_DESTINATION_OCCUPIED')
-        self.validate_intent(intent, capability)
         if self.method_binding is not None:
             intent = self.method_binding.bind(intent, capability)
+        self.validate_intent(intent, capability)
         return intent, module
 
     def exposed_wells(self, intent, bindings, labware, capability):

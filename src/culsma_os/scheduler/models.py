@@ -13,6 +13,7 @@ class OperationRequest:
 
 class OperationConditionPort(Protocol):
     def before_effect(self, run_id, pending) -> bool: ...
+    def after_effect(self, run_id, pending) -> None: ...
 
 
 class ExecutionMode(str, Enum):

@@ -34,6 +34,8 @@ class DeviceConfigurationSnapshot:
     transfer_requirements: tuple[str, ...] = ()
     setup_required: bool = False
     simulation_scope: str = "station"
+    # Conditions supported during pipetting, independently of centrifugation.
+    transfer_environment_conditions: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if self.simulation_scope not in {'station', 'run', 'unknown'}:

@@ -84,7 +84,7 @@ class PreflightEffectInteractor(ReplayEffectInteractor):
             self.preflight.validate_effect(pending, self.data["plan"], self.data["scope_id"],
                 self.motion_projection[1] if self.motion_projection is not None else None)
             if self.preflight.conditions is not None and self.motion_projection is not None:
-                self.retained_conditions = self.preflight.conditions.after_effect(
+                self.retained_conditions, self.motion_projection = self.preflight.conditions.after_effect(
                     pending, allocations, self.retained_conditions, self.motion_projection)
         except (ValueError, NotImplementedError) as error:
             step = pending.prepared.runtime_step

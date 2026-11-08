@@ -45,10 +45,16 @@ class ProcessingConditionInteractor:
         if not self.activations(run_id) or self.evidence.find_attempt(pending.effect_id) is not None:
             return True
         from culsma_os.program_manager.interactors.magnetic_intents import MagneticEnvironmentInteractor
-        if not MagneticEnvironmentInteractor().retains(pending):
+        if (not MagneticEnvironmentInteractor().retains(pending)
+                or MagneticEnvironmentInteractor.starts_field_scope(pending)):
             # Completed releases are settled idempotently, including crash recovery.
             self.finish(run_id)
         return True
+
+    def after_effect(self, run_id, pending):
+        from culsma_os.program_manager.interactors.magnetic_intents import MagneticEnvironmentInteractor
+        if MagneticEnvironmentInteractor.ends_field_scope(pending.prepared.runtime_step):
+            self.finish(run_id)
 
     def finish(self, run_id):
         for activation in self.activations(run_id):
@@ -100,11 +106,19 @@ class ProcessingConditionProjectionInteractor:
 
     def before_effect(self, pending, retained, projected):
         from culsma_os.program_manager.interactors.magnetic_intents import MagneticEnvironmentInteractor
-        if retained and not MagneticEnvironmentInteractor().retains(pending):
+        if retained and (not MagneticEnvironmentInteractor().retains(pending)
+                         or MagneticEnvironmentInteractor.starts_field_scope(pending)):
             return self.release(retained, projected)
         return retained, projected
 
     def after_effect(self, pending, allocations, retained, projected):
+        from culsma_os.program_manager.interactors.magnetic_intents import MagneticEnvironmentInteractor
+        retained = self.retain_after_effect(pending, allocations, retained, projected)
+        if MagneticEnvironmentInteractor.ends_field_scope(pending.prepared.runtime_step):
+            return self.release(retained, projected)
+        return retained, projected
+
+    def retain_after_effect(self, pending, allocations, retained, projected):
         from culsma_os.device_manager.instruments.execution_models import MagneticSeparationIntent, ProjectedConditionRelease
         if pending.prepared.runtime_step.op != 'sep':
             return retained
@@ -137,7 +151,8 @@ class BatchProcessingConditionInteractor:
 
     def before_effect(self, pending):
         from culsma_os.program_manager.interactors.magnetic_intents import MagneticEnvironmentInteractor
-        return () if MagneticEnvironmentInteractor().retains(pending) else self.finish()
+        new_scope = MagneticEnvironmentInteractor.starts_field_scope(pending)
+        return () if MagneticEnvironmentInteractor().retains(pending) and not new_scope else self.finish()
 
     def describe(self, pending, intent, layout, positions):
         from dataclasses import asdict

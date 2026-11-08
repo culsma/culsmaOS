@@ -14,7 +14,8 @@ class CentrifugePreparationInteractor:
     def resolve_intent(self, pending):
         step = pending.prepared.runtime_step
         if (step.op != "agit"
-                or set(step.gate or {}) - {"entry", "entry_kind", "entry_name"}
+                or set(step.gate or {}) - {"entry", "entry_kind", "entry_name",
+                                          "separation_scopes", "separation_entry", "separation_scope_ends"}
                 or set(step.args) != {"sample", "mode", "drive", "duration"}):
             raise ValueError("PROCESSING_CENTRIFUGE_SCOPE_UNSUPPORTED")
         args = DEFAULT_EXTERNAL_PARAMETER_NORMALIZER.normalize_runtime_arguments("agit", step.args)
@@ -57,8 +58,9 @@ class CentrifugeSeparationPreparationInteractor:
     def resolve_intent(self, pending):
         from culsma.runtime.material.args import arg_call, call_arg_value
         step = pending.prepared.runtime_step
-        if (step.op != "sep" or set(step.args) != {"sample", "program"}
-                or set(step.gate or {}) - {"entry", "entry_kind", "entry_name"}):
+        if (step.op != "sep" or not {"sample", "program"} <= set(step.args)
+                or set(step.args) - {"sample", "program", "component_fates"}
+                or set(step.gate or {}) - {"entry", "entry_kind", "entry_name", "protocol_name", "separation_scopes", "separation_entry", "separation_scope_ends", "env", "env_layers", "env_targets"}):
             raise ValueError("PROCESSING_CENTRIFUGE_SEPARATION_SCOPE_UNSUPPORTED")
         program = arg_call(step.args["program"])
         if program is None or program.get("name") != "centrifuge_program":
@@ -79,8 +81,20 @@ class CentrifugeSeparationPreparationInteractor:
                 or proposal.delta.get("program_kind") != "centrifuge_program"
                 or proposal.delta.get("source") != targets[0].container_id):
             raise ValueError("PROCESSING_CENTRIFUGE_PROPOSAL_UNSUPPORTED")
+        gate = step.gate or {}
+        duration = None
+        conditions = ()
+        if any(key in gate for key in ("env", "env_layers", "env_targets")):
+            from .processing_intents import OrbitalShakePreparationInteractor
+            env = gate.get("env", {})
+            if "duration" not in env:
+                raise ValueError("PROCESSING_CENTRIFUGE_ENVIRONMENT_DURATION_REQUIRED")
+            duration = self.arguments.quantity(env["duration"], {"s": 1, "min": 60, "h": 3600})
+            if duration <= 0:
+                raise ValueError("PROCESSING_DURATION_INVALID")
+            conditions = OrbitalShakePreparationInteractor(self.arguments).environment_conditions(pending, targets, duration)
         return CentrifugeSeparationIntent(step.step_id, self.arguments.physical_targets(pending, targets),
-                                          drive, quantity["unit"])
+                                          drive, quantity["unit"], duration, conditions)
 
 
 

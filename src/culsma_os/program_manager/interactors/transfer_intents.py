@@ -11,6 +11,40 @@ from math import isfinite
 from culsma_os.driver_framework.models import PlanContext, MaterialExpectation
 
 
+class TransferEnvironmentInteractor:
+    """Carry authored conditions and their targets across the pipetting boundary."""
+
+    def resolve(self, pending):
+        from .processing_arguments import ProcessingArgumentsInteractor
+        from .processing_intents import ThermalHoldPreparationInteractor
+        from culsma_os.device_manager.instruments.execution_models import EnvironmentCondition
+        from culsma.runtime.material.args import arg_string
+        gate = pending.prepared.runtime_step.gate or {}
+        if not any(key in gate for key in ('env', 'env_layers', 'env_targets')):
+            return {}
+        env, layers = gate.get('env', {}), gate.get('env_layers', [])
+        # Magnetic selection has its own retained-condition execution contract.
+        if set(env) == {'field'} and arg_string(env['field']) == 'magnetic_rack':
+            return {}
+        if (len(layers) != 1 or layers[0].get('env') != env
+                or layers[0].get('env_targets') != gate.get('env_targets')
+                or not env or set(env) - {'thermal', 'duration', 'co2', 'o2', 'humidity'}):
+            raise ValueError('TRANSFER_ENVIRONMENT_UNSUPPORTED')
+        arguments = ProcessingArgumentsInteractor()
+        if 'duration' in env and arguments.quantity(env['duration'], {'s': 1, 'min': 60, 'h': 3600}) <= 0:
+            raise ValueError('TRANSFER_ENVIRONMENT_DURATION_INVALID')
+        conditions = ThermalHoldPreparationInteractor(arguments).environment_conditions(env)
+        if 'thermal' in env:
+            conditions = (EnvironmentCondition('thermal', arguments.quantity(env['thermal'], {'C': 1}), 'C'), *conditions)
+        targets = arguments.targets(pending.before_material_state, gate.get('env_targets', []))
+        if not conditions or not targets:
+            raise ValueError('TRANSFER_ENVIRONMENT_TARGETS_REQUIRED')
+        # ENV duration times the separation entry; it is not another hold or spin
+        # during extraction. Its environmental conditions still reach the driver.
+        return {'environment_conditions': conditions,
+                'environment_targets': arguments.physical_targets(pending, targets)}
+
+
 class TransferIntentInteractor:
     def __init__(self, selection_planners=()):
         self.selection_planners = tuple(selection_planners)
@@ -22,6 +56,14 @@ class TransferIntentInteractor:
         return decision.intent
 
     def resolve_execution(self, pending):
+        from dataclasses import replace
+        decision = self.resolve_unconditioned_execution(pending)
+        if decision.intent is None:
+            return decision
+        conditions = TransferEnvironmentInteractor().resolve(pending)
+        return TransferExecutionDecision(replace(decision.intent, **conditions)) if conditions else decision
+
+    def resolve_unconditioned_execution(self, pending):
         for planner in self.selection_planners:
             if planner.handles(pending):
                 decision = planner.resolve_execution(pending)
@@ -247,25 +289,28 @@ class CentrifugeTransferInteractor:
 
     def resolve_execution(self, pending):
         from culsma.runtime.material.contents_state import ContentsPartSelection
-        from culsma_os.device_manager.instruments.pipetting.models import CentrifugeSupernatantTransferIntent
+        from culsma_os.device_manager.instruments.pipetting.models import (
+            CentrifugeSupernatantTransferIntent, CentrifugePelletTransferIntent)
+        fractions = {"0": ("supernatant", CentrifugeSupernatantTransferIntent),
+                     "1": ("pellet", CentrifugePelletTransferIntent)}
         step, proposal = pending.prepared.runtime_step, pending.prepared.material_result
         sources = step.args.get("sources", [])
-        if (step.op != "Mutation" or set(step.gate or {}) - {"entry", "entry_kind", "entry_name"}
+        if (step.op != "Mutation" or set(step.gate or {}) - {"entry", "entry_kind", "entry_name", "protocol_name", "separation_scopes", "separation_entry", "separation_scope_ends", "env", "env_layers", "env_targets"}
                 or len(sources) != 1 or proposal is None or not proposal.ok
                 or proposal.delta.get("op") != "Mutation" or len(proposal.delta.get("sources", [])) != 1):
             raise ValueError("TRANSFER_CENTRIFUGE_SCOPE_UNSUPPORTED")
         source = sources[0]
         reference = source.get("left") if isinstance(source, dict) and source.get("kind") == "IRPair" else source
         selection = self.select(pending, reference)
-        if (not isinstance(selection, ContentsPartSelection) or selection.slot != "0"
+        if (not isinstance(selection, ContentsPartSelection) or selection.slot not in fractions
                 or selection.state_record.get("program_kind") != "centrifuge_program"
-                or selection.state_record.get("slot_contract", {}).get("0") != "supernatant"
+                or selection.state_record.get("slot_contract", {}).get(selection.slot) != fractions[selection.slot][0]
                 or not selection.state_record.get("step_id")):
-            raise ValueError("TRANSFER_CENTRIFUGE_SUPERNATANT_REQUIRED")
+            raise ValueError("TRANSFER_CENTRIFUGE_FRACTION_REQUIRED")
         delta = proposal.delta["sources"][0]
         target = MaterialRefResolver.resolve_target_ref(pending.before_material_state, step.args.get("target"))
         if (target is None or target == selection.source_id or delta.get("op") != "contents_state_transfer"
-                or delta.get("source") != selection.source_id or delta.get("selected_slot") != "0"
+                or delta.get("source") != selection.source_id or delta.get("selected_slot") != selection.slot
                 or delta.get("dest") != target
                 or delta.get("mode") not in {"contents_state_full", "contents_state_volume"}):
             raise ValueError("TRANSFER_CENTRIFUGE_DELTA_UNSUPPORTED")
@@ -279,7 +324,7 @@ class CentrifugeTransferInteractor:
             raise ValueError("TRANSFER_CENTRIFUGE_LIQUID_REQUIRED")
         if volume == 0:
             return TransferExecutionDecision(None)
-        return TransferExecutionDecision(CentrifugeSupernatantTransferIntent(step.step_id, ResolvedContainerRef(target),
+        return TransferExecutionDecision(fractions[selection.slot][1](step.step_id, ResolvedContainerRef(target),
             (TransferAliquot(ResolvedContainerRef(selection.source_id), float(volume)),), step.span,
             producer_step_id=selection.state_record["step_id"]))
 

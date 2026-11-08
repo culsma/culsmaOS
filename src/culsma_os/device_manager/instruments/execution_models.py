@@ -55,6 +55,8 @@ class CentrifugeSeparationIntent:
     targets: tuple[ResolvedContainerRef, ...]
     drive_value: float
     drive_unit: str
+    duration_seconds: float | None = None
+    environment_conditions: tuple[EnvironmentCondition, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -67,6 +69,7 @@ class CentrifugeIntent:
     duration_seconds: float
     method_profile: ProcessingMethodProfile | None = None
     program_kind: str | None = None
+    environment_conditions: tuple[EnvironmentCondition, ...] = ()
 
 
 class ProcessingIntentPort(Protocol):

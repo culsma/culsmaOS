@@ -44,6 +44,7 @@ class TransferPreparationInteractor(TransferIntentInteractor):
         material = pending.physical_material_state()
         layout = self.space.bind(request.run_id, material, request.allocation_steps)
         context = self.prepare_context(request.run_id, layout, self.device.get(self.device_id), material)
+        self.preparation.validate_intent(intent, self.device.get(self.device_id))
         return self.preparation.prepare_execution(pending.effect_id, intent, context, layout.bindings)
 
     def prepare_group(self, request):
@@ -55,5 +56,7 @@ class TransferPreparationInteractor(TransferIntentInteractor):
         layout = self.space.bind(request.run_id, material, request.allocation_steps)
         context = self.prepare_context(request.run_id, layout, self.device.get(self.device_id), material)
         intents = tuple(self.resolve_intent(member) for member in pending.members)
+        for intent in intents:
+            self.preparation.validate_intent(intent, self.device.get(self.device_id))
         return self.preparation.prepare_group(pending.effect_id, pending.step_id,
             tuple(m.effect_id for m in pending.members), intents, context, layout.bindings)
