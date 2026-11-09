@@ -1,11 +1,11 @@
 {
   "decision": "DISTRIBUTION-20261018",
-  "status": "dependency_freeze_required",
-  "scope": "0.2.0 Mac Apple Silicon simulator preview preparation; dependency sources below remain the previous release baseline",
+  "status": "installed_candidate_verified",
+  "scope": "0.2.0 Mac Apple Silicon simulator preview with published Culsma 1.0.10",
   "invariants": [
-    "The published Culsma 1.0.8 wheel must not satisfy the OS dependency",
-    "Compatibility wheels have PEP 440 local version labels derived from exact source commits",
-    "Snapshot builds use immutable committed sources and change distribution metadata only",
+    "Use the published Culsma 1.0.10 wheel unchanged, verified against the upstream release SHA-256",
+    "Unpublished simulator wheels have PEP 440 local version labels derived from exact source commits",
+    "Snapshot builds use immutable committed sources and change distribution version metadata only",
     "OS tests own all required test inputs; installed plugins need no sibling source checkout",
     "Clean runs import from non-editable wheels, with no PYTHONPATH or source-path injection",
     "The wheel, sdist, entry points, and Python 3.11/3.12 profiles must be verified separately",
@@ -14,27 +14,25 @@
   "sources": {
     "core": {
       "distribution": "culsma",
-      "source_version": "1.0.8",
-      "revision": "ca7a0984d0b5b0d47a63c39725d8f70529961687",
-      "artifact_version": "1.0.8+gca7a0984d0b5",
+      "source_version": "1.0.10",
+      "source_tag": "v1.0.10",
+      "revision": "c93e65101b7d2b165249b08e60b0f46dcf5ad551",
+      "artifact_version": "1.0.10",
       "repository": "https://github.com/culsma/culsma",
-      "public_artifact_available": false,
-      "artifact": "culsma-1.0.8+gca7a0984d0b5-py3-none-any.whl",
-      "artifact_sha256": "c2ff1df7b928be1b9d8ec60f25d974769caad2a7bec420c57ff9001f76bb2b62",
-      "download_url": "https://github.com/culsma/culsmaOS/releases/download/0.2.0rc1/culsma-1.0.8%2Bgca7a0984d0b5-py3-none-any.whl",
-      "authenticated_artifact_available": false
+      "public_artifact_available": true,
+      "artifact": "culsma-1.0.10-py3-none-any.whl",
+      "artifact_sha256": "9289109ea1836367fce4f37c7c8b27c3841276f7c0a2bebe0df803b93d962f18",
+      "download_url": "https://github.com/culsma/culsma/releases/download/v1.0.10/culsma-1.0.10-py3-none-any.whl"
     },
     "simulator": {
       "distribution": "culsma-opentrons-simulator",
       "source_version": "0.1.0",
-      "revision": "ddf73c41e40fe6da2b0aea8e70d66bf3c7cfacf2",
-      "artifact_version": "0.1.0+gddf73c41e40f",
+      "revision": "205e705e7dd8e043150f6d00f5a7c16bbfc25138",
+      "artifact_version": "0.1.0+g205e705e7dd8",
       "repository": null,
-      "public_artifact_available": false,
-      "artifact": "culsma_opentrons_simulator-0.1.0+gddf73c41e40f-py3-none-any.whl",
-      "download_url": "https://github.com/culsma/culsmaOS/releases/download/0.2.0rc1/culsma_opentrons_simulator-0.1.0%2Bgddf73c41e40f-py3-none-any.whl",
-      "authenticated_artifact_available": false,
-      "artifact_sha256": "c351d593f9d42dc6f744c78821b5bababd8119fb48179eca31c13c7c1a15131d"
+      "artifact": "culsma_opentrons_simulator-0.1.0+g205e705e7dd8-py3-none-any.whl",
+      "download_url": "https://github.com/culsma/culsmaOS/releases/download/0.2.0/culsma_opentrons_simulator-0.1.0%2Bg205e705e7dd8-py3-none-any.whl",
+      "artifact_sha256": "06950d52bfd732478df850226f48e98c4386af1bed8db3fff37134b174928793"
     }
   },
   "conformance": {
@@ -48,17 +46,12 @@
     "repository": "culsma/culsmaOS",
     "tag": "0.2.0",
     "kind": "prerelease",
-    "status": "dependency_freeze_required",
+    "status": "installed_candidate_verified",
     "scope": "Self-contained macOS arm64 simulator app with isolated MCP bridge; Python archives and fixed dependency wheels",
     "page_url": "https://github.com/culsma/culsmaOS/releases/tag/0.2.0",
-    "api_access": "dedicated release credential; publication pending",
-    "anonymous_access": "pending publication",
+    "api_access": "GitHub Release assets; dedicated release credential for publication",
+    "anonymous_access": "Public release URLs; verify downloads against the recorded hashes",
     "repository_visibility": "PUBLIC",
-    "blocking_requirements": [
-      "Freeze accepted language separation-context changes into an immutable source commit",
-      "Freeze the matching Opentrons adapter, including instrument discovery, and align its language dependency with the accepted language version",
-      "Rebuild compatibility wheels and refresh project pins, desktop lock and hashed requirements together",
-      "Run clean installed-product acceptance with the exact candidate wheels before publication"
-    ]
+    "blocking_requirements": []
   }
 }

@@ -4,13 +4,13 @@
     "simulator": [
       {
         "name": "culsma",
-        "version": "1.0.8+gca7a0984d0b5",
-        "sha256": "c2ff1df7b928be1b9d8ec60f25d974769caad2a7bec420c57ff9001f76bb2b62"
+        "version": "1.0.10",
+        "sha256": "9289109ea1836367fce4f37c7c8b27c3841276f7c0a2bebe0df803b93d962f18"
       },
       {
         "name": "culsma-opentrons-simulator",
-        "version": "0.1.0+gddf73c41e40f",
-        "sha256": "c351d593f9d42dc6f744c78821b5bababd8119fb48179eca31c13c7c1a15131d"
+        "version": "0.1.0+g205e705e7dd8",
+        "sha256": "06950d52bfd732478df850226f48e98c4386af1bed8db3fff37134b174928793"
       },
       {
         "name": "opentrons",
@@ -121,8 +121,8 @@
     "mcp": [
       {
         "name": "culsma",
-        "version": "1.0.8+gca7a0984d0b5",
-        "sha256": "c2ff1df7b928be1b9d8ec60f25d974769caad2a7bec420c57ff9001f76bb2b62"
+        "version": "1.0.10",
+        "sha256": "9289109ea1836367fce4f37c7c8b27c3841276f7c0a2bebe0df803b93d962f18"
       },
       {
         "name": "mcp",

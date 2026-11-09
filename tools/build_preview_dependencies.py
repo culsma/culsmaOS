@@ -74,13 +74,16 @@ class PreviewDependencyBuilder:
     @classmethod
     def main(cls):
         parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument('--core', type=Path, required=True)
+        parser.add_argument('--core', type=Path, help='Only for an unpublished language snapshot; omit for a published language wheel')
         parser.add_argument('--simulator', type=Path, required=True)
         parser.add_argument('--output', type=Path, required=True)
         args = parser.parse_args()
         contract = Path(__file__).resolve().parents[1] / 'tools/distribution/manifest.json'
         specs = json.loads(contract.read_text())['sources']
-        cls().build({'core': args.core, 'simulator': args.simulator}, specs, args.output)
+        sources = {'simulator': args.simulator}
+        if args.core is not None:
+            sources['core'] = args.core
+        cls().build(sources, {key: specs[key] for key in sources}, args.output)
 
 
 if __name__ == '__main__':

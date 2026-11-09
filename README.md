@@ -11,7 +11,7 @@ outcomes remain explicit and block further execution of the affected run.
 
 [Install](#installation) · [Run an example](#quick-start) · [Example protocols](#example-protocols) · [Architecture](#architecture)
 
-**0.2.0rc1 desktop preview** · Python 3.11–3.12 · [Apache-2.0](LICENSE) · [Archived 0.1.1 DOI](https://doi.org/10.5281/zenodo.23467661)
+**0.2.0 desktop preview** · Python 3.11–3.12 · [Apache-2.0](LICENSE) · [Archived 0.1.1 DOI](https://doi.org/10.5281/zenodo.23467661)
 
 ## Architecture
 
@@ -54,7 +54,7 @@ application on the host computer.
 ### Mac desktop preview
 
 Download the **macOS arm64 DMG** from the
-[0.2.0rc1 prerelease](https://github.com/culsma/culsmaOS/releases/tag/0.2.0rc1),
+[0.2.0 prerelease](https://github.com/culsma/culsmaOS/releases/tag/0.2.0),
 then drag **CulsmaOS Preview.app** into **Applications**. Python, the official
 Opentrons simulator and an isolated MCP bridge are included. Open the App and try
 **Files → Experiments → Transfer → transfer.culs**. Apple Silicon and macOS 15+
@@ -65,20 +65,20 @@ See the short [installation and MCP guide](docs/mac-preview.md) for first launch
 AI client configuration and the separate preview workspace. Physical instruments
 are not connected by this package.
 
-### Archived command-line preview (0.1.1)
+### Command-line preview (0.2.0)
 
 Use **Python 3.11 or 3.12**. The commands below use a macOS/Linux shell;
 installed-package validation has been performed on macOS. The resident service
 requires Unix-domain sockets.
 
-Install this preview from the [release artifacts](https://github.com/culsma/culsmaOS/releases/tag/0.1.1).
+Install this preview from the [release artifacts](https://github.com/culsma/culsmaOS/releases/tag/0.2.0).
 The installation below selects the compatible language and simulator wheels
 automatically. PyPI publication is deferred.
 
 ```sh
 git clone https://github.com/culsma/culsmaOS.git
 cd culsmaOS
-git checkout 0.1.1
+git checkout 0.2.0
 python3.11 -m venv .venv
 . .venv/bin/activate
 ```
@@ -88,7 +88,7 @@ Install the OS with its simulator profile:
 ```sh
 python -m pip install --constraint requirements/preview-constraints.txt \
   --requirement requirements/preview-downloads.txt \
-  'culsma-os[simulator] @ https://github.com/culsma/culsmaOS/releases/download/0.1.1/culsma_os-0.1.1-py3-none-any.whl'
+  'culsma-os[simulator] @ https://github.com/culsma/culsmaOS/releases/download/0.2.0/culsma_os-0.2.0-py3-none-any.whl'
 python -m pip check
 culsma-os --help
 ```
@@ -227,7 +227,7 @@ are integrated for restricted device profiles. Plate centrifugation is validated
 through third-party protocol simulation. See the [capability map](docs/reference/instrument-capability-map.json)
 for exact coverage.
 
-The published 0.1.1 preview has no GUI, parallel execution, general manual reconciliation or
+The desktop preview does not support parallel execution, general manual reconciliation or
 measurement/readout integration. Material quantities are modeled; device action
 completion does not establish a measured biological result. Hamilton physical
 execution and general cross-device compatibility remain outside the accepted

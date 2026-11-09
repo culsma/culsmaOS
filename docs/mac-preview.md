@@ -1,4 +1,4 @@
-# culsmaOS 0.2.0rc1 Mac preview
+# culsmaOS 0.2.0 Mac preview
 
 Apple Silicon Mac, macOS 15 or later. This experimental package runs the official
 Opentrons simulator locally. It does not connect to physical instruments.
@@ -7,7 +7,7 @@ or separate Python installation are needed. Windows packaging is not yet accepte
 
 ## Install and try
 
-1. Download the `.dmg` from the [0.2.0rc1 prerelease](https://github.com/culsma/culsmaOS/releases/tag/0.2.0rc1).
+1. Download the `.dmg` from the [0.2.0 prerelease](https://github.com/culsma/culsmaOS/releases/tag/0.2.0).
 2. Open it and drag **CulsmaOS Preview.app** into **Applications**. Eject the disk image.
 3. Open **CulsmaOS Preview**. The preview is ad-hoc signed, not Apple notarized.
    If macOS blocks it, review **System Settings → Privacy & Security → Open Anyway**.

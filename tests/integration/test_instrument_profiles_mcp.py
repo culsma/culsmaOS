@@ -10,7 +10,7 @@ from tests.support.paths import ROOT
 
 @pytest.mark.skipif(not os.environ.get('CULSMA_OS_MCP_SDK_PATH'), reason='Explicit isolated official MCP SDK required')
 def test_static_profiles_over_stdio_without_resident(tmp_path):
-    import culsma_driver_hamilton
+    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver = Path(culsma_driver_hamilton.__file__).resolve().parents[2]
     paths = [str(ROOT/'src'), str(driver/'src'), str(driver/'agent/src'), os.environ['CULSMA_OS_MCP_SDK_PATH']]
     # Never propagate unrelated service credentials into a test subprocess.

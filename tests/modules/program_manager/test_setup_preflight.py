@@ -3,7 +3,6 @@ import json
 from copy import deepcopy
 from pathlib import Path
 import pytest
-from culsma_hamilton_os.providers import HamiltonOSDeviceFactory
 from culsma_os.bootstrap import OSApplicationFactory
 from culsma_os.device_manager.instruments.providers import InstrumentPreparationFactory
 from culsma_os.program_manager.models import HostBuildContext
@@ -17,7 +16,7 @@ from culsma_os.workspace_manager.interactors import WorkspacePlanningInteractor
 
 
 def prepare(tmp_path, suffix=''):
-    import culsma_driver_hamilton
+    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     root = Path(culsma_driver_hamilton.__file__).resolve().parents[2]
     data = json.loads((root/'examples/os-transfer-input/setup.json').read_text())
     config = tmp_path/'configuration.json'
@@ -27,7 +26,7 @@ def prepare(tmp_path, suffix=''):
     source = tmp_path/'transfer.culs'
     source.write_text((root/'examples/os-transfer-input/transfer.culs').read_text() + suffix)
     compiled = CompilationInteractor().compile([source])
-    factory = HamiltonOSDeviceFactory()
+    factory = pytest.importorskip('culsma_hamilton_os.providers').HamiltonOSDeviceFactory()
     catalogue = factory.build_workspace_reader().execute(config)
     checkpoint = HostedRuntimeInteractor().create(compiled.plan, compiled.state, 'preview')
     requirements = SetupRequirementsInteractor(RuntimeCheckpointCodecInteractor()).inspect(checkpoint)
@@ -83,7 +82,7 @@ def test_unknown_diagnostics_remain_visible_without_invented_repair():
 
 @pytest.mark.parametrize('drive,expected', [('500g', 'passed'), ('12000g', 'rejected')])
 def test_hamilton_loading_selects_the_bound_plate_and_checks_advertised_drive(tmp_path, drive, expected):
-    import culsma_driver_hamilton
+    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     root = Path(culsma_driver_hamilton.__file__).resolve().parents[2]
     data = json.loads((root/'tools/local_console/fixtures/incubation/device.json').read_text())
     data['layout']['labware']['another_plate'] = {
@@ -104,7 +103,7 @@ def test_hamilton_loading_selects_the_bound_plate_and_checks_advertised_drive(tm
         'let wells=p[A1];\n'
         f'agit(sample=wells[0],mode=centrifuge,drive={drive},duration=2s);\n')
     compiled = CompilationInteractor().compile([source])
-    factory = HamiltonOSDeviceFactory()
+    factory = pytest.importorskip('culsma_hamilton_os.providers').HamiltonOSDeviceFactory()
     catalogue = factory.build_workspace_reader().execute(config)
     checkpoint = HostedRuntimeInteractor().create(compiled.plan, compiled.state, 'preview')
     requirements = SetupRequirementsInteractor(RuntimeCheckpointCodecInteractor(), InstrumentPreparationFactory.build_processing())

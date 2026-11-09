@@ -15,7 +15,11 @@ class TestDistribution:
         core,simulator=contract['sources']['core'],contract['sources']['simulator']
         assert project['dependencies']==[core['distribution']+'=='+core['artifact_version']]
         assert project['optional-dependencies']['simulator']==[simulator['distribution']+'=='+simulator['artifact_version']]
-        assert '+g' in core['artifact_version'] and core['artifact_version']!='1.0.8'
+        assert core['artifact_version'] == '1.0.10'
+        assert core['source_version'] == core['artifact_version']
+        assert core['source_tag'] == 'v1.0.10'
+        assert len(core['revision']) == 40
+        assert len(core['artifact_sha256']) == 64
 
     def test_console_names_remain_owned_by_each_package(self):
         project=tomllib.loads((ROOT/'pyproject.toml').read_text())['project']
@@ -38,7 +42,8 @@ class TestDistributionAudit:
         import tarfile
         import zipfile
         directory=tmp_path/'dist';directory.mkdir()
-        version='1.0.8' if problem=='dependency' else '1.0.8+gca7a0984d0b5'
+        contract=json.loads((ROOT/'tools/distribution/manifest.json').read_text())
+        version='1.0.8' if problem=='dependency' else contract['sources']['core']['artifact_version']
         console='culsma' if problem=='console' else 'culsma-os'
         entries=f'[console_scripts]\n{console} = culsma_os.cli:CulsmaOSCLI.main\n'
         if problem!='handoff':

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 — Unreleased
+## 0.2.0 — 2026-11-09
 
 - Check proposed experiment loading against the same instrument preparation policies used by execution. App and MCP retain the proposed layout and identify unsupported steps before creating a run.
 - Discover instrument operations from driver capabilities through shared Device Manager contracts. Distinguish missing drivers, missing device instances, disconnected devices and unsupported labware without vendor-specific OS switches.
@@ -10,7 +10,7 @@
 - Improve loading review, readable run results and settings navigation. Allow reopening the advanced layout editor with unsaved edits and preserve the exit guard.
 - Use the macOS Skia renderer to avoid corrupted small deck labels in the pinned Flutter build.
 
-Release preparation: the language compatibility wheel and desktop dependency locks must be refreshed from the accepted, committed language source before installed-product acceptance. Existing pins still identify the previous release's dependencies; this section does not mark 0.2.0 as published.
+- Bundle the published Culsma 1.0.10 language wheel and a committed simulator adapter with matching dependency constraints. Pin every desktop dependency by version and SHA-256.
 
 ## 0.2.0rc1 — Mac desktop test release
 

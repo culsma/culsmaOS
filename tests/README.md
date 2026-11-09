@@ -25,5 +25,7 @@ CULSMA_OS_TEST_TIMEOUT_MULTIPLIER=3 python -m pytest -q --cov=culsma_os --cov-br
 This changes test polling budgets only; production deadlines and outcome assertions stay unchanged. Execution coverage alone does not prove assertion quality. Historical validation snapshots are maintained outside the public source tree.
 
 When the optional Hamilton driver is installed, set `CULSMA_HAMILTON_LABWARE_ROOT` to the matching local vendor definitions before the full suite. The driver owns these definitions; they are not copied into this repository.
+A default installed simulator profile skips Hamilton-dependent cases explicitly;
+release reports distinguish those skips from separately verified Hamilton integration.
 
 The polling multiplier applies to both in-process and CLI resident harnesses. It does not shorten protocol timings or relax result assertions.

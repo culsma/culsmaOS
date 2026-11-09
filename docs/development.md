@@ -97,9 +97,22 @@ python tools/check_distribution.py --directory dist
 
 Build and verify artifacts locally before uploading a release.
 
+The 0.2.0 distribution uses the published Culsma 1.0.10 wheel unchanged. Download
+it from the upstream release or PyPI and verify the manifest SHA-256. Build only
+the unpublished simulator adapter from the exact committed revision in the manifest:
+
+```sh
+python tools/build_preview_dependencies.py --simulator /path/to/simulator-checkout \
+  --output /path/to/new-adapter-wheels
+```
+
+The adapter checkout must be clean. Its source archive and wheel use the same
+commit-derived version; do not rebuild or relabel the published language wheel.
+
+
 ## Native station console (development checkout)
 
-The console is a local Flutter application. The 0.2.0rc1 Mac DMG bundles it with
+The console is a local Flutter application. The 0.2.0 Mac DMG bundles it with
 its runtime; the archived 0.1.1 wheel did not include it. Build it locally with the pinned FVM SDK, then attach it to an
 existing resident:
 

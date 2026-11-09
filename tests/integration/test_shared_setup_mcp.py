@@ -9,7 +9,7 @@ from tests.support.integration.shared_setup import SharedSetupHarness
 
 @pytest.mark.skipif(not os.environ.get('CULSMA_OS_MCP_SDK_PATH'),reason='Official MCP SDK runs in an isolated optional bridge environment')
 def test_real_mcp_stdio_edits_are_visible_in_console_and_cannot_confirm(tmp_path,monkeypatch):
-    import culsma_driver_hamilton
+    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
     monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
     with SharedSetupHarness(tmp_path) as shared:

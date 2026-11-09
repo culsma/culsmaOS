@@ -10,7 +10,7 @@ from tests.support.integration.shared_setup import SharedSetupHarness
 @pytest.mark.skipif(not all(os.environ.get(key) for key in ['CULSMA_OS_MCP_SDK_PATH','CULSMA_OS_BROWSER_MODULES','CULSMA_OS_CHROME']),
     reason='Optional browser and official MCP SDK test environments are required')
 def test_browser_observes_real_mcp_edits_and_operator_confirms_loading(tmp_path,monkeypatch):
-    import culsma_driver_hamilton
+    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
     monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
     artifacts=ROOT/'run-artifacts/ui-tests'

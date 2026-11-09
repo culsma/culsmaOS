@@ -1,4 +1,5 @@
 """Isolated local resident and HTTP console; Hamilton execution is a labelled double."""
+import pytest
 from pathlib import Path
 import json
 from culsma_os.bootstrap import OSApplicationFactory
@@ -14,7 +15,7 @@ from tests.support.console.http import ConsoleHTTPHarness
 class SharedSetupHarness(ResidentHarness):
     def __init__(self,directory,submit=True,programs=False):
         super().__init__(directory)
-        import culsma_driver_hamilton
+        culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
         driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
         data=json.loads((driver/'examples/os-transfer-input/setup.json').read_text())
         self.source=directory/'transfer.culs'

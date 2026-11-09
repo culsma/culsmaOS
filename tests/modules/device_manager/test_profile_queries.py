@@ -13,7 +13,7 @@ from culsma_os.program_manager.interactors.resident import ResidentCommandIntera
 
 @pytest.fixture
 def profiles(monkeypatch):
-    import culsma_driver_hamilton
+    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
     monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
     return ResidentDeviceProfileInteractor(DeviceProfileInteractor(DriverProfileInteractor())),driver

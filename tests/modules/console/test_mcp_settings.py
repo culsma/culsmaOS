@@ -12,7 +12,7 @@ from culsma_os.workspace_manager.models import ConfigurationError, StationConfig
 
 @pytest.fixture
 def settings(tmp_path,monkeypatch):
-    import culsma_driver_hamilton
+    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
     monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
     value=ConsoleSettings(tmp_path/'station.sock',0,tmp_path/'drafts.sqlite3',tmp_path/'projects',tmp_path/'snapshots',tmp_path/'Home',serve_frontend=False)

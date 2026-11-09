@@ -11,7 +11,7 @@ from tests.support.paths import ROOT
 
 @pytest.mark.skipif(not os.environ.get('CULSMA_OS_MCP_SDK_PATH'),reason='Explicit isolated official MCP SDK required')
 def test_mcp_settings_change_the_same_station_and_drafts_as_http(tmp_path,monkeypatch):
-    import culsma_driver_hamilton
+    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
     source=driver/'examples/test32-water-plate-heat/revision2/test32_water_plate_heat_deck_r2.lay'
     with native_station(tmp_path,monkeypatch) as shared:

@@ -1,4 +1,5 @@
 """Actual Hamilton definitions, Auth and SQLite; no mocked method catalogue."""
+import pytest
 import json
 from pathlib import Path
 from importlib.metadata import EntryPoint
@@ -14,7 +15,7 @@ from culsma_os.workspace_manager.models import StationConfigurationRequest
 
 class ProfileAPIFixture:
     def __init__(self, root):
-        import culsma_driver_hamilton
+        culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
         driver_root = Path(culsma_driver_hamilton.__file__).resolve().parents[2]
         self.configuration = json.loads((driver_root/'tools/local_console/fixtures/magnetic/device.json').read_text())
         self.tokens = TokenInteractor(SessionCredentialRepository())
