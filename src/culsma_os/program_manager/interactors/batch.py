@@ -67,6 +67,9 @@ class BatchProjectionEffectInteractor(PreflightEffectInteractor):
         if intent is not None:
             description = self.batch_conditions.describe(pending,intent,layout,positions) if self.batch_conditions is not None else {}
             self.operations.append(BatchOperation(pending.effect_id, intent, layout.bindings, description))
+        from .magnetic_intents import MagneticEnvironmentInteractor
+        if self.batch_conditions is not None and MagneticEnvironmentInteractor.ends_field_scope(pending.prepared.runtime_step):
+            self.operations.extend(self.batch_conditions.finish())
 
     def execute(self, step):
         simulated = WorkflowSimulationInteractor.execute_step(self.data, step)

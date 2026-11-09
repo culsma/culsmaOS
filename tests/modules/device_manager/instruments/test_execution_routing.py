@@ -26,7 +26,7 @@ def inputs():
         'orbital_shake':ShakerExecutionPreparationInteractor(None),
         'centrifuge':CentrifugeExecutionPreparationInteractor(None,method_binding=CentrifugeMethodBindingInteractor()),
         'magnetic_separation':MagnetExecutionPreparationInteractor(None)}
-    router=InstrumentExecutionRouterInteractor(entries,IncubatorExecutionPreparationInteractor(None))
+    router=InstrumentExecutionRouterInteractor(entries, {('thermal_hold', 'incubator'): IncubatorExecutionPreparationInteractor(None)})
     return target,layout,snapshot,router
 
 
@@ -38,7 +38,7 @@ def inputs():
 ])
 def test_each_operation_selects_its_concrete_device_entry(capability,make_intent):
     target,layout,snapshot,router=inputs();intent=make_intent(target)
-    entry=router.select_preparer(intent,layout,snapshot)
+    entry,_=router.select(intent,layout,snapshot)
     assert entry is router.preparers[capability]
     assert router.bind_intent(intent,layout,snapshot)[0]==intent
     extra=replace(layout.bindings[0],reference=ResolvedContainerRef('other'),well='A2')
@@ -47,13 +47,30 @@ def test_each_operation_selects_its_concrete_device_entry(capability,make_intent
     with pytest.raises(ValueError,match='PROCESSING_MODULE_UNAVAILABLE'):
         router.bind_intent(intent,layout,replace(snapshot,processing_capabilities={}))
 
+    declared = {capability: (capability,)}
+    configured = snapshot.processing_capabilities[capability]
+    cases = (
+        ({}, {}, 'INSTRUMENT_DRIVER_UNAVAILABLE'),
+        (declared, {}, 'INSTRUMENT_DEVICE_NOT_CONFIGURED'),
+        (declared, {name: {**module, 'connection_state': 'disconnected'} for name, module in configured.items()},
+         'INSTRUMENT_DEVICE_DISCONNECTED'),
+        (declared, {name: {**module, 'labware': ['other']} for name, module in configured.items()},
+         'PROCESSING_LABWARE_UNSUPPORTED'),
+    )
+    for drivers, modules, code in cases:
+        current = replace(snapshot, instrument_drivers=drivers, processing_capabilities={capability: modules})
+        with pytest.raises(ValueError, match=code):
+            router.bind_intent(intent, layout, current)
+    current = replace(snapshot, instrument_drivers=declared)
+    assert router.bind_intent(intent, layout, current)[0] == intent
+
 
 def test_incubator_is_selected_from_declared_device_capability():
     target,layout,snapshot,router=inputs()
     snapshot=replace(snapshot,processing_capabilities={'thermal_hold':{
         'cytomat':{'labware':['plate'],'instrument_kind':'incubator','temperature_range_celsius':[25,50]}}})
     intent=ThermalHoldIntent('incubate',(target,),37,2)
-    assert router.select_preparer(intent,layout,snapshot) is router.incubator
+    assert isinstance(router.select(intent,layout,snapshot)[0], IncubatorExecutionPreparationInteractor)
     assert router.bind_intent(intent,layout,snapshot)[1]=='cytomat'
     with pytest.raises(ValueError,match='PROCESSING_TEMPERATURE_UNSUPPORTED'):
         router.bind_intent(replace(intent,temperature_celsius=60),layout,snapshot)

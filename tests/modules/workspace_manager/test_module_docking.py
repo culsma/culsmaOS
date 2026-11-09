@@ -122,10 +122,11 @@ def test_unknown_docking_blocks_processing(tmp_path, monkeypatch):
 
 def test_docking_architecture():
     root = ROOT/'src/culsma_os'
-    for path in ('workspace_manager/interactors.py','processing_engine/interactors/preparation.py'):
+    for path in ('workspace_manager/interactors.py', 'program_manager/interactors/processing_preparation.py',
+                 'device_manager/instruments/execution.py'):
         names = [n.module or '' for n in ast.walk(ast.parse((root/path).read_text())) if isinstance(n, ast.ImportFrom)]
         assert not any(n.startswith(('opentrons','culsma_opentrons')) for n in names)
-    source = (root/'processing_engine/interactors/preparation.py').read_text()
+    source = (root/'device_manager/instruments/execution.py').read_text()
     assert 'placement: ProcessingPlacementPort' in source
 
 

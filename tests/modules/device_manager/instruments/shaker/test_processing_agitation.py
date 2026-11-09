@@ -94,7 +94,9 @@ class TestAgitationProcessing:
         try:
             result = app.execute(plan, init_state(plan))
             assert not result.ok and result.user_result['os']['status'] == 'failed'
-            assert 'PROCESSING_' in ' '.join(d.message for d in result.diagnostics)
+            expected = {'vortex': 'INSTRUMENT_DRIVER_UNAVAILABLE', 'no-module': 'INSTRUMENT_DEVICE_NOT_CONFIGURED',
+                        'wrong-module': 'INSTRUMENT_DEVICE_NOT_CONFIGURED'}.get(kind, 'PROCESSING_')
+            assert expected in ' '.join(d.message for d in result.diagnostics)
             assert not app.host.gateway.port.session.backend.protocol.commands()
             assert not app.client.lifecycle.operations.resource.occupied()
         finally: app.close()
@@ -218,7 +220,7 @@ class TestAgitationProcessing:
         adapter = (root/'driver_framework/adapters/opentrons.py').read_text()
         assert '.set_and_wait_for_shake_speed' not in adapter and '.close_labware_latch' not in adapter
         source = (root/'program_manager/interactors/processing_preparation.py').read_text()
-        assert 'self.intent_planners.get(' in source
+        assert 'self.planners.get(' in source
         for node in ast.walk(ast.parse(source)):
             if isinstance(node, ast.ImportFrom):
                 assert not (node.module or '').startswith('culsma_opentrons')

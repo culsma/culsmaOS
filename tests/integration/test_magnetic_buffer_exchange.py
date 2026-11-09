@@ -30,7 +30,7 @@ class TestBufferExchange:
         try:
             result=app.execute(plan,init_state(plan))
             assert not result.ok and result.user_result['os']['status']=='failed'
-            assert 'PROCESSING_MODULE_UNAVAILABLE' in ' '.join(d.message for d in result.diagnostics)
+            assert 'INSTRUMENT_DEVICE_NOT_CONFIGURED' in ' '.join(d.message for d in result.diagnostics)
             assert result.user_result['os']['preflight']['status']=='rejected'
             assert not app.host.gateway.port.session.backend.protocol.commands()
             identity=result.user_result['os']['run_id']

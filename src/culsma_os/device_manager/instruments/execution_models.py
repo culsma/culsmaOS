@@ -28,6 +28,13 @@ class ThermalHoldIntent:
     material_volumes: tuple[ProcessingMaterialVolume, ...] = ()
     environment_conditions: tuple[EnvironmentCondition, ...] = ()
 
+    @property
+    def instrument_kind(self):
+        if any(isinstance(condition, EnvironmentCondition) and condition.name in {'co2', 'o2', 'humidity'}
+               for condition in self.environment_conditions or ()):
+            return 'incubator'
+        return None
+
 
 @dataclass(frozen=True)
 class OrbitalShakeIntent:
@@ -38,6 +45,17 @@ class OrbitalShakeIntent:
     duration_seconds: float
     environment_conditions: tuple[EnvironmentCondition, ...] = ()
     requires_motion_default: bool = False
+
+
+@dataclass(frozen=True)
+class VortexIntent:
+    capability: ClassVar[str] = "vortex"
+    instrument_kind: ClassVar[str] = "vortexer"
+    step_id: str
+    targets: tuple[ResolvedContainerRef, ...]
+    duration_seconds: float
+    rate_rpm: int | None = None
+    environment_conditions: tuple[EnvironmentCondition, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -73,7 +91,7 @@ class CentrifugeIntent:
 
 
 class ProcessingIntentPort(Protocol):
-    def resolve_intent(self, pending: PendingEffect) -> ThermalHoldIntent | OrbitalShakeIntent | CentrifugeIntent | CentrifugeSeparationIntent | MagneticSeparationIntent: ...
+    def resolve_intent(self, pending: PendingEffect) -> ThermalHoldIntent | OrbitalShakeIntent | VortexIntent | CentrifugeIntent | CentrifugeSeparationIntent | MagneticSeparationIntent: ...
 
 
 from culsma_os.device_manager.instruments.magnet.models import MagneticSeparationIntent

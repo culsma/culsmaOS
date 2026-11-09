@@ -5,6 +5,7 @@ from culsma.runtime.material.args import arg_string
 from .semantics import HostedRuntimeInteractor
 from .replay import ReplayEffectInteractor
 from .workflow_simulation import WorkflowSimulationInteractor
+from .processing_preparation import ProcessingIntentInteractor
 from culsma.driver.base import DriverResult
 from culsma.driver.groups import GroupDriverResult
 from culsma.runtime.executor import run
@@ -21,16 +22,18 @@ class SetupRequirementsError(ValueError):
 
 
 class SetupRequirementsInteractor:
-    def __init__(self, codec):
+    def __init__(self, codec, processing_devices=None):
         self.codec = codec
+        self.processing_devices = processing_devices
 
-    def inspect(self, checkpoint):
+    def inspect(self, checkpoint, *, processing_capabilities=None):
         data = self.codec.loads(checkpoint)
         host = HostedRuntimeInteractor()
         if any(d.severity == 'error' for d in host.validate_plan(data['plan'], WorkflowSimulationInteractor.routes(data))):
             raise ValueError('SETUP_PROGRAM_UNSUPPORTED')
         projection = deepcopy(data['initial_state'])
-        effects = SetupDeclarationProjectionInteractor(data, projection, self.codec)
+        effects = SetupDeclarationProjectionInteractor(data, projection, self.codec, processing_capabilities,
+                                                        self.processing_devices)
         result = run(data['plan'], SemanticReplayDriver(effects), projection, max_scheduler_rounds=10000)
         if not result.ok:
             raise ValueError('SETUP_PROGRAM_UNSUPPORTED')
@@ -55,6 +58,8 @@ class SetupRequirementsInteractor:
                    'name': metadata.get('allocation_name') or identity, 'capacity_uL': metadata['capacity_uL'],
                    'initial_volume_uL': container.get('volume_uL', 0),
                    'initial_contents': deepcopy(container.get('component_quantities', container.get('components', {})))}
+            if identity in effects.processing_placements:
+                row['processing_labware'] = sorted(effects.processing_placements[identity])
             if metadata.get('kind') == 'well':
                 namespace, carrier = arg_string(step.args.get('container_namespace')), arg_string(step.args.get('carrier_id'))
                 from culsma_os.workspace_manager.interactors import SpaceInteractor
@@ -66,10 +71,32 @@ class SetupRequirementsInteractor:
 
 class SetupDeclarationProjectionInteractor(ReplayEffectInteractor):
     """Keep each container's initial declaration, before projected physical effects."""
-    def __init__(self, data, state, codec):
+    def __init__(self, data, state, codec, processing_capabilities=None, processing_devices=None):
         super().__init__(data, state, codec)
         self.containers = {}
         self.derived_outputs = {}
+        self.processing_placements = {}
+        self.processing_capabilities = processing_capabilities or {}
+        self.processing_devices = processing_devices
+        self.processing_intents = ProcessingIntentInteractor()
+
+    def record_processing_placements(self, step):
+        if not self.processing_capabilities or step.op not in self.processing_intents.planners:
+            return
+        try:
+            intent = self.processing_intents.resolve(self.prepare_effect(step))
+        except ValueError:
+            # The execution preflight reports the precise unsupported operation.
+            return
+        modules = self.processing_capabilities.get(intent.capability, {})
+        if not modules:
+            return
+        compatible = (self.processing_devices.compatible_labware(intent, modules) if self.processing_devices is not None
+                      else {labware for module in modules.values() for labware in module['labware']})
+        if not compatible:
+            return
+        for target in intent.targets:
+            self.processing_placements.setdefault(target.container_id, set(compatible)).intersection_update(compatible)
 
     def capture_initial_containers(self):
         for identity, container in self.state.artifacts.get('material_state', {}).get('containers', {}).items():
@@ -97,6 +124,7 @@ class SetupDeclarationProjectionInteractor(ReplayEffectInteractor):
             self.record_separation_outputs(step)
         if step.op not in self.bootstrap_ops:
             self.capture_initial_containers()
+            self.record_processing_placements(step)
         return DriverResult(True, 'SETUP_PRIVATE_PROJECTION', {'projection_only': True})
 
     def execute_group(self, request):

@@ -26,16 +26,9 @@ from .driver_framework.interactors import (
 from .program_manager.interactors.transfer_preparation import TransferPreparationInteractor
 from .program_manager.interactors.transfer_intents import MagneticTransferInteractor, CentrifugeTransferInteractor
 from .device_manager.instruments.pipetting.interactors import PipettingExecutionPreparationInteractor
-from .device_manager.instruments.magnet.interactors import MagnetExecutionPreparationInteractor
 from .program_manager.interactors.processing_preparation import ProcessingPreparationInteractor
-from .program_manager.interactors.processing_intents import ThermalHoldPreparationInteractor
-from .program_manager.interactors.separation_intents import AgitationPreparationInteractor, SeparationPreparationInteractor
 from .device_manager.instruments.plate_transport.interactors import PlateTransportExecutionPreparationInteractor
-from .device_manager.instruments.execution import InstrumentExecutionRouterInteractor
-from .device_manager.instruments.centrifuge.interactors import CentrifugeMethodBindingInteractor, CentrifugeExecutionPreparationInteractor
-from .device_manager.instruments.temperature.interactors import TemperatureExecutionPreparationInteractor
-from .device_manager.instruments.incubator.interactors import IncubatorExecutionPreparationInteractor
-from .device_manager.instruments.shaker.interactors import ShakerExecutionPreparationInteractor
+from .device_manager.instruments.providers import InstrumentPreparationFactory
 from .resource_manager.repository import SqliteResourceRepository, SqliteRunReservationRepository
 from .resource_manager.interactors import ResourceInteractor, ConsumableInteractor, RunReservationInteractor, StationUsageInteractor
 from .program_manager.interactors.safety import RunSafetyInteractor
@@ -82,6 +75,7 @@ class OpentronsSessionFactory:
                 labware_geometries=description.labware_geometries,
                 transfer_channels=description.transfer_channels,
                 processing_capabilities=description.processing_capabilities,
+                instrument_drivers=getattr(session, "instrument_drivers", lambda: None)(),
                 feedback_capabilities=(ExecutionFeedbackCapabilities(description.feedback_completion_units)
                     if getattr(description, "feedback_completion_units", None) is not None else None),
             )
@@ -147,16 +141,8 @@ class OSApplicationFactory:
         from .workspace_manager.interactors import LabwareMotionInteractor
         motion = LabwareMotionInteractor(SqliteLabwarePositionRepository(connections[9], connections[2],
             str(context.database_path.resolve())), space, snapshot, str(context.database_path.resolve()))
-        device_preparers = {
-            'magnetic_separation': MagnetExecutionPreparationInteractor(gateway, motion),
-            'thermal_hold': TemperatureExecutionPreparationInteractor(gateway, motion),
-            'orbital_shake': ShakerExecutionPreparationInteractor(gateway, motion),
-            'centrifuge': CentrifugeExecutionPreparationInteractor(gateway, motion, CentrifugeMethodBindingInteractor()),
-        }
-        device_processing = InstrumentExecutionRouterInteractor(device_preparers,
-            IncubatorExecutionPreparationInteractor(gateway, motion))
+        device_processing = InstrumentPreparationFactory.build_processing(gateway, motion)
         processing = ProcessingPreparationInteractor(space, device, gateway, snapshot.device_id,
-            {"env_hold": ThermalHoldPreparationInteractor(), "agit": AgitationPreparationInteractor(), "sep": SeparationPreparationInteractor()},
             devices=device_processing)
         from .program_manager.interactors.preflight import ProgramPreflightInteractor
         from .scheduler.conditions import ProcessingConditionProjectionInteractor
@@ -201,7 +187,7 @@ class OSApplicationFactory:
         motions = MotionSchedulerInteractor(motion, execution, gateway, resource, evidence, device, state,
             preparation=PlateTransportExecutionPreparationInteractor(gateway))
         conditions = ProcessingConditionInteractor(evidence, gateway, resource, motions,
-            preparation=device_preparers["magnetic_separation"])
+            preparation=device_processing.preparers["magnetic_separation"])
         safety = RunSafetyInteractor(tasks, execution, evidence, material, conditions, motions)
         reservations = RunReservationInteractor(station_repository, safety, station_id,
             str(context.database_path.resolve()), snapshot, usage)
@@ -236,7 +222,8 @@ class OSApplicationFactory:
         space.setup_addresses = ({(p['labware'], p['well']) for p in catalogue['locations']}
                                  if catalogue is not None else {(a.labware, a.well) for a in positions.values()})
         setup = RunSetupInteractor(SqliteRunSetupRepository(connections[0]), tasks, state, host, codec,
-            SetupRequirementsInteractor(codec), WorkspacePlanningInteractor(), catalogue, snapshot, reservations, evidence, space.workspaces, device)
+            SetupRequirementsInteractor(codec, device_processing), WorkspacePlanningInteractor(), catalogue, snapshot,
+            reservations, evidence, space.workspaces, device)
         tasks.setup = setup
         gateway.setup = setup
         runs = RunSchedulerInteractor(tasks, execution, reservations, device, evidence)
@@ -430,16 +417,20 @@ class ResidentCommandFactory:
         from .workspace_manager.interactors import WorkspacePlanningInteractor
         workspace_reader = getattr(factory, 'build_workspace_reader', lambda: None)()
         setup_requests.setup_supported = workspace_reader is not None
+        from .program_manager.interactors.setup_preflight import SetupProgramPreflightInteractor
+        from .program_manager.providers import ProgramPreviewScopeFactory
+        devices = self.applications.build_device_inspector(context)
+        snapshot_reader = getattr(factory, 'build_configuration_snapshot_reader', lambda: None)()
+        program_check = SetupProgramPreflightInteractor(devices, ProgramPreviewScopeFactory(), snapshot_reader, context.config_path)
         preview = RunSetupPreviewInteractor(workspace_reader,
-            configuration, context, SetupRequirementsInteractor(RuntimeCheckpointCodecInteractor()),
-            WorkspacePlanningInteractor(), HostedRuntimeInteractor())
+            configuration, context, SetupRequirementsInteractor(RuntimeCheckpointCodecInteractor(), InstrumentPreparationFactory.build_processing()),
+            WorkspacePlanningInteractor(), HostedRuntimeInteractor(), program_check)
         from .resource_manager.interactors import SupplyReplacementInteractor,StationPathInteractor
         from .resource_manager.repository import SqliteSupplyLoadRepository
         path=StationPathInteractor().database_path(context)
         supply_connection=DatabaseConnection(path).open()
         supply_guard=SqliteRunReservationRepository(DatabaseConnection(path).open(),path.with_suffix('.dispatch.lock'))
         replacement_port=getattr(factory,'build_consumable_replacement',lambda context:None)(context)
-        devices=self.applications.build_device_inspector(context)
         supplies=SupplyReplacementInteractor(SqliteSupplyLoadRepository(supply_connection),supply_guard,replacement_port,devices)
         from .developer_tools.interactors import FaultTestInteractor
         test_port=getattr(factory,'build_fault_tests',lambda context:None)(context)

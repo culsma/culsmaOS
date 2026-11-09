@@ -16,6 +16,23 @@ class CentrifugeProfileInteractor(ModuleProfileResolutionInteractor):
 class CentrifugeExecutionPreparationInteractor(InstrumentExecutionPreparationInteractor):
     capability = 'centrifuge'
 
+    def validate_intent(self, intent, capability):
+        from math import isfinite
+        super().validate_intent(intent, capability)
+        if 'drive_ranges' not in capability:
+            return
+        ranges = capability['drive_ranges']
+        limits = ranges.get(intent.drive_unit) if isinstance(ranges, dict) else None
+        if limits is None:
+            raise ValueError(f'PROCESSING_CENTRIFUGE_DRIVE_UNSUPPORTED: The configured module does not accept {intent.drive_unit}.')
+        if (not isinstance(limits, (list, tuple)) or len(limits) != 2
+                or any(type(value) not in (int, float) or not isfinite(value) for value in limits)
+                or not 0 < limits[0] <= limits[1]):
+            raise ValueError('PROCESSING_CENTRIFUGE_DRIVE_CAPABILITY_INVALID')
+        if not limits[0] <= intent.drive_value <= limits[1]:
+            raise ValueError(f'PROCESSING_CENTRIFUGE_DRIVE_UNSUPPORTED: Requested {intent.drive_value:g} {intent.drive_unit}; '
+                             f'the configured module accepts {limits[0]:g}–{limits[1]:g} {intent.drive_unit}.')
+
 
 class CentrifugeMethodBindingInteractor:
     def bind(self, intent, capability):

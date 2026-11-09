@@ -49,6 +49,9 @@ class SqliteDeviceRepository:
         data["labware_geometries"] = {name: tuple(shape) for name, shape in data.get("labware_geometries", {}).items()}
         data["transfer_selection_capabilities"] = tuple(data.get("transfer_selection_capabilities", ()))
         data["transfer_requirements"] = tuple(data.get("transfer_requirements", ()))
+        if data.get("instrument_drivers") is not None:
+            data["instrument_drivers"] = {kind: tuple(operations)
+                                          for kind, operations in data["instrument_drivers"].items()}
         feedback = data.get("feedback_capabilities")
         if feedback is not None:
             data["feedback_capabilities"] = ExecutionFeedbackCapabilities(tuple(feedback["completion_units"]))

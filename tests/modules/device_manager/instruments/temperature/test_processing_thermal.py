@@ -91,7 +91,11 @@ class TestThermalProcessing:
             assert not app.host.gateway.port.session.backend.protocol.commands()
             assert not app.host.gateway.port.session.thermal.receipts
             assert not app.client.lifecycle.operations.resource.occupied()
-            assert 'PROCESSING_' in ' '.join(d.message for d in result.diagnostics)
+            expected = {
+                'no-module': 'INSTRUMENT_DEVICE_NOT_CONFIGURED',
+                'co2': 'INSTRUMENT_DRIVER_UNAVAILABLE',
+            }.get(kind, 'PROCESSING_')
+            assert expected in ' '.join(d.message for d in result.diagnostics)
         finally:
             app.close()
 

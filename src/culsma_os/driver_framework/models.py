@@ -304,3 +304,8 @@ class LabwareEditorPort(Protocol):
 class WorkspaceCatalogueReadPort(Protocol):
     """Offline declared positions/supplies. Implementations must not connect to hardware."""
     def execute(self, path: Path) -> dict: ...
+
+
+class DeviceConfigurationReadPort(Protocol):
+    """Validated capability snapshot; no session creation, hardware I/O or registration."""
+    def execute(self, path: Path): ...

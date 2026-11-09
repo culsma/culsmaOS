@@ -1,6 +1,7 @@
 """Acceptance of the resident boundary, queue ownership and lifecycle."""
 
 from tests.support.paths import ROOT
+from tests.support.timeouts import ResidentWaitBudget
 from pathlib import Path
 import ast
 import json
@@ -60,7 +61,7 @@ class GateSessionFactory(FakeSessionFactory):
         return (port, *description)
 
 
-class ResidentHarness:
+class ResidentHarness(ResidentWaitBudget):
     def __init__(self, tmp_path, sessions=None, database=None, config=None):
         self.sessions = sessions or FakeSessionFactory()
         self.context = HostBuildContext(database or tmp_path/'os.sqlite3', 'fake', config, tmp_path/'artifacts')
@@ -82,15 +83,6 @@ class ResidentHarness:
         self.thread.start()
         self.wait(lambda: self.client.execute({'action':'host-status'})['status'] == expect)
         return self
-
-    def wait_budget(self, seconds):
-        try:
-            multiplier = int(os.environ.get('CULSMA_OS_TEST_TIMEOUT_MULTIPLIER', '1'))
-        except ValueError as error:
-            raise ValueError('TEST_TIMEOUT_MULTIPLIER_INVALID') from error
-        if not 1 <= multiplier <= 10:
-            raise ValueError('TEST_TIMEOUT_MULTIPLIER_INVALID')
-        return seconds * multiplier
 
     def wait(self, predicate, timeout=10):
         deadline = time.monotonic() + self.wait_budget(timeout)

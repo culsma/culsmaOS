@@ -107,7 +107,6 @@ class TestTransferMatrix:
         ('dropwise','target << [source:50uL] with constraint(dropwise);',f'{BUFFER}:200uL',2000,'TRANSFER_CONSTRAINT_UNSUPPORTED'),
         ('environment','with env(thermal=37C) { target << [source:50uL]; }',f'{BUFFER}:200uL',2000,'TRANSFER_GATE_UNSUPPORTED'),
         ('physical-capacity','target << [source:50uL];',f'{BUFFER}:200uL',3000,'WORKSPACE_CAPACITY_MISMATCH'),
-        ('late-declaration','target << [source:50uL]; let late = tube(capacity=2000uL);',f'{BUFFER}:200uL',2000,'HOST_OPERATION_UNSUPPORTED'),
     ])
     def test_rejection_matrix(self, tmp_path, name, body, load, capacity, code, record_property):
         fixture = TransferMatrixFixture()
@@ -315,20 +314,38 @@ class TestTransferMatrix:
         finally:
             app.close()
 
-    @pytest.mark.parametrize('name,body',[
-        ('separation-prerequisite','sep(sample=source,program=centrifuge_program(drive=12000g)); target << [source.contents[0]:50uL];'),
-        ('runtime-declarations-in-repeat','repeat 2 { let another = tube(capacity=2000uL); another << [source:50uL]; }'),
-    ])
-    def test_unimplemented_host_profiles_reject_before_action(self,tmp_path,name,body,record_property):
-        fixture=TransferMatrixFixture()
-        plan=fixture.compile(fixture.source(body),tmp_path)
-        app=OSApplicationFactory().build(fixture.context(tmp_path,plan))
+    @pytest.mark.parametrize('body,expected,strokes', [
+        ('target << [source:50uL]; let late = tube(capacity=2000uL);',
+         (150, 50, 0), (50,)),
+        ('repeat 2 { let another = tube(capacity=2000uL); another << [source:50uL]; }',
+         (100, 0, 50, 50), (50, 50)),
+    ], ids=['late-declaration', 'bounded-loop-declarations'])
+    def test_declarations_during_execution_preserve_material_and_device_evidence(self, tmp_path, body, expected, strokes):
+        fixture = TransferMatrixFixture()
+        plan = fixture.compile(fixture.source(body), tmp_path)
+        app = OSApplicationFactory().build(fixture.context(tmp_path, plan))
         try:
-            result=app.execute(plan,init_state(plan))
-            assert not result.ok
-            assert 'HOST_OPERATION_UNSUPPORTED' in [d.code for d in result.diagnostics]
-            assert not app.host.gateway.port.session.backend.protocol.commands()
-            record_property('coverage',json.dumps({'status':'expected_host_profile_rejection','diagnostic':'HOST_OPERATION_UNSUPPORTED'}))
+            result = app.execute(plan, init_state(plan))
+            fixture.assert_completed(app, plan, result, expected, strokes)
         finally:
             app.close()
 
+    def test_missing_centrifuge_driver_rejects_before_action(self, tmp_path, record_property):
+        fixture = TransferMatrixFixture()
+        body = 'sep(sample=source,program=centrifuge_program(drive=12000g)); target << [source.contents[0]:50uL];'
+        plan = fixture.compile(fixture.source(body), tmp_path)
+        app = OSApplicationFactory().build(fixture.context(tmp_path, plan))
+        try:
+            result = app.execute(plan, init_state(plan))
+            assert not result.ok
+            assert 'PREFLIGHT_OPERATION_REJECTED' in [d.code for d in result.diagnostics]
+            assert 'INSTRUMENT_DRIVER_UNAVAILABLE' in ' '.join(d.message for d in result.diagnostics)
+            assert result.user_result['os']['preflight']['status'] == 'rejected'
+            assert not app.host.gateway.port.session.backend.protocol.commands()
+            with sqlite3.connect(tmp_path/'os.sqlite3') as connection:
+                assert connection.execute('SELECT count(*) FROM os_attempts').fetchone()[0] == 0
+                assert connection.execute('SELECT count(*) FROM os_material_changes').fetchone()[0] == 0
+            record_property('coverage', json.dumps({'status': 'expected_driver_rejection',
+                                                   'diagnostic': 'INSTRUMENT_DRIVER_UNAVAILABLE'}))
+        finally:
+            app.close()

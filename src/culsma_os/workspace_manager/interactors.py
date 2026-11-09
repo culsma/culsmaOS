@@ -266,7 +266,10 @@ class LabwareMotionInteractor:
         step = pending.prepared.runtime_step
         run_id = self.space.scope_for_effect(pending)
         routes = self.space.routes(run_id, self.capabilities.get("before_steps", {}))
-        for offset, route in enumerate(routes.get(step.step_id, ())[start:]):
+        remaining = routes.get(step.step_id, ())[start:]
+        if remaining:
+            self.snapshot.require_motion()
+        for offset, route in enumerate(remaining):
             ordinal = start + offset
             if layout is None:
                 layout = self.space.preview(run_id, pending.physical_material_state(), allocations)
@@ -710,6 +713,8 @@ class WorkspacePlanningInteractor:
             return False
         if max(demand['capacity_uL'], demand.get('initial_volume_uL', 0)) > location['capacity_uL']:
             return False
+        if 'processing_labware' in demand and location['labware'] not in demand['processing_labware']:
+            return False
         if demand.get('carrier') is not None:
             return (location.get('geometry') == demand['geometry'] and location['well'] == demand['well'])
         return True
@@ -798,6 +803,7 @@ class WorkspacePlanningInteractor:
                 'name': (f"{demand['carrier']} / {demand.get('well', '')}" if demand.get('carrier') else demand.get('name') or demand['allocation_id']),
                 'fixed': deepcopy(address), 'required_capacity_uL': demand['capacity_uL'],
                 'kind': demand['kind'], 'geometry': deepcopy(demand.get('geometry')),
+                **({'processing_labware': demand['processing_labware']} if 'processing_labware' in demand else {}),
                 'compatible_locations': [{'labware': p['labware'], 'well': p['well'],
                     'placement': deepcopy(p.get('placement', {}))} for p in candidates]})
         overlaps = {}
@@ -817,6 +823,8 @@ class WorkspacePlanningInteractor:
             action = 'Choose different positions or change a fixed placement to automatic.'
         elif code == 'SETUP_NO_FEASIBLE_LOCATION':
             message = '; '.join(f"{r['name']} requires {r['kind']} capacity {r['required_capacity_uL']} µL"
+                + (f" and a location usable by all required processing steps ({', '.join(r['processing_labware']) or 'none'})"
+                   if 'processing_labware' in r else '')
                 + (f" at {r['fixed']['labware']} / {r['fixed']['well']}" if r['fixed'] else '') for r in rows)
             action = 'Check the selected position, declared availability, container capacity and plate geometry. Change the placement or configure compatible labware.'
         else:

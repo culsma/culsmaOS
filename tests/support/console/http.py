@@ -1,3 +1,4 @@
+from tests.support.timeouts import ResidentWaitBudget
 import copy
 import http.client
 import json
@@ -53,7 +54,7 @@ class ConsoleHTTPHarness:
             connection.close()
 
 
-class ConsoleProtocolHarness:
+class ConsoleProtocolHarness(ResidentWaitBudget):
     """Run the official SDK in its normal CLI process, with bounded cleanup."""
     def __init__(self, directory, profile):
         from pathlib import Path
@@ -83,7 +84,7 @@ class ConsoleProtocolHarness:
 
     def wait(self, predicate, timeout):
         import time
-        deadline = time.monotonic()+timeout
+        deadline = time.monotonic()+self.wait_budget(timeout)
         while time.monotonic()<deadline:
             if self.process.poll() is not None:
                 raise AssertionError('Resident process exited; inspect resident.log')

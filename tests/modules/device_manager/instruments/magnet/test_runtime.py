@@ -39,7 +39,7 @@ def test_device_entry_rejects_partial_plate_and_missing_module(tmp_path):
                         labware=next(b.labware for b in layout.bindings if b.reference in intent.targets), well='A2')
         with pytest.raises(ValueError, match='PROCESSING_COLLATERAL_EXPOSURE'):
             owner.bind_intent(intent, replace(layout,bindings=(*layout.bindings,other)),snapshot)
-        with pytest.raises(ValueError, match='PROCESSING_MODULE_UNAVAILABLE'):
+        with pytest.raises(ValueError, match='INSTRUMENT_DEVICE_NOT_CONFIGURED'):
             owner.bind_intent(intent,layout,replace(snapshot,processing_capabilities={}))
     finally:
         app.close()

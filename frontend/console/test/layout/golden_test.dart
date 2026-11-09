@@ -37,6 +37,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Advanced layout editor'));
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await expectLater(
         find.byKey(const Key('golden-root')),
@@ -59,6 +61,8 @@ void main() {
         child: CulsmaConsole(controller: c, initialView: 'settings'),
       ),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Advanced layout editor'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await expectLater(
@@ -91,6 +95,8 @@ void main() {
         child: CulsmaConsole(controller: c, initialView: 'settings'),
       ),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Advanced layout editor'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('export-native-layout')));
     await tester.pumpAndSettle();

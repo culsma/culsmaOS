@@ -82,7 +82,14 @@ void main() {
           child: CulsmaConsole(controller: layout, console: c),
         ),
       );
-      await tester.pumpAndSettle();
+      // A waiting run has an indeterminate progress animation. Capture one
+      // deterministic frame instead of waiting for that animation to stop.
+      if (view == 'experiment') {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+      } else {
+        await tester.pumpAndSettle();
+      }
       expect(tester.takeException(), isNull);
       await expectLater(
         find.byKey(const Key('migration-golden')),

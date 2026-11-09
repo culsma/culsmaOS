@@ -186,6 +186,36 @@ class TransferIntentInteractor:
             raise ValueError("TRANSFER_LIQUID_VOLUME_REQUIRED")
         return float(volume)
 
+class PipetteMixSelectionInteractor:
+    """Opt-in physical handling of a single quantified same-container mutation."""
+    def handles(self, pending):
+        proposal = pending.prepared.material_result
+        sources = proposal.delta.get('sources', []) if proposal is not None and proposal.ok else []
+        return (pending.prepared.runtime_step.op == 'Mutation' and len(sources) == 1
+                and sources[0].get('mode') == 'quantified_self_noop'
+                and sources[0].get('qty', {}).get('value') != 0)
+
+    def resolve_execution(self, pending):
+        from .processing_arguments import ProcessingArgumentsInteractor
+        from culsma_os.device_manager.instruments.pipetting.models import PipetteMixIntent
+        step = pending.prepared.runtime_step
+        delta = pending.prepared.material_result.delta
+        source = delta['sources'][0]
+        target = delta['target']
+        if source.get('source') != target or source.get('target') != target:
+            raise ValueError('TRANSFER_MATERIAL_REFERENCE_MISMATCH')
+        volume = ProcessingArgumentsInteractor().quantity(
+            {**source['qty'], 'kind': 'IRQuantity'}, {'uL': 1, 'mL': 1000})
+        available = pending.before_material_state['containers'][target]['volume_uL']
+        if not 0 < volume <= available:
+            raise ValueError('PIPETTE_MIX_VOLUME_INVALID')
+        identity = ResolvedContainerRef(pending.exclusive_physical_id(target))
+        requirements = TransferConstraintInteractor().resolve((step.gate or {}).get('constraint', {}))
+        conditions = TransferEnvironmentInteractor().resolve(pending)
+        return TransferExecutionDecision(PipetteMixIntent(step.step_id, identity,
+            (TransferAliquot(identity, volume),), step.span, requirements, **conditions))
+
+
 class MagneticTransferInteractor:
     def handles(self, pending):
         from culsma.runtime.material.contents_state import is_container_contents_index

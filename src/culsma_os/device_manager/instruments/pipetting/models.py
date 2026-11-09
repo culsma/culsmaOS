@@ -114,3 +114,9 @@ class CentrifugeSupernatantTransferIntent(CentrifugeFractionTransferIntent):
 class CentrifugePelletTransferIntent(CentrifugeFractionTransferIntent):
     selection_kind: ClassVar[str] = "centrifuge_pellet"
     selected_slot: str = "1"
+
+
+@dataclass(frozen=True)
+class PipetteMixIntent(TransferIntent):
+    """Explicit device interpretation; the language material effect remains a no-op."""
+    selection_kind: ClassVar[str] = "pipette_mix"

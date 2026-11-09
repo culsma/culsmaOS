@@ -1,3 +1,4 @@
+from tests.support.console.http import ConsoleProtocolHarness
 from tests.support.paths import ROOT
 from pathlib import Path
 import ast
@@ -294,18 +295,19 @@ class TestResidentHost:
 
 
 
+@pytest.mark.parametrize('harness_type', [ResidentHarness, ConsoleProtocolHarness])
 class TestResidentHarnessBudgets:
-    def test_default_wait_budget_is_unchanged(self, monkeypatch, tmp_path):
+    def test_default_wait_budget_is_unchanged(self, monkeypatch, tmp_path, harness_type):
         monkeypatch.delenv('CULSMA_OS_TEST_TIMEOUT_MULTIPLIER', raising=False)
-        assert ResidentHarness(tmp_path).wait_budget(10) == 10
+        assert harness_type.wait_budget(10) == 10
 
     @pytest.mark.parametrize('multiplier', [1, 3, 10])
-    def test_instrumented_budget_is_explicit(self, monkeypatch, tmp_path, multiplier):
+    def test_instrumented_budget_is_explicit(self, monkeypatch, tmp_path, multiplier, harness_type):
         monkeypatch.setenv('CULSMA_OS_TEST_TIMEOUT_MULTIPLIER', str(multiplier))
-        assert ResidentHarness(tmp_path).wait_budget(10) == 10 * multiplier
+        assert harness_type.wait_budget(10) == 10 * multiplier
 
     @pytest.mark.parametrize('value', ['0', '-1', '11', 'bad', '1.5'])
-    def test_invalid_budget_cannot_wait_without_a_bound(self, monkeypatch, tmp_path, value):
+    def test_invalid_budget_cannot_wait_without_a_bound(self, monkeypatch, tmp_path, value, harness_type):
         monkeypatch.setenv('CULSMA_OS_TEST_TIMEOUT_MULTIPLIER', value)
         with pytest.raises(ValueError, match='TEST_TIMEOUT_MULTIPLIER_INVALID'):
-            ResidentHarness(tmp_path).wait_budget(10)
+            harness_type.wait_budget(10)

@@ -3,7 +3,7 @@ from culsma.domains.agitation import AgitationMode
 from culsma.pipeline.external_boundary import DEFAULT_EXTERNAL_PARAMETER_NORMALIZER
 from culsma_os.device_manager.instruments.execution_models import CentrifugeIntent, CentrifugeSeparationIntent, ProcessingMethodProfile
 from .processing_arguments import ProcessingArgumentsInteractor
-from .processing_intents import OrbitalShakePreparationInteractor
+from .processing_intents import OrbitalShakePreparationInteractor, VortexPreparationInteractor
 from .magnetic_intents import MagneticPreparationInteractor
 
 
@@ -37,6 +37,7 @@ class AgitationPreparationInteractor:
     """Dispatch language agitation modes to injected capability planners."""
     def __init__(self, mode_planners=None):
         self.mode_planners = ({AgitationMode.SHAKE: OrbitalShakePreparationInteractor(),
+                               AgitationMode.VORTEX: VortexPreparationInteractor(),
                                AgitationMode.CENTRIFUGE: CentrifugePreparationInteractor()}
                               if mode_planners is None else dict(mode_planners))
 
@@ -85,14 +86,14 @@ class CentrifugeSeparationPreparationInteractor:
         duration = None
         conditions = ()
         if any(key in gate for key in ("env", "env_layers", "env_targets")):
-            from .processing_intents import OrbitalShakePreparationInteractor
+            from .processing_intents import ShakingPreparationInteractor
             env = gate.get("env", {})
             if "duration" not in env:
                 raise ValueError("PROCESSING_CENTRIFUGE_ENVIRONMENT_DURATION_REQUIRED")
             duration = self.arguments.quantity(env["duration"], {"s": 1, "min": 60, "h": 3600})
             if duration <= 0:
                 raise ValueError("PROCESSING_DURATION_INVALID")
-            conditions = OrbitalShakePreparationInteractor(self.arguments).environment_conditions(pending, targets, duration)
+            conditions = ShakingPreparationInteractor(self.arguments).environment_conditions(pending, targets, duration)
         return CentrifugeSeparationIntent(step.step_id, self.arguments.physical_targets(pending, targets),
                                           drive, quantity["unit"], duration, conditions)
 

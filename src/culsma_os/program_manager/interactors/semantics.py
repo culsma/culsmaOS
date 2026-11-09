@@ -51,6 +51,9 @@ class HostedRuntimeInteractor:
                     not isinstance(program, dict) or program.get("kind") != "IRCall"
                     or program.get("name") not in {"magnetic_program", "centrifuge_program"}
                     or (program.get("name") == "centrifuge_program"
+                        # When a station preflight is wired, it owns capability checks
+                        # and can explain all reachable failures against the same layout.
+                        and self.preflight is None
                         and self.processing_capabilities is not None
                         and not self.processing_capabilities.get("centrifuge"))))
                 if step.op == "img" and step.step_id in (routes or {}) and routes[step.step_id]["operation"] == "img":

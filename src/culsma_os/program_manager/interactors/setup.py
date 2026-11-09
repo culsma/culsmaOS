@@ -5,6 +5,12 @@ from datetime import datetime, timezone
 from .workspace import WorkspaceCheckpointInteractor
 
 
+class SetupPreflightRejected(ValueError):
+    def __init__(self, diagnostics):
+        super().__init__('SETUP_PREFLIGHT_REJECTED')
+        self.diagnostics = deepcopy(diagnostics)
+
+
 class RunSetupInteractor:
     def __init__(self, repository, tasks, state, host, codec, requirements, planner, catalogue, snapshot, reservations, evidence, workspaces, device):
         self.repository, self.tasks, self.state, self.host = repository, tasks, state, host
@@ -36,7 +42,10 @@ class RunSetupInteractor:
             if self.catalogue is not None and getattr(self.device,'consumables',None) is not None:
                 self.device.restore_consumables(self.snapshot.device_id,self.evidence)
                 self.catalogue=self.device.readiness.describe_workspace()
-            result = self.planner.plan(self.requirements.inspect(record.checkpoint), self.catalogue, preferences)
+            self.snapshot.verify_workspace_capabilities(self.catalogue)
+            demands = self.requirements.inspect(record.checkpoint,
+                processing_capabilities=self.catalogue.get('processing_capabilities'))
+            result = self.planner.plan(demands, self.catalogue, preferences)
             identity = {'plan': data['plan_fingerprint'], 'initial': data['initial_fingerprint'],
                         'configuration': self.snapshot.configuration_revision, 'catalogue': self.codec.fingerprint(self.catalogue)}
             if 'workflow_fingerprint' in data:
@@ -55,7 +64,11 @@ class RunSetupInteractor:
             self.workspaces.invalidate(run_id)
             projected = self.codec.loads(self.host.advance(checkpoint))
             if any(d.severity == 'error' for d in projected['diagnostics']):
-                raise ValueError('SETUP_PREFLIGHT_REJECTED')
+                blocked = self.codec.loads(checkpoint)
+                blocked['preflight'] = projected.get('preflight') or {'status': 'rejected',
+                    'diagnostics': [d.to_dict() for d in projected['diagnostics']]}
+                self.state.replace_setup(run_id, self.codec.dumps(blocked))
+                raise SetupPreflightRejected(blocked['preflight']['diagnostics'])
             document['preflight'] = deepcopy(projected.get('preflight'))
             document['fingerprint'] = self.codec.fingerprint(document)
             self.device.prepare_simulation_loading(run_id, document)
@@ -70,6 +83,8 @@ class RunSetupInteractor:
     def validate(self, run_id, fingerprint):
         value = self.get(run_id)
         data = self.codec.loads(self.tasks.get(run_id).checkpoint)
+        if (data.get('preflight') or {}).get('status') == 'rejected':
+            raise SetupPreflightRejected(data['preflight']['diagnostics'])
         identity = {'plan': data['plan_fingerprint'], 'initial': data['initial_fingerprint'],
                     'configuration': self.snapshot.configuration_revision, 'catalogue': self.codec.fingerprint(self.catalogue)}
         if 'workflow_fingerprint' in data:
@@ -211,9 +226,10 @@ class RunSetupInspectionInteractor:
 
 class RunSetupPreviewInteractor:
     """Use the same requirements and allocator as loading, without a run or reservation."""
-    def __init__(self, reader: WorkspaceCatalogueReadPort | None, configuration, context, requirements, planner, host):
+    def __init__(self, reader: WorkspaceCatalogueReadPort | None, configuration, context, requirements, planner, host, program_check=None):
         self.reader, self.configuration, self.context = reader, configuration, context
         self.requirements, self.planner, self.host = requirements, planner, host
+        self.program_check = program_check
 
     def preview(self, compiled, workflow=None):
         self.configuration.verify(self.context)
@@ -222,7 +238,7 @@ class RunSetupPreviewInteractor:
         # execution capability, not a claim that hardware was discovered or connected.
         base = {'configuration_fingerprint': identity, 'physical_observation': False,
                 'execution_options': {'simulation': True, 'hardware': False},
-                'scope': 'Proposed initial loading; execution preflight and stock checks still run before dispatch.'}
+                'scope': 'Declared loading and device capability checks; vendor preparation, live stock and physical outcomes remain checked at execution.'}
         if workflow is not None:
             base["workflow_simulation"] = workflow
         if self.reader is None:
@@ -232,12 +248,21 @@ class RunSetupPreviewInteractor:
         checkpoint = self.host.create(compiled.plan, compiled.state, 'preview', **options)
         demands = []
         try:
-            demands = self.requirements.inspect(checkpoint)
+            demands = self.requirements.inspect(checkpoint, processing_capabilities=catalogue.get('processing_capabilities'))
             plan = self.planner.plan(demands, catalogue)
             result = {**base, 'status': 'available', 'plan': plan, 'requirements': demands}
+            if self.program_check is not None:
+                check = self.program_check.inspect(compiled, catalogue, plan, workflow)
+                result['device_check'] = check
+                if check['status'] != 'passed':
+                    result.update(status='blocked', diagnostic='SETUP_DEVICE_PREFLIGHT_REJECTED',
+                                  diagnostics=check['diagnostics'])
+                    result['execution_options'] = {'simulation': False, 'hardware': False}
         except ValueError as error:
             result = {**base, 'status': 'blocked', 'plan': None, 'requirements': demands,
-                      'diagnostic': str(error), 'diagnostics': getattr(error, 'diagnostics', [])}
+                      'diagnostic': str(error).split(':', 1)[0], 'message': str(error),
+                      'diagnostics': getattr(error, 'diagnostics', []),
+                      'execution_options': {'simulation': False, 'hardware': False}}
         self.configuration.verify(self.context)
         if self.configuration.fingerprint != identity:
             raise ValueError('HOST_CONFIGURATION_STALE')

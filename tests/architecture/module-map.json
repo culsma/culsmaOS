@@ -392,6 +392,10 @@
         {
           "component": "CentrifugeSeparationPreparationInteractor",
           "path": "src/culsma_os/program_manager/interactors/separation_intents.py"
+        },
+        {
+          "component": "ProgramPreviewScopeFactory",
+          "path": "src/culsma_os/program_manager/providers.py"
         }
       ]
     },
@@ -842,6 +846,10 @@
         {
           "component": "ProjectedConditionRelease",
           "path": "src/culsma_os/device_manager/instruments/execution_models.py"
+        },
+        {
+          "component": "InstrumentPreparationFactory",
+          "path": "src/culsma_os/device_manager/instruments/providers.py"
         }
       ]
     },

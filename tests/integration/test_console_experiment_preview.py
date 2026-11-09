@@ -82,3 +82,20 @@ def test_preview_and_final_plan_reuse_configured_positions(tmp_path):
         shared.wait(lambda:shared.status(run)['status']=='awaiting_setup')
         assert shared.client.execute({'action':'setup-show','run_id':run})['bindings'] == config['bindings']
         assert not shared.backend.calls
+
+
+def test_preview_explains_missing_processing_before_admission(tmp_path):
+    shared = SharedSetupHarness(tmp_path, submit=False, programs=True)
+    source = shared.program_root/'transfer.culs'
+    source.write_text(source.read_text() + '\nagit(sample=source,mode=vortex,duration=3s);')
+    with shared:
+        view = preview(shared)
+        preparation = view['preparation']
+        assert view['valid'] and preparation['status'] == 'blocked'
+        assert preparation['plan']['bindings']
+        assert not preparation['execution_options']['simulation']
+        issue = preparation['device_check']['issues'][0]
+        assert issue['code'] == 'INSTRUMENT_DRIVER_UNAVAILABLE'
+        assert issue['summary'] and issue['action'] and issue['span']['line']
+        assert not shared.client.execute({'action':'runs'})['runs']
+        assert not shared.backend.calls

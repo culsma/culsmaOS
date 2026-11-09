@@ -45,7 +45,7 @@ class NativeSettingsViewState extends State<NativeSettingsView> {
               ),
               TextButton(
                 onPressed:
-                    c.layout.dirty ||
+                    (advanced && c.layout.dirty) ||
                         c.layout.busy ||
                         c.layout.writeUncertain ||
                         c.layout.pendingRequest != null

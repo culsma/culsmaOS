@@ -62,7 +62,9 @@ class TestFrameworkProtocol:
         try:
             result = app.execute(plan, init_state(plan))
             assert not result.ok
-            assert "HOST_OPERATION_UNSUPPORTED" in str(result.diagnostics)
+            assert any(d.code == "PREFLIGHT_OPERATION_REJECTED" and
+                       d.message == "PROCESSING_CENTRIFUGE_ENVIRONMENT_DURATION_REQUIRED"
+                       for d in result.diagnostics)
             assert not app.host.gateway.port.session.backend.protocol.commands()
         finally:
             app.close()

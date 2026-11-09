@@ -12,7 +12,13 @@ class TransferPreparationInteractor(TransferIntentInteractor):
         self.preparation = preparation or PipettingExecutionPreparationInteractor(gateway)
 
     def resolve_execution(self, pending):
-        decision = super().resolve_execution(pending)
+        from .transfer_intents import PipetteMixSelectionInteractor
+        device = self.device.get(self.device_id)
+        mixing = PipetteMixSelectionInteractor()
+        if 'pipette_mix' in device.transfer_selection_capabilities and mixing.handles(pending):
+            decision = mixing.resolve_execution(pending)
+        else:
+            decision = super().resolve_execution(pending)
         requirements = TransferConstraintInteractor().resolve((pending.prepared.driver_step.gate or {}).get('constraint', {}))
         self.preparation.require_supported(requirements, self.device.get(self.device_id))
         return decision

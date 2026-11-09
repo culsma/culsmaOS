@@ -44,7 +44,7 @@ class InstrumentProfileDesignTests(unittest.TestCase):
         package = importlib.import_module('culsma_os.device_manager.instruments')
         root = Path(package.__file__).parent
         allowed = {'__future__', 'abc', 'dataclasses', 'typing', 'culsma.pipeline.plan_nodes', 'culsma.common.source', 'culsma_os.auth.interactors',
-                   'collections.abc', 'math', 'types', 'json', 'uuid', 'culsma_os.workspace_manager.models', 'culsma_os.driver_framework.models', 'culsma_os.program_manager.models'}
+                   'collections.abc', 'math', 'types', 'json', 'uuid', 'culsma_os.workspace_manager.models', 'culsma_os.device_manager.models', 'culsma_os.driver_framework.models', 'culsma_os.program_manager.models'}
         storage_imports = {'pathlib', 'contextlib', 'sqlite3'}
         for path in root.rglob('*.py'):
             path_allowed = allowed | (storage_imports if path.name == 'sqlite_repository.py' else set()) | ({'re'} if path.name == 'profile_api.py' else set())

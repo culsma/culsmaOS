@@ -1,6 +1,7 @@
 """with-sep must retain the source field through extraction and release it."""
 from culsma.runtime.state import init_state
 import pytest
+import pytest
 from tests.support.processing_engine.processing_magnetic import MagneticFixture, DECLARATIONS
 
 
@@ -154,6 +155,7 @@ def test_cold_separation_and_extraction_preserve_driver_conditions(tmp_path, mon
 @pytest.mark.parametrize('body,expected', [
     ('with env(thermal=22C,duration=1min) {hold(sample=s);}', 'ThermalHoldIntent'),
     ('agit(sample=s,mode="shake",rate=200rpm,duration=5s);', 'OrbitalShakeIntent'),
+    ('agit(sample=s,mode="vortex",duration=5s);', 'VortexIntent'),
     ('agit(sample=s,mode=AgitationMode.CENTRIFUGE,drive=300g,duration=5s);', 'CentrifugeIntent'),
 ])
 def test_processing_inside_context_reaches_intent_validation(tmp_path, body, expected):

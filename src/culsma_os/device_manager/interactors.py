@@ -1,3 +1,4 @@
+from dataclasses import replace
 from .repository import DeviceRepository, DeviceInspectionRepository
 
 
@@ -26,8 +27,16 @@ class DeviceInteractor:
     def require_session_configuration(self):
         if self.configured_snapshot is not None:
             current = self.repository.get(self.configured_snapshot.device_id)
-            if current != self.configured_snapshot:
+            if not self.matches_session(current):
                 raise ValueError("DEVICE_SESSION_CONFIGURATION_MISMATCH")
+
+    def matches_session(self, current):
+        expected = self.configured_snapshot
+        if current.instrument_drivers is None:
+            # Older records can acquire driver metadata on admission without
+            # treating this as a change to the run's device configuration.
+            expected = replace(expected, instrument_drivers=None)
+        return current == expected
 
     def admit_session(self, allow_reconfiguration=False):
         if self.configured_snapshot is None:
@@ -37,12 +46,9 @@ class DeviceInteractor:
         except KeyError:
             self.register(self.configured_snapshot)
             return
-        if current != self.configured_snapshot:
-            if not allow_reconfiguration:
-                raise ValueError("DEVICE_SESSION_CONFIGURATION_MISMATCH")
-            self.register(self.configured_snapshot)
-        else:
-            self.register(self.configured_snapshot)  # Adopt an identical legacy catalog under run ownership.
+        if not self.matches_session(current) and not allow_reconfiguration:
+            raise ValueError("DEVICE_SESSION_CONFIGURATION_MISMATCH")
+        self.register(self.configured_snapshot)
 
     def validate_ready(self, context):
         current = self.get(context.device_id)
@@ -107,6 +113,24 @@ class DeviceInspectionInteractor:
                     'devices': reports,
                     'resources': {key: value for key, value in resources.items() if key != 'station_usage'}}
 
+    def preparation_snapshot(self, catalogue, configured=None):
+        """Read the registered device matching the driver catalogue; never open hardware."""
+        with self.snapshot, self.station_snapshot:
+            candidates = [d for d in ((configured,) if configured is not None else self.repository.snapshots())
+                          if d.device_id == catalogue.get('device_id')
+                          and d.configuration_revision == catalogue.get('configuration_revision')]
+            if len(candidates) != 1:
+                raise ValueError('SETUP_DEVICE_SNAPSHOT_UNAVAILABLE: The current device configuration has not been registered. Wait for the workstation to become ready, then check again.')
+            device = candidates[0]
+            device.verify_workspace_capabilities(catalogue)
+            observation = self.describe(device, self.resources.inspect())
+            positions = observation['positions']
+            if observation['unresolved_operations']:
+                raise ValueError('SETUP_DEVICE_EXECUTION_UNRESOLVED: Review the previous unresolved execution before preparing another experiment.')
+            if positions['status'] == 'unknown':
+                raise ValueError('SETUP_DEVICE_POSITION_UNKNOWN: Review the unresolved workstation movement before preparing another experiment.')
+            return device, positions['current'] or {}
+
     def describe(self, device, resources):
         from pathlib import Path
         evidence = self.evidence.inspect(device.device_id)
@@ -122,6 +146,7 @@ class DeviceInspectionInteractor:
         unresolved = [self.describe_operation(operation) for operation in evidence.operations
                       if operation.evidence is None or operation.evidence.outcome not in {'completed', 'rejected'}]
         return {'device_id': device.device_id, 'mode': device.mode,
+                'instrument_drivers': device.instrument_drivers,
                 'configuration_revision': device.configuration_revision,
                 'calibration_revision': device.calibration_revision, 'simulation_scope': device.simulation_scope,
                 'positions': positions, 'evidence_accounting': evidence.accounting, 'unresolved_operations': unresolved,

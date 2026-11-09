@@ -156,6 +156,8 @@ void main() {
       CulsmaConsole(controller: c, initialView: 'settings'),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Advanced layout editor'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('carrier-narrow')));
     await tester.pumpAndSettle();
     expect(find.text('5-site reagent carrier · 1 track'), findsOneWidget);

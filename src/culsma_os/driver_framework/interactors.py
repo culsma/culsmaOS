@@ -60,6 +60,7 @@ class DriverGatewayInteractor:
             self.feedback.freeze(self.port.describe_processing(vendor_plan), context, "operation", (intent.step_id,)))
 
     def prepare_motion(self, effect_id, intent, context):
+        self.device.get(context.device_id).require_motion()
         self.device.validate_ready(context)
         if self.profile_bindings is not None: self.profile_bindings.require_unprofiled(context.run_id)
         self.feedback.require_unit(context, "operation")
@@ -215,12 +216,7 @@ class DriverGatewayInteractor:
 
     def require_selection(self, intent, context):
         from culsma_os.device_manager.instruments.pipetting.interactors import PipettingCapabilityInteractor
-        PipettingCapabilityInteractor().require_supported(intent.requirements, self.device.get(context.device_id))
-        if self.device.get(context.device_id).supports_transfer is False:
-            raise ValueError("TRANSFER_DEVICE_UNSUPPORTED")
-        kind = getattr(intent, "selection_kind", None)
-        if kind is not None and kind not in self.device.get(context.device_id).transfer_selection_capabilities:
-            raise ValueError("DRIVER_TRANSFER_SELECTION_UNSUPPORTED")
+        PipettingCapabilityInteractor().validate_intent(intent, self.device.get(context.device_id))
 
     def validate_material(self, context, bindings):
         validator = getattr(self.port, "validate_material", None)

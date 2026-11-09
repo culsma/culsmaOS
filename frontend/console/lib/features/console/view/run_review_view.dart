@@ -15,6 +15,9 @@ class NativeRunReviewView extends StatelessWidget {
     final workflow = preparation?['workflow_simulation'] as Map?;
     final internal = workflow?['routes'] as Map? ?? {};
     final checked = c.launchReview != null;
+    final check = preparation?['device_check'] as Map?;
+    final issues = check?['issues'] as List? ?? [];
+    final blocked = preparation?['status'] == 'blocked';
     final simulation = c.review.simulationAvailable(c.station, c.inspection);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -28,10 +31,10 @@ class NativeRunReviewView extends StatelessWidget {
                 c.startingSimulation
                     ? 'Starting the simulation…'
                     : c.checkingRun
-                    ? 'Checking the experiment…'
-                    : checked
-                    ? 'Ready to confirm'
-                    : 'Check needs attention',
+                        ? 'Checking the experiment…'
+                        : checked
+                            ? 'Ready to confirm'
+                            : 'Check needs attention',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
@@ -101,7 +104,48 @@ class NativeRunReviewView extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              if (checked) ...[
+              if (!c.reviewBusy && blocked) ...[
+                Text(
+                  'Cannot run with the current workstation configuration.',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                if (plan.isNotEmpty)
+                  const Text(
+                    'Loading positions were allocated. The execution checks below still need attention.',
+                  ),
+                for (final issue in issues)
+                  ListTile(
+                    leading: const Icon(Icons.warning_amber),
+                    title: Text(
+                      issue['summary']?.toString() ?? 'Check needs attention',
+                    ),
+                    subtitle: Text(
+                      [
+                        if (issue['span'] is Map)
+                          'Protocol line ${issue['span']['line']}',
+                        issue['action']?.toString() ?? '',
+                      ].join('\n'),
+                    ),
+                  ),
+                if (issues.isEmpty)
+                  Text(
+                    preparation?['message']?.toString() ??
+                        c.message ??
+                        'Review the workstation configuration.',
+                  ),
+                ExpansionTile(
+                  title: const Text('Technical details'),
+                  children: [
+                    SelectableText(
+                      check?['diagnostics']?.toString() ??
+                          c.messageDetails ??
+                          '',
+                    ),
+                  ],
+                ),
+              ],
+              if (checked || (!c.reviewBusy && plan.isNotEmpty)) ...[
                 if (workflow != null)
                   ListTile(
                     title: Text(
@@ -111,7 +155,9 @@ class NativeRunReviewView extends StatelessWidget {
                     ),
                     subtitle: Text(
                       internal.isEmpty
-                          ? 'All planned device actions use the workstation.'
+                          ? (check?['status'] == 'passed'
+                              ? 'Configured device checks passed for the projected program path.'
+                              : 'Checking the selected workstation capabilities; no device action has been run.')
                           : 'The workstation runs the device actions. Internal simulation supplies ${internal.length} synthetic readout(s).',
                     ),
                   ),
@@ -127,7 +173,7 @@ class NativeRunReviewView extends StatelessWidget {
                     title: const Text('Protocol steps'),
                     children: [SelectableText(c.inspection!['source'])],
                   ),
-              ] else if (!c.reviewBusy) ...[
+              ] else if (!c.reviewBusy && !blocked) ...[
                 Text(
                   c.message ?? 'Open the protocol again to repeat the checks.',
                 ),

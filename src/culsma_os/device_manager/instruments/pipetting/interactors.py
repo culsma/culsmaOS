@@ -19,9 +19,8 @@ class PipettingCapabilityInteractor:
             raise ValueError('TRANSFER_CONSTRAINT_UNSUPPORTED')
 
     def validate_intent(self, intent, device):
+        device.require_transfer()
         self.require_supported(intent.requirements, device)
-        if device.supports_transfer is False:
-            raise ValueError('TRANSFER_DEVICE_UNSUPPORTED')
         from ..execution import InstrumentExecutionPreparationInteractor
         InstrumentExecutionPreparationInteractor.require_environment_conditions(
             intent.environment_conditions, device.transfer_environment_conditions, 'TRANSFER')

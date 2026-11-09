@@ -195,7 +195,7 @@ class TestFlexBufferExchange:
         preflight=(root/'program_manager/interactors/preflight.py').read_text()
         assert 'ConditionPreflightPort' in preflight
         assert 'processing_engine' not in preflight and 'magnetic' not in preflight
-        source=(root/'processing_engine/interactors/conditions.py').read_text().split('class ProcessingConditionProjectionInteractor:',1)[1]
+        source=(root/'scheduler/conditions.py').read_text().split('class ProcessingConditionProjectionInteractor:',1)[1].split('class BatchProcessingConditionInteractor:',1)[0]
         for forbidden in ('gateway','record_intent','repository','execute(','.held'):
             assert forbidden not in source
 

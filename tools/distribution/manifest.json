@@ -1,7 +1,7 @@
 {
   "decision": "DISTRIBUTION-20261018",
-  "status": "desktop_candidate_preparation",
-  "scope": "0.2.0rc1 Mac Apple Silicon simulator preview; native product bundle and isolated MCP runtime; no PyPI publication",
+  "status": "dependency_freeze_required",
+  "scope": "0.2.0 Mac Apple Silicon simulator preview preparation; dependency sources below remain the previous release baseline",
   "invariants": [
     "The published Culsma 1.0.8 wheel must not satisfy the OS dependency",
     "Compatibility wheels have PEP 440 local version labels derived from exact source commits",
@@ -46,13 +46,19 @@
   },
   "release": {
     "repository": "culsma/culsmaOS",
-    "tag": "0.2.0rc1",
+    "tag": "0.2.0",
     "kind": "prerelease",
-    "status": "desktop_candidate_preparation",
+    "status": "dependency_freeze_required",
     "scope": "Self-contained macOS arm64 simulator app with isolated MCP bridge; Python archives and fixed dependency wheels",
-    "page_url": "https://github.com/culsma/culsmaOS/releases/tag/0.2.0rc1",
+    "page_url": "https://github.com/culsma/culsmaOS/releases/tag/0.2.0",
     "api_access": "dedicated release credential; publication pending",
     "anonymous_access": "pending publication",
-    "repository_visibility": "PUBLIC"
+    "repository_visibility": "PUBLIC",
+    "blocking_requirements": [
+      "Freeze accepted language separation-context changes into an immutable source commit",
+      "Freeze the matching Opentrons adapter, including instrument discovery, and align its language dependency with the accepted language version",
+      "Rebuild compatibility wheels and refresh project pins, desktop lock and hashed requirements together",
+      "Run clean installed-product acceptance with the exact candidate wheels before publication"
+    ]
   }
 }

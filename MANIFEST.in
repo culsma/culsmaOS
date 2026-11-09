@@ -17,6 +17,7 @@ prune frontend/console/build
 prune frontend/console/macos/Flutter/ephemeral
 prune frontend/console/macos/Pods
 prune frontend/console/test/failures
+prune frontend/console/test/*/failures
 prune src/culsma_os/console/native
 
 include frontend/console/assets/fonts/RobotoMono-OFL.txt frontend/console/macos/Podfile
