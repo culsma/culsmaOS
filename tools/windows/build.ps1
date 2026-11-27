@@ -1,5 +1,4 @@
 param(
-    [Parameter(Mandatory=$true)][string]$DriverSource,
     [Parameter(Mandatory=$true)][string]$LanguageSource,
     [Parameter(Mandatory=$true)][string]$SourceManifest,
     [Parameter(Mandatory=$true)][string]$Output,
@@ -27,7 +26,13 @@ try {
 } finally { Pop-Location }
 $wheels = "$Output.wheels"
 New-Item -ItemType Directory -Path $wheels | Out-Null
-Invoke-Checked $python @('-m','pip','wheel','--no-deps','--wheel-dir',$wheels,$LanguageSource,$source,$DriverSource)
+Invoke-Checked $python @('-m','pip','wheel','--no-deps','--wheel-dir',$wheels,$LanguageSource,$source)
+Push-Location (Join-Path $source 'tools')
+try {
+    $driverUrl = & $python -c "from build_windows_product import WindowsProductBuilder; print(WindowsProductBuilder().hamilton_release()['url'])"
+    if ($LASTEXITCODE -ne 0) { throw 'Could not read the pinned Hamilton wheel.' }
+    Invoke-Checked $python @('-m','pip','download','--no-deps','--require-hashes','--dest',$wheels,$driverUrl)
+} finally { Pop-Location }
 $redist = Get-ChildItem 'C:\BuildTools\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT' -Directory | Sort-Object FullName | Select-Object -Last 1
 if (!$redist) { throw 'MSVC x64 runtime is missing.' }
 Invoke-Checked $python @(
@@ -55,7 +60,17 @@ try {
         'tests/modules/lifecycle_manager/test_run_cancellation.py',
         'tests/modules/file_system/test_windows_host.py')
 } finally { Pop-Location }
-Push-Location $DriverSource
+# The matching release source archive supplies only the tests and their fixtures.
+$qa = "$Output.driver-qa"
+New-Item -ItemType Directory -Path $qa | Out-Null
+$qaArchive = Join-Path $qa 'tests.tar.gz'
+Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/culsma/culsma-driver-hamilton/releases/download/v0.1.2/culsma_driver_hamilton-0.1.2.tar.gz' -OutFile $qaArchive
+if ((Get-FileHash $qaArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'ea987d711335e51b9a2ce9cb4e7d2a7f0a317ab5413493015fc921bfb7eeb913') {
+    throw 'Hamilton test source archive checksum mismatch.'
+}
+Invoke-Checked $python @('-I','-c',
+    "import sys, tarfile; tarfile.open(sys.argv[1]).extractall(sys.argv[2], filter='data')",$qaArchive,$qa)
+Push-Location (Join-Path $qa 'culsma_driver_hamilton-0.1.2')
 try {
     Invoke-Checked $packaged @('-I','-c',
         "import os, sys; sys.path.extend([sys.argv.pop(1), os.getcwd()]); import pytest; raise SystemExit(pytest.main())",

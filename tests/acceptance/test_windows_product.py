@@ -29,3 +29,19 @@ def test_upgrade_reads_the_existing_job_reservation_without_starting_a_service(t
     with sqlite3.connect(db) as connection:
         connection.execute('UPDATE station SET job_id=NULL')
     prepare_upgrade(tmp_path)
+
+
+def test_windows_product_verifies_the_hamilton_release(tmp_path, monkeypatch):
+    from hashlib import sha256
+
+    builder = WindowsProductBuilder()
+    release = builder.hamilton_release()
+    assert release['url'].endswith(release['filename'] + '#sha256=' + release['sha256'])
+    assert release['url'].startswith('https://github.com/culsma/culsma-driver-hamilton/releases/download/')
+    wheel = tmp_path / release['filename']
+    wheel.write_bytes(b'repacked')
+    with pytest.raises(ValueError, match='match the public release'):
+        builder.verify_hamilton_wheel(tmp_path)
+    pin = dict(release, sha256=sha256(wheel.read_bytes()).hexdigest())
+    monkeypatch.setattr(builder, 'hamilton_release', lambda: pin)
+    assert builder.verify_hamilton_wheel(tmp_path) == pin

@@ -730,14 +730,14 @@ submission so it cannot execute with different parameters.
 
 ### Build and upgrade the complete Windows product
 
-Use clean Git snapshots of CulsmaOS, the Culsma language runtime, and the
-Hamilton driver. Record the full commit IDs in a JSON source manifest with the
-keys `os`, `culsma`, and
-`hamilton`. Record the language wheel version as `culsma_version`. Run
-`tools/windows/build.ps1` on the provisioned Windows builder with
-`-DriverSource`, `-LanguageSource`, `-SourceManifest`, and a new `-Output`.
-It builds the native console and three wheels, assembles the package, and
-runs the Windows, direct VENUS driver, and remote MCP checks.
+Use clean Git snapshots of CulsmaOS and the Culsma language runtime. Record their
+full commit IDs as `os` and `culsma` in the JSON source manifest and the language
+version as `culsma_version`. Run `tools/windows/build.ps1` on the Windows
+builder with `-LanguageSource`, `-SourceManifest`, and a new `-Output`.
+The build downloads the Hamilton wheel pinned by the OS's `hamilton` extra,
+checks its SHA-256 before installation, and records its source in `Product.json`.
+Windows runs the driver tests from the hash-pinned source archive of that release
+against the installed wheel, alongside the OS, native console, and MCP checks.
 Distribute the archive only after that command succeeds. The archive checksum
 and the included `Product.json` identify the build and its inputs.
 

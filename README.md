@@ -91,6 +91,13 @@ python -m pip check
 culsma-os --help
 ```
 
+For a Hamilton station, install the same OS wheel with the `hamilton` extra.
+The Windows product build uses this same pinned public wheel.
+
+```sh
+python -m pip install 'culsma-os[hamilton] @ https://github.com/culsma/culsmaOS/releases/download/0.2.3/culsma_os-0.2.3-py3-none-any.whl'
+```
+
 Use `python3.12` in place of `python3.11` if needed. Run the examples below from
 this checkout with the virtual environment activated. No physical robot is
 required.

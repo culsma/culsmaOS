@@ -7,11 +7,32 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tomllib
+from urllib.parse import urlsplit
 import tarfile
 import zipfile
 
 
 class WindowsProductBuilder:
+    def hamilton_release(self):
+        root = Path(__file__).resolve().parents[1]
+        project = tomllib.loads((root / 'pyproject.toml').read_text(encoding='utf-8'))['project']
+        dependency, = project['optional-dependencies']['hamilton']
+        name, url = dependency.split(' @ ')
+        asset = urlsplit(url)
+        algorithm, digest = asset.fragment.split('=')
+        if (name != 'culsma-driver-hamilton' or algorithm != 'sha256' or len(digest) != 64
+                or any(c not in '0123456789abcdef' for c in digest)):
+            raise ValueError('Invalid Hamilton release pin')
+        return {'url': url, 'filename': Path(asset.path).name, 'sha256': digest}
+
+    def verify_hamilton_wheel(self, wheels):
+        release = self.hamilton_release()
+        wheel = wheels / release['filename']
+        if not wheel.is_file() or sha256(wheel.read_bytes()).hexdigest() != release['sha256']:
+            raise ValueError('Hamilton wheel does not match the public release')
+        return release
+
     def product_wheels(self, wheels):
         wheel_files = sorted(wheels.glob('*.whl'))
         for required in ('culsma-', 'culsma_os-', 'culsma_driver_hamilton-'):
@@ -41,6 +62,7 @@ class WindowsProductBuilder:
         unpack.rmdir()
         python = product/'runtime/python.exe'
         wheel_files = self.product_wheels(wheels)
+        driver_release = self.verify_hamilton_wheel(wheels)
         wheel_requirements = [
             str(path) + '[mcp]' if path.name.startswith('culsma_os-') else str(path)
             for path in wheel_files
@@ -73,6 +95,7 @@ class WindowsProductBuilder:
             'physical_execution_enabled':False, 'python':expected,
             'sources':json.loads(source_manifest.read_text(encoding='utf-8-sig')),
             'packages':sorted(packages, key=lambda item:item['name'].lower()),
+            'hamilton_release':driver_release,
             'input_wheels':{p.name:sha256(p.read_bytes()).hexdigest() for p in wheel_files},
             'defaults':{p.name:sha256(p.read_bytes()).hexdigest() for p in (product/'defaults').iterdir() if p.is_file()}}
         (product/'Product.json').write_text(json.dumps(inventory,indent=2)+'\n', encoding='utf-8')

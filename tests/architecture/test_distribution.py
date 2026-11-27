@@ -15,7 +15,9 @@ class TestDistribution:
         core,simulator=contract['sources']['core'],contract['sources']['simulator']
         assert project['dependencies'] == ['culsma>=1.0.11,<1.1']
         # The immutable 0.2.0 preview manifest remains provenance, not today's package pin.
-        assert project['optional-dependencies']['simulator'] == ['culsma-opentrons-simulator==0.1.0']
+        simulator_pin, = [line for line in (ROOT/'requirements/release-downloads.txt').read_text().splitlines()
+                          if line.startswith('culsma-opentrons-simulator @ ')]
+        assert project['optional-dependencies']['simulator'] == [simulator_pin]
         assert core['artifact_version'] == '1.0.10'
         assert core['source_version'] == core['artifact_version']
         assert core['source_tag'] == 'v1.0.10'

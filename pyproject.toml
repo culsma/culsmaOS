@@ -13,7 +13,8 @@ dependencies = ["culsma>=1.0.11,<1.1"]
 [project.optional-dependencies]
 # Install the MCP bridge in its own environment; vendor simulators pin conflicting dependencies.
 mcp = ["mcp==2.3.0"]
-simulator = ["culsma-opentrons-simulator==0.1.0"]
+simulator = ["culsma-opentrons-simulator @ https://github.com/culsma/culsma-driver-opentrons/releases/download/v0.1.0/culsma_opentrons_simulator-0.1.0-py3-none-any.whl#sha256=0a68156db50fbae39378123beaf97f0d1faada69333989cd53deeba268917cdd"]
+hamilton = ["culsma-driver-hamilton @ https://github.com/culsma/culsma-driver-hamilton/releases/download/v0.1.2/culsma_driver_hamilton-0.1.2-py3-none-any.whl#sha256=46421f3cb44741f263e2122305a36044792ea42e4de482acd1e0a6572513f36b"]
 dev = ["pytest>=8,<9", "coverage==7.10.7", "pytest-cov==7.0.0"]
 [project.scripts]
 culsma-os = "culsma_os.cli:CulsmaOSCLI.main"
