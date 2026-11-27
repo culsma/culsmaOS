@@ -3,8 +3,10 @@ import Foundation
 
 // A Finder entry point only. The Python product owns startup and the native UI owns interaction.
 let resources = Bundle.main.resourceURL!
-let state = FileManager.default.homeDirectoryForCurrentUser
-    .appendingPathComponent("Library/Application Support/culsmaOS/preview")
+let support = FileManager.default.homeDirectoryForCurrentUser
+    .appendingPathComponent("Library/Application Support/culsmaOS")
+let legacy = support.appendingPathComponent("preview")
+let state = FileManager.default.fileExists(atPath: legacy.path) ? legacy : support.appendingPathComponent("desktop")
 do {
     try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true,
         attributes: [.posixPermissions: 0o700])
@@ -26,7 +28,7 @@ do {
     process.waitUntilExit()
     if process.terminationStatus != 0 {
         throw NSError(domain: "culsmaOS", code: Int(process.terminationStatus),
-            userInfo: [NSLocalizedDescriptionKey: "The preview could not start. See \(logURL.path)"])
+            userInfo: [NSLocalizedDescriptionKey: "CulsmaOS could not start. See \(logURL.path)"])
     }
 } catch {
     let app = NSApplication.shared

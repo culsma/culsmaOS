@@ -1,5 +1,5 @@
 # macOS arm64 CPython 3.11 wheel pins; install OS separately from the matching release.
-culsma==1.0.10 --hash=sha256:9289109ea1836367fce4f37c7c8b27c3841276f7c0a2bebe0df803b93d962f18
+culsma==1.0.11 --hash=sha256:6f022850f97164ad6511eb244edf103d273471c525415779d85ceef3c449817d
 mcp==2.3.0 --hash=sha256:dd0c44c089d16453e8ae31a3877a0054d7a2314caaa81f5e0541b9b1734b2377
 mcp-types==2.3.0 --hash=sha256:968efdbdaedfab06adae40d378a34395f1090c5921d4be3c9cde283aaf76d91d
 anyio==4.15.1 --hash=sha256:6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101

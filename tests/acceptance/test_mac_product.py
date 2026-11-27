@@ -148,3 +148,15 @@ def test_hamilton_profile_cannot_be_selected_with_unrecognized_name_or_symlink(t
     (p.base_state/'station.json').symlink_to(tmp_path/'outside')
     with pytest.raises(ValueError,match='STATION_SELECTION_FILE_IS_LINK'):p.select_profile('opentrons-simulator')
     with pytest.raises(ValueError,match='PRODUCT_STATION_SELECTION_IS_LINK'):MacPreviewProduct(p.resources,p.user_home,tmp_path)
+
+
+def test_mac_upgrade_reuses_existing_workspace_and_station_state(tmp_path):
+    p = product(tmp_path)
+    assert p.workspace == p.user_home / 'CulsmaOS'
+    assert p.base_state.name == 'desktop'
+    (p.user_home / 'Culsma Preview').mkdir()
+    legacy = p.base_state.parent / 'preview'
+    legacy.mkdir(parents=True)
+    upgraded = MacPreviewProduct(p.resources, p.user_home, tmp_path)
+    assert upgraded.workspace == p.user_home / 'Culsma Preview'
+    assert upgraded.base_state == legacy

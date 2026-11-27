@@ -5,7 +5,7 @@
 - Install the Opentrons simulator from its public driver release alongside Culsma 1.0.11. The Hamilton installation extra and Windows product builder use the SHA-256-pinned public Hamilton driver 0.1.2.
 - Review highlighted loading positions and confirm a prepared run through MCP. Track cancellation and outstanding device cleanup before releasing the workstation.
 - Preserve the expanded layout editor after saving, and keep loading highlights visible in desktop and narrow browser views.
-- Include the browser acceptance fixtures and Windows build inputs in the source archive. This release provides the OS wheel and source distribution.
+- Include the browser acceptance fixtures and Windows build inputs in the source archive. Ship the Apple Silicon desktop application as a DMG alongside the OS wheel and source distribution.
 
 ## 0.2.1 — Internal Windows validation
 

@@ -121,7 +121,7 @@ async def exercise(app, output, verify=False):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--app',type=Path,default=Path('/Applications/CulsmaOS Preview.app'))
+    parser.add_argument('--app',type=Path,default=Path('/Applications/CulsmaOS.app'))
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--verify',action='store_true')
     args=parser.parse_args();asyncio.run(exercise(args.app,args.output,args.verify))

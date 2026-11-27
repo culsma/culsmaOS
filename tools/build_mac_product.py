@@ -1,4 +1,4 @@
-"""Assemble the local arm64 preview from verified runtime, wheels and native UI."""
+"""Assemble the macOS arm64 application from verified runtime, wheels and native UI."""
 import argparse
 from hashlib import sha256
 import importlib.metadata
@@ -82,7 +82,7 @@ class MacProductBuilder:
         if not (native/'Contents/MacOS/culsma_console').is_file():raise ValueError('NATIVE_BUILD_REQUIRED')
         output.mkdir(parents=True)
         image=output/'image';image.mkdir()
-        app=image/'CulsmaOS Preview.app';contents=app/'Contents';resources=contents/'Resources'
+        app=image/'CulsmaOS.app';contents=app/'Contents';resources=contents/'Resources'
         resources.mkdir(parents=True);(contents/'MacOS').mkdir()
         unpack=output/'unpack';unpack.mkdir()
         with tarfile.open(runtime_archive) as archive:archive.extractall(unpack,filter='data')
@@ -109,8 +109,8 @@ class MacProductBuilder:
         for name in ('deck.json','transfer.culs'):shutil.copy2(root/'examples/transfer'/name,defaults/name)
         for name in ('LICENSE','THIRD_PARTY_NOTICES.md'):
             shutil.copy2(root/name,resources/name)
-        shutil.copy2(root/'docs/mac-preview.md',image/'Read me first.md')
-        shutil.copy2(root/'docs/mac-preview.md',resources/'Read me first.md')
+        shutil.copy2(root/'docs/mac-desktop.md',image/'Read me first.md')
+        shutil.copy2(root/'docs/mac-desktop.md',resources/'Read me first.md')
         self.clean_python_tree(resources)
         # Wheel/site metadata is included with all third-party license files.
         inventory=self.package_inventory(resources/'packages')
@@ -122,7 +122,7 @@ class MacProductBuilder:
             expected={row['name'].lower().replace('_','-'):row['version'] for row in pins['environments'][name]}
             if actual!=expected:raise ValueError('PRODUCT_DEPENDENCIES_CHANGED')
         product={'version':version,'platform':'macos-arm64','runtime':lock,'packages':inventory,
-            'signing':'ad-hoc, not Developer ID notarized','hardware':'simulation-only preview',
+            'signing':'ad-hoc, not Developer ID notarized','hardware':'local simulation',
             'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()}
         (resources/'Product.json').write_text(json.dumps(product,indent=2)+'\n')
         self.write_shell(contents/'MacOS/culsma-mcp','mcp')
@@ -133,8 +133,8 @@ class MacProductBuilder:
         self.create_icon(root,resources,output)
         native_resources=resources/'Native/culsma_console.app/Contents/Resources'
         shutil.copy2(resources/'AppIcon.icns',native_resources/'AppIcon.icns')
-        info={'CFBundleExecutable':'culsmaOS','CFBundleIdentifier':'dev.culsma.os.preview',
-            'CFBundleName':'CulsmaOS Preview','CFBundleDisplayName':'CulsmaOS Preview',
+        info={'CFBundleExecutable':'culsmaOS','CFBundleIdentifier':'dev.culsma.os',
+            'CFBundleName':'CulsmaOS','CFBundleDisplayName':'CulsmaOS',
             'CFBundlePackageType':'APPL','CFBundleShortVersionString':version.split('rc')[0],'CFBundleVersion':'1',
             'CulsmaProductVersion':version,'CFBundleIconFile':'AppIcon.icns',
             'LSMinimumSystemVersion':'15.0','LSUIElement':True,'NSHighResolutionCapable':True}
@@ -147,7 +147,7 @@ class MacProductBuilder:
     def image(self, output, version):
         dmg=output/f'culsmaOS-{version}-macOS-arm64.dmg'
         subprocess.run(['/usr/bin/hdiutil','create','-fs','HFS+','-format','UDZO',
-            '-volname','CulsmaOS Preview','-srcfolder',str(output/'image'),str(dmg)],check=True)
+            '-volname','CulsmaOS','-srcfolder',str(output/'image'),str(dmg)],check=True)
         (output/'SHA256SUMS').write_text(self.digest(dmg)+'  '+dmg.name+'\n')
         return dmg
 

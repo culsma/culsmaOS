@@ -11,7 +11,7 @@ outcomes remain explicit and block further execution of the affected run.
 
 [Install](#installation) · [Run an example](#quick-start) · [Example protocols](#example-protocols) · [Architecture](#architecture)
 
-**0.2.3 Python release** · Python 3.11–3.12 · [Apache-2.0](LICENSE) · [Archived 0.1.1 DOI](https://doi.org/10.5281/zenodo.23467661)
+**CulsmaOS 0.2.3** · macOS desktop · Python 3.11–3.12 CLI · [Apache-2.0](LICENSE) · [Archived 0.1.1 DOI](https://doi.org/10.5281/zenodo.23467661)
 
 ## Architecture
 
@@ -43,7 +43,7 @@ functional units. Measurement remains reserved.
 - **Manage resources across programs:** track plate positions, tips and resource reservations.
 - **Inspect execution:** review results, device evidence and unresolved outcomes.
 
-The desktop preview supports one station with one worker, a native console and
+The desktop application supports one station with one worker, a native console and
 shared MCP operations for experiment files, execution and station configuration.
 Its main execution path is validated with the official Opentrons simulator;
 physical instrument operation is not yet accepted. culsmaOS runs as a Python
@@ -51,19 +51,9 @@ application on the host computer.
 
 ## Installation
 
-### Mac desktop preview
+### Mac desktop app
 
-Download the **macOS arm64 DMG** from the
-[0.2.0 prerelease](https://github.com/culsma/culsmaOS/releases/tag/0.2.0),
-then drag **CulsmaOS Preview.app** into **Applications**. Python, the official
-Opentrons simulator and an isolated MCP bridge are included. Open the App and try
-**Files → Experiments → Transfer → transfer.culs**. Apple Silicon and macOS 15+
-are required; Windows packaging is pending.
-
-This experimental App is ad-hoc signed and has not been Apple notarized.
-See the short [installation and MCP guide](docs/mac-preview.md) for first launch,
-AI client configuration and the separate preview workspace. Physical instruments
-are not connected by this package.
+Download [CulsmaOS 0.2.3 for Apple Silicon](https://github.com/culsma/culsmaOS/releases/download/0.2.3/culsmaOS-0.2.3-macOS-arm64.dmg), drag **CulsmaOS.app** into **Applications**, and open it. Requires macOS 15 or later. The app includes its runtime, the official Opentrons simulator and an isolated MCP bridge. Open **Files → Experiments → Transfer → transfer.culs** to try the bundled example. See the [installation and MCP guide](docs/mac-desktop.md) for first launch, ad-hoc signing and upgrades.
 
 ### Command-line installation (0.2.3)
 
@@ -237,7 +227,7 @@ are integrated for restricted device profiles. Plate centrifugation is validated
 through third-party protocol simulation. See the [capability map](docs/reference/instrument-capability-map.json)
 for exact coverage.
 
-The desktop preview does not support parallel execution, general manual reconciliation or
+The desktop application does not support parallel execution, general manual reconciliation or
 measurement/readout integration. Material quantities are modeled; device action
 completion does not establish a measured biological result. Hamilton physical
 execution and general cross-device compatibility remain outside the accepted

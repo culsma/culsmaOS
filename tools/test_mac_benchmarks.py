@@ -114,7 +114,7 @@ async def audit(app, root, output, execute):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--app',type=Path,default=Path('/Applications/CulsmaOS Preview.app'))
+    parser.add_argument('--app',type=Path,default=Path('/Applications/CulsmaOS.app'))
     parser.add_argument('--benchmarks-root',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--execute',action='store_true')

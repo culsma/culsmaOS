@@ -11,7 +11,8 @@ class MacPreviewProduct:
     def __init__(self, resources, home=None, endpoint_root=None):
         self.resources = Path(resources).resolve()
         self.user_home = Path(home) if home is not None else Path.home()
-        self.base_state = self.user_home / 'Library/Application Support/culsmaOS/preview'
+        support = self.user_home / 'Library/Application Support/culsmaOS'
+        self.base_state = support / ('preview' if (support / 'preview').exists() else 'desktop')
         selection = self.base_state / 'station.json'
         if selection.is_symlink():
             raise ValueError('PRODUCT_STATION_SELECTION_IS_LINK')
@@ -23,7 +24,8 @@ class MacPreviewProduct:
             raise ValueError('PRODUCT_STATION_PROFILE_INVALID')
         self.addon = self.user_home / 'Library/Application Support/culsmaOS/addons/hamilton'
         self.state = self.base_state if self.profile=='opentrons-simulator' else self.base_state/'stations/hamilton-local'
-        self.workspace = self.user_home / ('Culsma Preview' if self.profile=='opentrons-simulator' else 'Culsma Hamilton')
+        simulator_workspace = 'Culsma Preview' if (self.user_home / 'Culsma Preview').exists() else 'CulsmaOS'
+        self.workspace = self.user_home / (simulator_workspace if self.profile=='opentrons-simulator' else 'Culsma Hamilton')
         self.programs = self.workspace / 'projects'
         key = sha256(str(self.state.resolve()).encode()).hexdigest()[:16]
         self.endpoint = Path(endpoint_root or '/private/tmp') / f'culsma-preview-{os.getuid()}-{key}'

@@ -47,7 +47,7 @@ async def execute(app, program, output):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--app', type=Path, default=Path('/Applications/CulsmaOS Preview.app'))
+    parser.add_argument('--app', type=Path, default=Path('/Applications/CulsmaOS.app'))
     parser.add_argument('--program', default='Magnetic separation/local_magnetic_separation.culs')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()

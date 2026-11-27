@@ -90,7 +90,7 @@ def main(app, output):
                 print(json.dumps(result,indent=2))
             finally:
                 subprocess.run([str(python),'-I','-B',str(launch),'stop'],env=env,capture_output=True,timeout=15)
-                resident_log=home/'Library/Application Support/culsmaOS/preview/resident.log'
+                resident_log=home/'Library/Application Support/culsmaOS/desktop/resident.log'
                 if resident_log.exists():shutil.copy2(resident_log,output/'resident.log')
                 # Terminate only this isolated test's native child, not any user's app.
                 children=subprocess.run(['/usr/bin/pgrep','-P',str(native.pid)],capture_output=True,text=True).stdout.split()
