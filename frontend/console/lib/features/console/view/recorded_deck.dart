@@ -100,7 +100,22 @@ class RecordedDeckBoard extends StatelessWidget {
       style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
     );
     return narrow
-        ? Column(mainAxisSize: MainAxisSize.min, children: [symbol, label])
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              symbol,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  item['number']!,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          )
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -109,6 +124,85 @@ class RecordedDeckBoard extends StatelessWidget {
               Flexible(child: label),
             ],
           );
+  }
+
+  /// One physical site has one outline, even when plate and lid share it.
+  Widget occupiedSite(
+    Map<String, dynamic> carrier,
+    String site,
+    List<Map<String, dynamic>> placements,
+  ) {
+    final selected = placements.any((p) => p['id'] == selectedEntity);
+    final required = placements.any((p) => annotations.containsKey(p['id']));
+    return Container(
+      key: ValueKey('occupied-site:${carrier['id']}/$site'),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: selected
+            ? const Color(0xffbddbf0)
+            : required
+            ? const Color(0xfffff3d2)
+            : Colors.white,
+        border: Border.all(
+          color: selected
+              ? const Color(0xff247a92)
+              : required
+              ? const Color(0xffb67816)
+              : const Color(0xffb7cadb),
+        ),
+        borderRadius: BorderRadius.circular(3),
+      ),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(3),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final placed in placements)
+            Flexible(child: siteItem(carrier, site, placed)),
+        ],
+      ),
+    );
+  }
+
+  Widget siteItem(
+    Map<String, dynamic> carrier,
+    String site,
+    Map<String, dynamic> placed,
+  ) {
+    final id = placed['id'] as String;
+    final annotation = annotations[id];
+    return Semantics(
+      button: onItem != null,
+      identifier: 'layout:$id',
+      label: annotation != null
+          ? 'Preparation ${annotation['number']}: ${annotation['label']}'
+          : 'Configured item $id',
+      child: Tooltip(
+        message: annotation?['instructions'] ?? id,
+        child: InkWell(
+          key: keys.putIfAbsent(id, () => GlobalKey()),
+          onTap: onItem == null ? null : () => onItem!(placed),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            child: annotation != null
+                ? marker(annotation, carrier['span'] < 3)
+                : Text(
+                    carrier['span'] < 3 ? site : id,
+                    textAlign: TextAlign.center,
+                    maxLines: annotations.isNotEmpty ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: id == selectedEntity
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget carrier(
@@ -143,69 +237,20 @@ class RecordedDeckBoard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 3),
                   child: Column(
                     children: [
-                      if (carrier['span'] >= 3)
-                        Text('$site', style: const TextStyle(fontSize: 10)),
-                      for (final placed in placements.where(
-                        (p) => p['site'] == site,
-                      ))
+                      Text(
+                        '$site',
+                        key: ValueKey('site-label:${carrier['id']}/$site'),
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                      if (placements.any((p) => p['site'] == site))
                         Expanded(
-                          child: Semantics(
-                            button: onItem != null,
-                            identifier: 'layout:${placed['id']}',
-                            label: annotations.containsKey(placed['id'])
-                                ? 'Preparation ${annotations[placed['id']]!['number']}: ${annotations[placed['id']]!['label']}'
-                                : 'Configured item ${placed['id']}',
-                            child: InkWell(
-                              onTap: onItem == null
-                                  ? null
-                                  : () => onItem!(
-                                      Map<String, dynamic>.from(placed),
-                                    ),
-                              child: Container(
-                                key: keys.putIfAbsent(
-                                  placed['id'],
-                                  () => GlobalKey(),
-                                ),
-                                width: double.infinity,
-                                margin: const EdgeInsets.symmetric(vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: placed['id'] == selectedEntity
-                                      ? const Color(0xffbddbf0)
-                                      : annotations.containsKey(placed['id'])
-                                      ? const Color(0xfffff3d2)
-                                      : Colors.white,
-                                  border: Border.all(
-                                    color: placed['id'] == selectedEntity
-                                        ? const Color(0xff247a92)
-                                        : annotations.containsKey(placed['id'])
-                                        ? const Color(0xffb67816)
-                                        : const Color(0xffb7cadb),
-                                  ),
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.all(3),
-                                child: Tooltip(
-                                  message: placed['id'],
-                                  child: annotations.containsKey(placed['id'])
-                                      ? marker(
-                                          annotations[placed['id']]!,
-                                          carrier['span'] < 3,
-                                        )
-                                      : Text(
-                                          carrier['span'] < 3
-                                              ? '$site'
-                                              : placed['id'],
-                                          textAlign: TextAlign.center,
-                                          maxLines: annotations.isNotEmpty
-                                              ? 1
-                                              : 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 10),
-                                        ),
-                                ),
-                              ),
-                            ),
+                          child: occupiedSite(
+                            carrier,
+                            site.toString(),
+                            placements
+                                .where((p) => p['site'] == site)
+                                .map((p) => Map<String, dynamic>.from(p))
+                                .toList(),
                           ),
                         ),
                       if (!placements.any((p) => p['site'] == site))

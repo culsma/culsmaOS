@@ -12,6 +12,7 @@ export class RunSetupLayout {
     for (const supply of plan.supplies || []) items.push({...supply, id:supply.id, kind:'supply',
       placement:{carrier:supply.carrier,track:supply.track,site:supply.site,slot:supply.slot,module:supply.module},
       containers:[]});
+    for (const fixture of plan.installed_fixtures || []) items.push({...fixture, kind:'fixture', containers:[]});
     return items;
   }
 
@@ -68,6 +69,7 @@ export class RunSetupLayout {
   }
 
   static label(plan,item) {
+    if (item.kind === 'fixture') return item.label || item.model || item.id;
     if (item.kind === 'supply') return item.id;
     const names = (item.containers || []).map(row => row.name).filter(Boolean);
     const isPlate = (plan.items || []).some(row => row.address?.labware === item.id && row.kind === 'well');
@@ -115,7 +117,8 @@ export class RunSetupLayout {
           control.append(a.element('span',position,'loading-site'),a.element('strong',RunSetupLayout.label(plan,item)),
             a.element('span',item.model || 'Model not recorded','label'));
           const used = item.containers || [];
-          const summary = item.kind === 'supply' ? `${item.available ?? 'Unknown'} declared positions` :
+          const summary = item.kind === 'fixture' ? item.instructions :
+            item.kind === 'supply' ? `${item.available ?? 'Unknown'} declared positions` :
             RunSetupLayout.wells(plan,item) ? 'Wells '+used.map(row => row.well).join(', ') :
               used.map(row => `${row.volume_uL ?? 'Unknown'} µL`).join(' · ');
           control.append(a.element('span',summary,'loading-item-summary'));
@@ -161,7 +164,9 @@ export class RunSetupLayout {
       });
       wrapper.append(grid);panel.append(wrapper,a.element('p','Blue wells are used by this program. Other wells are outside this loading checklist.','note'));
     }
-    if (item.kind === 'supply') {
+    if (item.kind === 'fixture') {
+      panel.append(a.element('p',item.instructions,'note'));
+    } else if (item.kind === 'supply') {
       panel.append(a.element('p','Confirm this supply is in the declared position.','note'),
         a.table(['Declared positions','Declared available'],[[(item.positions || []).join(', ') || 'Not recorded',item.available]]));
     } else {

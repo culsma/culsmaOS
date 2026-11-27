@@ -1,0 +1,11 @@
+// Engineering example for the device interface and simulation.
+let plate = plate(label="Assay", format="96well", capacity=200uL);
+let sample = plate[A1];
+let stock = tube(capacity=2000uL, load=[content(kind=formulation, type=buffer, code="BUFFER"):50uL]);
+let collection = tube(capacity=2000uL);
+sample << [stock];
+with env(thermal=4C, duration=5min) {
+    sep(sample=sample[0], program=centrifuge_program(drive=300g));
+}
+collection << [sample[0].contents[0]:40uL];
+return collection;

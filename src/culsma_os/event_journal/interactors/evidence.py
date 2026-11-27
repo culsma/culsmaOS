@@ -32,6 +32,45 @@ class EvidenceInteractor:
     def find_evidence(self, effect_id):
         return self.repository.find_evidence(effect_id)
 
+    def request_cancellation(self, run_id):
+        self.repository.request_cancellation(run_id)
+
+    def cancellation_requested(self, run_id):
+        return self.repository.cancellation_requested(run_id)
+
+    def find_stop(self, attempt_id):
+        return self.repository.find_stop(attempt_id)
+
+    def record_stop(self, attempt, proof):
+        if (self.find_attempt_by_id(attempt.attempt_id) != attempt
+                or proof.get('attempt_id') != attempt.attempt_id or proof.get('mode') != attempt.mode
+                or proof.get('state') != 'stopped' or not isinstance(proof.get('evidence_ref'), str)
+                or not proof['evidence_ref'] or not self.cancellation_requested(attempt.run_id)):
+            raise ValueError('ATTEMPT_STOP_INVALID')
+        old = self.find_stop(attempt.attempt_id)
+        if old is not None:
+            return old
+        # Unknown consumption reserves the planned maximum; it is not a claim
+        # that tips were actually picked up. Never reuse a possibly used tip.
+        receipt = self.find_evidence(attempt.effect_id)
+        requirements = attempt.context.get('description', {}).get('resource_requirements', {})
+        consumed = receipt.consumed_resources if receipt is not None else {}
+        remaining = ({key: max(0, count - consumed.get(key, 0)) for key, count in requirements.items()}
+                     if receipt is None or receipt.outcome == 'unknown' else {})
+        if any(type(count) is not int or count < 0 for count in remaining.values()):
+            raise ValueError('ATTEMPT_STOP_CONSUMPTION_INVALID')
+        value = {**proof, 'run_id': attempt.run_id, 'effect_id': attempt.effect_id,
+                 'stop_id': attempt.attempt_id + ':stop', 'reserved_consumption': remaining}
+        self.repository.record_stop(attempt.attempt_id, value)
+        self.synchronize_stop_usage(attempt, value)
+        return value
+
+    def synchronize_stop_usage(self, attempt, stop):
+        if self.usage:
+            self.usage.record(ExecutionEvidence(stop['stop_id'], attempt.run_id, attempt.effect_id,
+                attempt.attempt_id, attempt.mode, 'unknown', {'stop': stop}, stop['reserved_consumption']),
+                attempt.context['device_id'])
+
     def normalize(self, attempt, receipt):
         matching = (
             receipt.mode == attempt.mode
@@ -69,18 +108,30 @@ class EvidenceInteractor:
             if evidence.mode == 'simulation' and evidence.run_id == run_id:
                 for resource, count in evidence.consumed_resources.items():
                     totals[resource] = totals.get(resource, 0) + count
+        for attempt in self.attempts_for_run(run_id):
+            stop = self.find_stop(attempt.attempt_id)
+            if stop and attempt.mode == 'simulation' and attempt.context['device_id'] == device_id:
+                for resource, count in stop['reserved_consumption'].items():
+                    totals[resource] = totals.get(resource, 0) + count
         return totals
 
-    def known_consumption(self, device_id):
+    def known_consumption(self, device_id, mode="simulation"):
         totals = {}
         local = self.repository.for_device(device_id)
+        stop_ids = []
+        for attempt in self.repository.attempts_for_device(device_id):
+            stop = self.find_stop(attempt.attempt_id)
+            if stop and attempt.mode == mode:
+                stop_ids.append(stop['stop_id'])
+                for resource, count in stop['reserved_consumption'].items():
+                    totals[resource] = totals.get(resource, 0) + count
         for evidence in local:
-            if evidence.mode != "simulation":
+            if evidence.mode != mode:
                 continue
             for resource, count in evidence.consumed_resources.items():
                 totals[resource] = totals.get(resource, 0) + count
         if self.usage:
-            shared = self.usage.known(device_id, tuple(e.evidence_id for e in local))
+            shared = self.usage.known(device_id, (*tuple(e.evidence_id for e in local), *stop_ids), mode=mode)
             for resource, amount in shared.items():
                 totals[resource] = totals.get(resource, 0) + amount
         return totals
@@ -137,10 +188,14 @@ class EvidenceInteractor:
     def synchronize_device_usage(self, device_id):
         for evidence in self.repository.for_device(device_id):
             self.synchronize_usage(evidence)
+        for attempt in self.repository.attempts_for_device(device_id):
+            stop = self.find_stop(attempt.attempt_id)
+            if stop:
+                self.synchronize_stop_usage(attempt, stop)
 
 
     def record_logical_completion(self, completion):
-        if (completion.mode != "simulation" or completion.payload.get("device_action") is not False
+        if (completion.mode not in ("simulation", "physical") or completion.payload.get("device_action") is not False
                 or completion.payload.get("completion_kind") != "logical"):
             raise ValueError("LOGICAL_COMPLETION_INVALID")
         self.repository.record_logical_completion(completion)
@@ -169,7 +224,7 @@ class EvidenceInteractor:
         root = self.find_evidence(parent.effect_id)
         saved = parent.context['description']['execution_batch']['members']
         if (not same or root is None
-                or root.mode != 'simulation' or root.outcome != 'completed'
+                or root.mode != parent.mode or root.mode not in ('simulation', 'physical') or root.outcome != 'completed'
                 or descriptor not in saved):
             raise ValueError('BATCH_MEMBER_EVIDENCE_INCOMPLETE')
         identity = descriptor['effect_id']

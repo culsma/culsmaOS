@@ -21,11 +21,13 @@ class DesktopConnection {
   final Uri origin;
   final String token;
   final String? rendererToken, stationKey;
+  final bool remoteAccess;
   const DesktopConnection(
     this.origin,
     this.token, {
     this.rendererToken,
     this.stationKey,
+    this.remoteAccess = false,
   });
 
   factory DesktopConnection.fromJson(Map<String, dynamic> json) {
@@ -55,6 +57,7 @@ class DesktopConnection {
       token,
       rendererToken: renderer,
       stationKey: station,
+      remoteAccess: json['remote_access'] == true,
     );
   }
 }

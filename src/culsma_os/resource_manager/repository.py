@@ -152,12 +152,12 @@ class RunReservationRepository(Protocol):
     def validate_owner(self, reservation): ...
     def release_run(self, reservation, proof): ...
     def release_proof(self, run_id): ...
-    def record_usage(self, evidence_id, device_id, consumption): ...
-    def usage(self, device_id, excluded_evidence_ids=()): ...
+    def record_usage(self, evidence_id, device_id, consumption, mode='simulation'): ...
+    def usage(self, device_id, excluded_evidence_ids=(), mode='simulation'): ...
 
 
 class SqliteRunReservationRepository:
-    """Station persistence and a process-shared POSIX dispatch guard."""
+    """Station persistence and a process-shared dispatch guard."""
 
     def __init__(self, connection, guard_path):
         import os
@@ -171,17 +171,19 @@ class SqliteRunReservationRepository:
             connection.execute("CREATE TABLE IF NOT EXISTS os_run_resources(resource_id TEXT PRIMARY KEY,run_id TEXT NOT NULL)")
             connection.execute("CREATE TABLE IF NOT EXISTS os_run_releases(run_id TEXT PRIMARY KEY,proof TEXT NOT NULL)")
             connection.execute("CREATE TABLE IF NOT EXISTS os_station_usage(evidence_id TEXT PRIMARY KEY,device_id TEXT NOT NULL,consumption TEXT NOT NULL)")
+            if 'mode' not in {row[1] for row in connection.execute('PRAGMA table_info(os_station_usage)')}:
+                connection.execute("ALTER TABLE os_station_usage ADD COLUMN mode TEXT NOT NULL DEFAULT 'simulation'")
 
     @contextmanager
     def guard(self):
-        import fcntl
+        from culsma_os.platform_support import ProcessFileLock
         if not self.lock.acquire(blocking=False):
             raise ResourceConflict("STATION_DISPATCH_ACTIVE")
         outer = not getattr(self.depth, "value", 0)
         try:
             if outer:
                 try:
-                    fcntl.flock(self.guard_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    ProcessFileLock.acquire(self.guard_fd)
                 except BlockingIOError as error:
                     raise ResourceConflict("STATION_DISPATCH_ACTIVE") from error
             self.depth.value = getattr(self.depth, "value", 0) + 1
@@ -190,7 +192,7 @@ class SqliteRunReservationRepository:
             finally:
                 self.depth.value -= 1
                 if outer:
-                    fcntl.flock(self.guard_fd, fcntl.LOCK_UN)
+                    ProcessFileLock.release(self.guard_fd)
         finally:
             self.lock.release()
 
@@ -266,21 +268,23 @@ class SqliteRunReservationRepository:
         row = self.connection.execute("SELECT proof FROM os_run_releases WHERE run_id=?", (run_id,)).fetchone()
         return json.loads(row[0]) if row else None
 
-    def record_usage(self, evidence_id, device_id, consumption):
+    def record_usage(self, evidence_id, device_id, consumption, mode='simulation'):
+        if mode not in ('simulation', 'physical'):
+            raise ValueError('STATION_USAGE_MODE_UNSUPPORTED')
         encoded = json.dumps(consumption, sort_keys=True)
-        existing = self.connection.execute("SELECT device_id,consumption FROM os_station_usage WHERE evidence_id=?", (evidence_id,)).fetchone()
-        if existing == (device_id, encoded):
+        existing = self.connection.execute("SELECT device_id,consumption,mode FROM os_station_usage WHERE evidence_id=?", (evidence_id,)).fetchone()
+        if existing == (device_id, encoded, mode):
             return
         with self.guard(), self.connection:
-            row = self.connection.execute("SELECT device_id,consumption FROM os_station_usage WHERE evidence_id=?", (evidence_id,)).fetchone()
-            if row and row != (device_id, encoded):
+            row = self.connection.execute("SELECT device_id,consumption,mode FROM os_station_usage WHERE evidence_id=?", (evidence_id,)).fetchone()
+            if row and row != (device_id, encoded, mode):
                 raise ValueError("STATION_USAGE_CONFLICT")
-            self.connection.execute("INSERT OR IGNORE INTO os_station_usage VALUES(?,?,?)", (evidence_id, device_id, encoded))
+            self.connection.execute("INSERT OR IGNORE INTO os_station_usage(evidence_id,device_id,consumption,mode) VALUES(?,?,?,?)", (evidence_id, device_id, encoded, mode))
 
-    def usage(self, device_id, excluded_evidence_ids=()):
+    def usage(self, device_id, excluded_evidence_ids=(), mode='simulation'):
         excluded = set(excluded_evidence_ids)
         totals = {}
-        for identity, encoded in self.connection.execute("SELECT evidence_id,consumption FROM os_station_usage WHERE device_id=?", (device_id,)):
+        for identity, encoded in self.connection.execute("SELECT evidence_id,consumption FROM os_station_usage WHERE device_id=? AND mode=?", (device_id, mode)):
             if identity in excluded:
                 continue
             for resource, amount in json.loads(encoded).items():
@@ -343,9 +347,12 @@ class SqliteResourceInspectionRepository:
             'os_run_resources', 'SELECT resource_id,run_id FROM os_run_resources ORDER BY resource_id')]
 
     def usage(self):
-        return [{'evidence_id': row[0], 'device_id': row[1], 'consumption': json.loads(row[2])}
+        # Reading an older installation must not require a schema mutation.
+        columns = self.station.rows('os_station_usage', 'PRAGMA table_info(os_station_usage)')
+        mode = 'mode' if any(row[1] == 'mode' for row in columns) else "'simulation'"
+        return [{'evidence_id': row[0], 'device_id': row[1], 'consumption': json.loads(row[2]), 'mode': row[3]}
             for row in self.station.rows('os_station_usage',
-                'SELECT evidence_id,device_id,consumption FROM os_station_usage ORDER BY evidence_id')]
+                f'SELECT evidence_id,device_id,consumption,{mode} FROM os_station_usage ORDER BY evidence_id')]
 
 
 class SupplyLoadRepository(Protocol):

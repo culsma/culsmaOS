@@ -1,0 +1,7 @@
+let source = tube(capacity = 2000uL, load = [
+    content(kind = ContentKind.FORMULATION, type = ContentType.BUFFER, code = "BUFFER"):200uL
+]);
+let destination = tube(capacity = 2000uL);
+let alias = source;
+destination << [alias:50uL];
+destination << [source:0.05mL];

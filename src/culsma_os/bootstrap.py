@@ -1,6 +1,7 @@
 """Composition only: select factories and inject all concrete implementations."""
 
 from importlib.metadata import entry_points
+import os
 from .program_manager.interactors.semantics import HostedRuntimeInteractor
 from .program_manager.interactors.codec import RuntimeCheckpointCodecInteractor
 from .driver_framework.models import DriverLoadError
@@ -54,13 +55,38 @@ class OpentronsSessionFactory:
             return None  # Older execution plugins remain usable without this optional reader.
         return ConfiguredLayoutInteractor(FileLayoutConfigurationRepository())
 
-    def build(self, context):
+    def execution_implementations(self):
+        from .driver_framework.execution_mode import SimulationExecutionImplementation
         from culsma_opentrons.plugin import SimulatorSessionFactory
-        from .driver_framework.adapters.opentrons import OpentronsExecutionAdapter
+        options = getattr(SimulatorSessionFactory, 'execution_options', None)
+        if options is None:
+            return (SimulationExecutionImplementation('opentrons', 'Opentrons official simulator', self.build_selected),)
+        return tuple(SimulationExecutionImplementation(v['simulator'], v['label'], self.build_selected)
+                     for v in options())
 
-        session = SimulatorSessionFactory().create_from_file(
-            context.config_path, context.artifacts_dir, state_dir=getattr(context, "device_state_dir", None)
-        )
+    def legacy_execution_selection(self, configuration):
+        return {'mode': configuration.get('mode', 'simulation'), 'simulator': 'opentrons'}
+
+    def configuration_for_execution(self, configuration, selection):
+        from copy import deepcopy
+        value = deepcopy(configuration)
+        value.pop('execution_selection', None)
+        if 'mode' in value:
+            value['mode'] = selection.mode.value
+        return value
+
+    def build(self, context):
+        from .driver_framework.execution_mode import ExecutionSelectionInteractor
+        return ExecutionSelectionInteractor().build(self, context)
+
+    def build_selected(self, context, selection):
+        from .driver_framework.adapters.opentrons import OpentronsExecutionAdapter, OpentronsSessionAdapter
+
+        import json
+        configuration = self.configuration_for_execution(json.loads(context.config_path.read_text()), selection)
+        session = OpentronsSessionAdapter().create(
+            configuration, context.artifacts_dir,
+            state_dir=getattr(context, "device_state_dir", None))
         try:
             description = session.describe_session()
             snapshot = DeviceConfigurationSnapshot(
@@ -70,6 +96,7 @@ class OpentronsSessionFactory:
                 description.shared_resources,
                 supports_transfer=True,
                 transfer_requirements=getattr(description, "transfer_requirements", ()),
+                transfer_selection_capabilities=getattr(session, "transfer_selection_capabilities", lambda: ())(),
                 motion_capabilities=getattr(description, "motion_capabilities", {}),
                 consumable_capacities=description.consumable_capacities,
                 labware_geometries=description.labware_geometries,
@@ -102,6 +129,10 @@ class OSApplicationFactory:
             else session_factories
         )
 
+    def execution_factory(self, driver_name):
+        from types import SimpleNamespace
+        return self.device_factory(SimpleNamespace(driver_name=driver_name))
+
     def device_factory(self, context):
         factory = self.session_factories.get(context.driver_name)
         if factory is None:
@@ -119,13 +150,25 @@ class OSApplicationFactory:
         station_path = StationPathInteractor().database_path(context)
         context = replace(context, device_state_dir=StationPathInteractor().device_state_directory(context))
         factory = self.device_factory(context)
-        port, snapshot, positions, capacities, receipt_mapper = factory.build(context)
+        from .driver_framework.execution_mode import ExecutionSelectionInteractor
+        if callable(getattr(factory, 'execution_implementations', None)):
+            execution_selection = ExecutionSelectionInteractor()
+            context = replace(context, execution_selection=execution_selection.selection(factory, context))
+            port, snapshot, positions, capacities, receipt_mapper = execution_selection.build(factory, context)
+        else:
+            if (context.execution_selection is not None
+                    or ExecutionSelectionInteractor().configuration(context).get('execution_selection') is not None):
+                raise DriverLoadError('EXECUTION_SELECTION_PROVIDER_UNSUPPORTED')
+            port, snapshot, positions, capacities, receipt_mapper = factory.build(context)
         if external_simulation and snapshot.mode != "simulation":
             port.close()
             raise ValueError("EXTERNAL_SIMULATION_REQUIRED")
         database = DatabaseConnection(context.database_path)
         connections = [database.open() for _ in range(8)]
-        connections.extend(DatabaseConnection(station_path).open() for _ in range(2))
+        connections.append(DatabaseConnection(station_path).open())
+        from .driver_framework.execution_mode import motion_state_database
+        connections.append(DatabaseConnection(motion_state_database(station_path, snapshot.mode,
+            context.execution_selection.simulator) if context.execution_selection else station_path).open())
         codec = RuntimeCheckpointCodecInteractor()
         task_repository = SqliteTaskRepository(connections[0])
         device = DeviceInteractor(SqliteDeviceRepository(connections[8], connections[1]), port, snapshot)
@@ -136,7 +179,8 @@ class OSApplicationFactory:
         )
         gateway = DriverGatewayInteractor(port, device, receipt_mapper)
         transfer = TransferPreparationInteractor(space, device, gateway, snapshot.device_id, (CentrifugeTransferInteractor(), MagneticTransferInteractor()),
-            preparation=PipettingExecutionPreparationInteractor(gateway))
+            preparation=PipettingExecutionPreparationInteractor(gateway),
+            transfer_assessor=getattr(port, 'transfer_assessor', None))
         from .workspace_manager.repository import SqliteLabwarePositionRepository
         from .workspace_manager.interactors import LabwareMotionInteractor
         motion = LabwareMotionInteractor(SqliteLabwarePositionRepository(connections[9], connections[2],
@@ -172,13 +216,8 @@ class OSApplicationFactory:
         )
         state = RunStateInteractor(task_repository, host, evidence)
         tasks = TaskInteractor(task_repository, preparation, state)
-        from .device_manager.instruments.run_bindings import RunProfileBindingInteractor
-        from .device_manager.instruments.sqlite_repository import FileModuleProfileRepository, FileRunProfileBindingRepository
-        run_profiles = RunProfileBindingInteractor(
-            FileModuleProfileRepository(context.database_path.parent/'drafts.instrument-profiles.sqlite3'),
-            FileRunProfileBindingRepository(context.database_path), port)
-        tasks.profile_bindings = run_profiles
-        gateway.profile_bindings = run_profiles
+        from .device_manager.instruments.sqlite_repository import LegacyRunMethodCheck
+        gateway.legacy_method_selections = LegacyRunMethodCheck(context.database_path)
         material = MaterialInteractor(LocalMaterialRepository(connections[5]), codec)
         execution = ExecutionHostInteractor(tasks, host, state, material=material)
         operation_repository = SqliteOperationRepository(connections[6])
@@ -228,6 +267,8 @@ class OSApplicationFactory:
         gateway.setup = setup
         runs = RunSchedulerInteractor(tasks, execution, reservations, device, evidence)
         finalization = RunFinalizationInteractor(tasks, state, safety, reservations, conditions, resource, evidence)
+        from .recovery_manager.cancellation import RunCancellationInteractor
+        finalization.cancellation = RunCancellationInteractor(evidence, gateway)
         strategy = self.execution_strategy_factory(tasks, runs, operations)
         recovery = RecoveryInteractor(
             tasks, execution, evidence, material, state, resource, projection, logical, finalization, motions, strategy
@@ -245,7 +286,7 @@ class OSApplicationFactory:
             finalization,
             execution_strategy=strategy, external_simulation=external_simulation,
         )
-        report = RunReportInteractor(tasks, execution, material, setup)
+        report = RunReportInteractor(tasks, execution, material, setup, evidence=evidence)
         handoff = None
         if external_simulation:
             from .program_manager.interactors.external_simulation import ExternalSimulationHandoffInteractor
@@ -300,10 +341,22 @@ class OSApplicationFactory:
         local = ReadOnlyDatabaseSnapshot(context.database_path)
         station_path = StationPathInteractor().database_path(context)
         station = ReadOnlyDatabaseSnapshot(station_path)
+        motion = station
+        from .driver_framework.execution_mode import ExecutionSelectionInteractor, motion_state_database
+        selection = context.execution_selection
+        if selection is None and context.config_path is not None:
+            factory = self.device_factory(context)
+            if callable(getattr(factory, 'execution_implementations', None)):
+                selection = ExecutionSelectionInteractor().selection(factory, context)
+        if selection is not None:
+            motion_path = motion_state_database(station_path, selection.mode, selection.simulator)
+            if motion_path != station_path:
+                motion = ReadOnlyDatabaseSnapshot(motion_path)
         return DeviceInspectionInteractor(SqliteDeviceInspectionRepository(station, local), local,
-            WorkspaceInspectionInteractor(SqliteWorkspaceInspectionRepository(station, local)),
+            WorkspaceInspectionInteractor(SqliteWorkspaceInspectionRepository(motion, local)),
             ResourceInspectionInteractor(SqliteResourceInspectionRepository(local, station), station),
-            EvidenceInspectionInteractor(SqliteEvidenceInspectionRepository(local)), station_path, station)
+            EvidenceInspectionInteractor(SqliteEvidenceInspectionRepository(local)), station_path, station,
+            motion if motion is not station else None)
 
     def build_run_inspector(self, context):
         from .program_manager.interactors.control import RunInspectionInteractor
@@ -315,11 +368,6 @@ class OSApplicationFactory:
         from .program_manager.interactors.workspace import WorkspaceCheckpointInteractor
         tasks = TaskInteractor(repository, PreparationInteractor(host, self.build_workspace_catalog(context),
             WorkspaceCheckpointInteractor(RuntimeCheckpointCodecInteractor())), state)
-        from .device_manager.instruments.run_bindings import RunProfileBindingInteractor
-        from .device_manager.instruments.sqlite_repository import FileModuleProfileRepository, FileRunProfileBindingRepository
-        tasks.profile_bindings = RunProfileBindingInteractor(
-            FileModuleProfileRepository(context.database_path.parent/'drafts.instrument-profiles.sqlite3'),
-            FileRunProfileBindingRepository(context.database_path))
         execution = ExecutionHostInteractor(tasks, host, state)
         material = MaterialInteractor(LocalMaterialRepository(connections[1]), RuntimeCheckpointCodecInteractor())
         from .program_manager.repositories.setup import SqliteRunSetupRepository
@@ -336,6 +384,7 @@ class OSApplicationFactory:
         evidence = RunEvidenceInteractor(snapshot,
             EvidenceInspectionInteractor(SqliteEvidenceInspectionRepository(snapshot)),
             MaterialInspectionInteractor(SqliteMaterialInspectionRepository(snapshot)))
+        report.fault_reader = evidence.receipt_faults
         return RunInspectionInteractor(tasks, report, connections, evidence)
 
     def build_workspace_catalog(self, context):
@@ -370,6 +419,14 @@ class LanguageProgramExecutorFactory:
         )
 
         return LanguageProgramInteractor(OSApplicationFactory().build_program_runner())
+
+
+class OpentronsProgramExecutorFactory:
+    """Explicit OS-hosted CLI entry; the installed standalone plugin keeps its name."""
+    def build(self):
+        from .program_manager.interactors.language_entry import LanguageProgramInteractor
+        return LanguageProgramInteractor(OSApplicationFactory().build_program_runner(),
+                                         device_driver_name='opentrons-simulator')
 
 
 class HostLeaseFactory:
@@ -446,10 +503,24 @@ class ResidentCommandFactory:
         workflow_planner = WorkflowSimulationInteractor(WorkflowReadoutSimulator())
         workflow = WorkflowSimulationSettingInteractor(SqliteWorkflowSimulationSettingRepository(
             supply_connection, context.driver_name))
+        from .workspace_manager.floor_plan import StationFloorPlanInteractor
+        from .workspace_manager.repositories.configuration import SqliteStationFloorPlanRepository
+        from .device_manager.instruments.station_settings import ResidentInstrumentSettings
+        instrument_editor = getattr(factory, 'build_instrument_settings', lambda: None)()
+        instrument_settings = ResidentInstrumentSettings(instrument_editor, configuration, context)
+        floor_plan = StationFloorPlanInteractor(SqliteStationFloorPlanRepository(supply_connection),
+            configuration, context, snapshot_reader, instrument_settings)
         from .device_manager.interactors import StationCapabilitiesInteractor
         capabilities = StationCapabilitiesInteractor(context.driver_name, layout=layout_reader is not None,
             loading_plan=workspace_reader is not None, labware_editor=labware_editor is not None,
             simulated_tip_replacement=replacement_port is not None, fault_test=test_port is not None)
+        from .lifecycle_manager.station_service import StationServiceRepository, StationServiceInteractor
+        service_port = getattr(factory,'build_station_service',lambda context:None)(context)
+        permission_port = getattr(factory, 'build_physical_permission', lambda context: None)(context)
+        station_service = StationServiceInteractor(StationServiceRepository(supply_connection), service_port,
+                                                   configuration, permission_port, run_evidence=inspector.evidence.execute,
+                                                   native_debug_enabled=os.getenv("CULSMA_OS_NATIVE_DEBUG") == "1")
         return ResidentCommandInteractor(CompilationInteractor(),inspector.tasks,queue,inspector,
             HostedRuntimeInteractor(),RuntimeCheckpointCodecInteractor(),status,context,
-            devices,configuration,setup_requests,layout,labware,preview,supplies,fault_tests,profile_queries,capabilities,workflow,workflow_planner)
+            devices,configuration,setup_requests,layout,labware,preview,supplies,fault_tests,profile_queries,capabilities,workflow,workflow_planner,
+            floor_plan=floor_plan, instrument_settings=instrument_settings, station_service=station_service)

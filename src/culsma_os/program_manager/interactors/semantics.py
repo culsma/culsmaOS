@@ -106,6 +106,8 @@ class HostedRuntimeInteractor:
             raise HostContractError("HOST_CHECKPOINT_PLAN_MISMATCH")
         if self.codec.fingerprint(data["initial_state"]) != data["initial_fingerprint"]:
             raise HostContractError("HOST_CHECKPOINT_INITIAL_MISMATCH")
+        for recorded in data['confirmed']:
+            self.require_resolution_mode(recorded.resolution)
         contract = data.get('carrier_contract', 0)
         if type(contract) is not int or contract not in {0, 1}:
             raise HostContractError('HOST_CHECKPOINT_LANGUAGE_CONTRACT_UNSUPPORTED')
@@ -218,9 +220,15 @@ class HostedRuntimeInteractor:
     def pending(self, checkpoint):
         return self.restore(checkpoint)[0]["pending"]
 
+    def require_resolution_mode(self, resolution):
+        members = resolution.members if isinstance(resolution, GroupEffectResolution) else (resolution,)
+        if self.execution_mode is not None and any(value.mode != self.execution_mode for value in members):
+            raise HostContractError('HOST_RESOLUTION_MODE_MISMATCH')
+
     def resume(self, checkpoint, resolution):
         data, _ = self.restore(checkpoint)
         self.require_workflow_mode(data)
+        self.require_resolution_mode(resolution)
         pending = data["pending"]
         if pending is None or pending.effect_id != resolution.effect_id:
             raise HostContractError("HOST_RESOLUTION_EFFECT_MISMATCH")

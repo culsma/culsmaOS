@@ -14,7 +14,7 @@ def test_graphical_loading_plan_tracks_mcp_revision_and_invalidates_operator_ack
     culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     from pathlib import Path
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
+    monkeypatch.setenv('CULSMA_HAMILTON_PRIVATE_LABWARE',str(driver/'reference/LabWare'))
     shared=SharedSetupHarness(tmp_path)
     config=json.loads(shared.context.config_path.read_text())
     config['layout']['labware']['source_other']={**config['layout']['labware']['source_vessel'],'site':'2'}

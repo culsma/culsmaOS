@@ -38,6 +38,9 @@ class ConsoleApplicationLifecycleInteractor:
     def execute(self):
         try:
             self.wait_ready()
+            remote_access = getattr(self.server, 'remote_access', None)
+            if remote_access is not None:
+                remote_access.restore()
             thread = threading.Thread(target=self.server.serve_forever, daemon=True)
             thread.start()
             try:
@@ -49,12 +52,19 @@ class ConsoleApplicationLifecycleInteractor:
                     connection['renderer_access_token'] = session['renderer_access_token']
                 if hasattr(self.server, 'settings'):
                     connection['station_key'] = sha256(str(self.server.settings.socket_path.resolve()).encode()).hexdigest()
+                if getattr(self.server, 'remote_access', None) is not None:
+                    connection['remote_access'] = True
                 return self.application.run(connection)
             finally:
                 self.server.shutdown()
                 thread.join(timeout=5)
         finally:
-            self.server.server_close()
+            try:
+                remote_access = getattr(self.server, 'remote_access', None)
+                if remote_access is not None:
+                    remote_access.close()
+            finally:
+                self.server.server_close()
         # The resident outlives this UI. Closing a window is not a station shutdown command.
 
 

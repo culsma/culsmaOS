@@ -1,7 +1,7 @@
 """Real Hamilton configuration, real compiler and isolated SQLite; no device mocks."""
+from tests.support.paths import HAMILTON_TRANSFER
 import json
 from copy import deepcopy
-from pathlib import Path
 import pytest
 from culsma_os.bootstrap import OSApplicationFactory
 from culsma_os.device_manager.instruments.providers import InstrumentPreparationFactory
@@ -16,15 +16,14 @@ from culsma_os.workspace_manager.interactors import WorkspacePlanningInteractor
 
 
 def prepare(tmp_path, suffix=''):
-    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
-    root = Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    data = json.loads((root/'examples/os-transfer-input/setup.json').read_text())
+    pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
+    data = json.loads((HAMILTON_TRANSFER/'setup.json').read_text())
     config = tmp_path/'configuration.json'
     config.write_text(json.dumps({'schema':'culsma_hamilton_device_v1', 'device_id':'preview-test',
         'mode':'simulation', 'layout':data['layout'], 'execution':data['execution'],
         'bindings':{}, 'well_positions':{}, 'agent':{}}))
     source = tmp_path/'transfer.culs'
-    source.write_text((root/'examples/os-transfer-input/transfer.culs').read_text() + suffix)
+    source.write_text((HAMILTON_TRANSFER/'transfer.culs').read_text() + suffix)
     compiled = CompilationInteractor().compile([source])
     factory = pytest.importorskip('culsma_hamilton_os.providers').HamiltonOSDeviceFactory()
     catalogue = factory.build_workspace_reader().execute(config)
@@ -52,7 +51,7 @@ def test_fresh_station_preview_projects_real_transfer_without_creating_persisten
 @pytest.mark.parametrize('suffix,code', [
     ('\nagit(sample=source,mode=shake,motion=orbital,rate=500rpm,duration=1s);', 'INSTRUMENT_DEVICE_NOT_CONFIGURED'),
     ('\nwith env(thermal=37C,co2=5%,duration=3h){hold(sample=source);}', 'INSTRUMENT_DEVICE_NOT_CONFIGURED'),
-    ('\nagit(sample=source,mode=vortex,duration=3s);', 'INSTRUMENT_DRIVER_UNAVAILABLE'),
+    ('\nagit(sample=source,mode=vortex,duration=3s);', 'INSTRUMENT_DEVICE_NOT_CONFIGURED'),
 ])
 def test_allocation_success_does_not_hide_unsupported_device_steps(tmp_path, suffix, code):
     check, compiled, catalogue, loading, config = prepare(tmp_path, suffix)
@@ -82,9 +81,8 @@ def test_unknown_diagnostics_remain_visible_without_invented_repair():
 
 @pytest.mark.parametrize('drive,expected', [('500g', 'passed'), ('12000g', 'rejected')])
 def test_hamilton_loading_selects_the_bound_plate_and_checks_advertised_drive(tmp_path, drive, expected):
-    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
-    root = Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    data = json.loads((root/'tools/local_console/fixtures/incubation/device.json').read_text())
+    pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
+    data = json.loads((HAMILTON_TRANSFER/'incubation.json').read_text())
     data['layout']['labware']['another_plate'] = {
         **data['layout']['labware']['destination_plate'], 'site': '2'}
     data['execution']['capacities_uL']['another_plate'] = 2000

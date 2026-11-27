@@ -1,3 +1,4 @@
+from culsma_os.driver_framework.execution_mode import ExecutionMode
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -19,7 +20,7 @@ class ExecutionFeedbackCapabilities:
 @dataclass(frozen=True)
 class DeviceConfigurationSnapshot:
     device_id: str
-    mode: str
+    mode: ExecutionMode
     configuration_revision: str
     shared_resources: tuple[str, ...]
     calibration_revision: str = "simulation"
@@ -34,7 +35,7 @@ class DeviceConfigurationSnapshot:
     transfer_requirements: tuple[str, ...] = ()
     setup_required: bool = False
     simulation_scope: str = "station"
-    # Driver implementations for this station's execution mode, independent of
+    # Installed driver interfaces, independent of runtime mode and of
     # which instrument instances are configured. None denotes an older plugin.
     instrument_drivers: dict[str, tuple[str, ...]] | None = None
     # Conditions the driver can maintain during pipetting, independent of a
@@ -42,6 +43,7 @@ class DeviceConfigurationSnapshot:
     transfer_environment_conditions: dict = field(default_factory=dict)
 
     def __post_init__(self):
+        object.__setattr__(self, 'mode', ExecutionMode(self.mode))
         if self.simulation_scope not in {'station', 'run', 'unknown'}:
             raise ValueError('DEVICE_SIMULATION_SCOPE_INVALID')
         if self.simulation_scope == 'run' and self.mode != 'simulation':

@@ -1,0 +1,204 @@
+{
+  "schema": "culsma_hamilton_device_v1",
+  "device_id": "hamilton-local-incubation",
+  "mode": "simulation",
+  "layout": {
+    "schema": "hamilton_layout_proposal_v1",
+    "deck_model": "STAR-54",
+    "carriers": {
+      "reagents": {
+        "model": "RGT_CAR_5R60_A00",
+        "track": "3"
+      },
+      "plates": {
+        "model": "CAR_5DWP",
+        "track": "6"
+      },
+      "tips_carrier": {
+        "model": "CAR_5TIP",
+        "track": "12"
+      }
+    },
+    "labware": {
+      "source_vessel": {
+        "model": "RGT_CONT_60ML_BC_A00",
+        "carrier": "reagents",
+        "site": "1"
+      },
+      "destination_plate": {
+        "model": "Ham_DW_Rgt_96_L",
+        "carrier": "plates",
+        "site": "1"
+      },
+      "tips": {
+        "model": "HTF_L",
+        "carrier": "tips_carrier",
+        "site": "1"
+      }
+    }
+  },
+  "execution": {
+    "environment_id": "offline-hamilton-transfer",
+    "channel": {
+      "id": "independent-channel-1",
+      "index": 1,
+      "min_volume_uL": 10,
+      "max_volume_uL": 300,
+      "volume_resolution_uL": 0.1
+    },
+    "liquid_class": "HighVolumeFilter_Water_DispenseJet_Empty",
+    "tips": {
+      "labware": "tips",
+      "available_positions": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ]
+    },
+    "waste": {
+      "model": "ml_star2_universal_waste_8pos",
+      "carrier_origin_mm": [
+        1364.5,
+        102,
+        100
+      ],
+      "position": "1"
+    },
+    "pipetting": {
+      "aspiration_height_mm": 2.5,
+      "dispense_height_mm": 5,
+      "channel_use": 2,
+      "dispense_mode": 1
+    },
+    "capacities_uL": {
+      "source_vessel": 60000,
+      "destination_plate": 2000
+    }
+  },
+  "bindings": {},
+  "well_positions": {
+    "destination_plate": {
+      "A1": "1",
+      "B1": "2",
+      "C1": "3",
+      "D1": "4",
+      "E1": "5",
+      "F1": "6",
+      "G1": "7",
+      "H1": "8",
+      "A2": "9",
+      "B2": "10",
+      "C2": "11",
+      "D2": "12",
+      "E2": "13",
+      "F2": "14",
+      "G2": "15",
+      "H2": "16",
+      "A3": "17",
+      "B3": "18",
+      "C3": "19",
+      "D3": "20",
+      "E3": "21",
+      "F3": "22",
+      "G3": "23",
+      "H3": "24",
+      "A4": "25",
+      "B4": "26",
+      "C4": "27",
+      "D4": "28",
+      "E4": "29",
+      "F4": "30",
+      "G4": "31",
+      "H4": "32",
+      "A5": "33",
+      "B5": "34",
+      "C5": "35",
+      "D5": "36",
+      "E5": "37",
+      "F5": "38",
+      "G5": "39",
+      "H5": "40",
+      "A6": "41",
+      "B6": "42",
+      "C6": "43",
+      "D6": "44",
+      "E6": "45",
+      "F6": "46",
+      "G6": "47",
+      "H6": "48",
+      "A7": "49",
+      "B7": "50",
+      "C7": "51",
+      "D7": "52",
+      "E7": "53",
+      "F7": "54",
+      "G7": "55",
+      "H7": "56",
+      "A8": "57",
+      "B8": "58",
+      "C8": "59",
+      "D8": "60",
+      "E8": "61",
+      "F8": "62",
+      "G8": "63",
+      "H8": "64",
+      "A9": "65",
+      "B9": "66",
+      "C9": "67",
+      "D9": "68",
+      "E9": "69",
+      "F9": "70",
+      "G9": "71",
+      "H9": "72",
+      "A10": "73",
+      "B10": "74",
+      "C10": "75",
+      "D10": "76",
+      "E10": "77",
+      "F10": "78",
+      "G10": "79",
+      "H10": "80",
+      "A11": "81",
+      "B11": "82",
+      "C11": "83",
+      "D11": "84",
+      "E11": "85",
+      "F11": "86",
+      "G11": "87",
+      "H11": "88",
+      "A12": "89",
+      "B12": "90",
+      "C12": "91",
+      "D12": "92",
+      "E12": "93",
+      "F12": "94",
+      "G12": "95",
+      "H12": "96"
+    }
+  },
+  "agent": {},
+  "processing": {
+    "cytomat": {
+      "module_id": "cytomat",
+      "labware": [
+        "destination_plate"
+      ],
+      "simulation_com_port": 1,
+      "stacker": 1,
+      "level": 1,
+      "environment": {
+        "humidity_percent": 50,
+        "co2_percent": 5,
+        "o2_percent": 20
+      },
+      "loading": "declared_simulation_exchange_fixture",
+      "end_environment": "retain_requested"
+    }
+  },
+  "execution_strategy": "batch"
+}

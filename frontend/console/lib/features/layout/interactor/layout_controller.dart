@@ -16,6 +16,7 @@ class LayoutController extends ChangeNotifier {
   String? selectedPosition, message, pendingRequest;
   bool busy = false, valid = false, confirmed = false, writeUncertain = false;
   bool externalConfigurationChanged = false;
+  bool _instrumentApplication = false;
   final Duration pollInterval;
   LayoutController(
     this.api, {
@@ -306,6 +307,40 @@ class LayoutController extends ChangeNotifier {
         : 'Layout saved. Check before applying.';
   }, writes: true);
 
+  bool get canSelectExecution =>
+      draft != null &&
+      !busy &&
+      !dirty &&
+      !writeUncertain &&
+      !externalConfigurationChanged &&
+      pendingRequest == null;
+
+  Future<Map<String, dynamic>> executionOptions() async {
+    if (!canSelectExecution) {
+      throw const FormatException('CONFIGURATION_NOT_READY');
+    }
+    return api.command('/api/v1/configuration/drafts', {
+      'action': 'execution_options',
+      'draft_id': draft!['draft_id'],
+      'revision': draft!['revision'],
+    });
+  }
+
+  Future<void> selectExecution(Map<String, dynamic> selection) async {
+    if (!canSelectExecution) return;
+    await perform(() async {
+      final result = await api.command('/api/v1/configuration/drafts', {
+        'action': 'select_execution',
+        'draft_id': draft!['draft_id'],
+        'revision': draft!['revision'],
+        'configuration': selection,
+      });
+      selectDraft(result['draft']);
+      message =
+          'Execution choice saved. Check and apply the saved setup to activate it.';
+    }, writes: true);
+  }
+
   Future<void> validate() => perform(() async {
     if (dirty || draft == null || writeUncertain || pendingRequest != null)
       return;
@@ -372,57 +407,109 @@ class LayoutController extends ChangeNotifier {
         'Layout exported for vendor validation. The active station is unchanged.';
   });
 
+  static const instrumentSettings = '/api/v1/configuration/instruments';
+
+  bool get canChangeInstrument =>
+      !busy && !dirty && !writeUncertain && pendingRequest == null;
+
+  Future<bool> applyInstrument(
+    String instrument,
+    String fingerprint,
+    Map<String, num> values,
+  ) async {
+    if (!canChangeInstrument) return false;
+    var applied = false;
+    await perform(() async {
+      final result = await api.command(instrumentSettings, {
+        'action': 'prepare',
+        'configuration_fingerprint': fingerprint,
+        'instrument': instrument,
+        'values': values,
+      });
+      if (result['configuration_fingerprint'] != fingerprint) {
+        throw const FormatException('HOST_CONFIGURATION_STALE');
+      }
+      applied = await _requestApplication(
+        result['draft'],
+        fingerprint,
+        instrument: true,
+      );
+    }, writes: true);
+    return applied;
+  }
+
   Future<void> apply() async {
     if (!canApply) return;
     await perform(() async {
-      final random = Random.secure();
-      pendingRequest = List.generate(
-        24,
-        (_) => random.nextInt(16).toRadixString(16),
-      ).join();
-      // A write is dispatched once. All subsequent requests only read its durable receipt.
-      try {
-        await api.command('/api/v1/configuration/activation', {
-          'action': 'apply',
-          'draft_id': draft!['draft_id'],
-          'revision': draft!['revision'],
-          'expected_fingerprint': active!['active']['fingerprint'],
-          'request_id': pendingRequest,
-        });
-      } on ConsoleApiError catch (error) {
-        if (error.status != null && error.status! < 500) pendingRequest = null;
-        rethrow;
-      }
-      confirmed = false;
-      await observeApplication();
+      await _requestApplication(draft!, active!['active']['fingerprint']);
     }, writes: true);
   }
 
-  Future<void> observeApplication() async {
+  Future<bool> _requestApplication(
+    Map<String, dynamic> target,
+    String fingerprint, {
+    bool instrument = false,
+  }) async {
+    _instrumentApplication = instrument;
+    final random = Random.secure();
+    pendingRequest = List.generate(
+      24,
+      (_) => random.nextInt(16).toRadixString(16),
+    ).join();
+    // A write is dispatched once. All subsequent requests only read its durable receipt.
+    try {
+      await api.command('/api/v1/configuration/activation', {
+        'action': 'apply',
+        'draft_id': target['draft_id'],
+        'revision': target['revision'],
+        'expected_fingerprint': fingerprint,
+        'request_id': pendingRequest,
+      });
+    } on ConsoleApiError catch (error) {
+      if (error.status != null && error.status! < 500) pendingRequest = null;
+      rethrow;
+    }
+    confirmed = false;
+    return observeApplication();
+  }
+
+  Future<bool> observeApplication() async {
     for (var attempt = 0; attempt < 100; attempt++) {
-      active = await api.command('/api/v1/configuration/activation', {
+      final status = await api.command('/api/v1/configuration/activation', {
         'action': 'status',
         'request_id': pendingRequest,
       });
-      final receipt = active?['receipt'];
+      if (!_instrumentApplication) active = status;
+      final receipt = status['receipt'];
       if (receipt?['request_id'] == pendingRequest &&
           ['applied', 'failed', 'interrupted'].contains(receipt?['status'])) {
         message = receipt['status'] == 'applied'
-            ? 'Layout applied. Station ready.'
+            ? (_instrumentApplication
+                  ? 'Device settings applied. Station ready.'
+                  : 'Layout applied. Station ready.')
             : 'Application ${receipt['status']}: ${receipt['error'] ?? 'Inspect station state'}';
         pendingRequest = null;
         valid = false;
         writeUncertain = false;
-        return;
+        return receipt['status'] == 'applied';
       }
       notifyListeners();
       await Future<void>.delayed(pollInterval);
     }
     message =
         'Application still pending. Inspect its status; no automatic apply retry.';
+    return false;
   }
 
-  Future<void> inspectPending() => perform(observeApplication);
+  Future<bool> inspectPending() async {
+    var applied = false;
+    if (pendingRequest != null) {
+      await perform(() async {
+        applied = await observeApplication();
+      });
+    }
+    return applied;
+  }
 
   @override
   void dispose() {

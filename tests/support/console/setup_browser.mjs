@@ -1,3 +1,4 @@
+import {visiblePanelScreenshot} from './visible_panel.mjs';
 import {createRequire} from 'node:module';
 import {readFileSync, writeFileSync, existsSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
@@ -37,7 +38,7 @@ try {
   await card.getByText('Station reserved. Load every item above before confirming.',{exact:true}).waitFor();
   // Keep the golden free of random request identities; the records themselves remain visible in the UI.
   await page.locator('#operation-status').evaluate(node=>{node.style.visibility='hidden';});
-  const png=await card.screenshot({path:screenshot,animations:'disabled',maskColor:'#e7edf4',mask:[card.locator('[data-region="setup-activity"] tbody tr td:last-child')]});
+  const png=await visiblePanelScreenshot(card, {path:screenshot,animations:'disabled',maskColor:'#e7edf4',mask:[card.locator('[data-region="setup-activity"] tbody tr td:last-child')]}, card.locator('.setup-deck-scroll'));
   await page.locator('#operation-status').evaluate(node=>{node.style.removeProperty('visibility');});
   if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1') writeFileSync(baseline,png);
   else {

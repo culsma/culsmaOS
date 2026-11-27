@@ -1,4 +1,5 @@
 """Actual installed offline profiles and the production bounded local socket transport."""
+from tests.support.paths import station_layout_fixture
 import base64
 from pathlib import Path
 from threading import Event, Thread
@@ -15,7 +16,7 @@ from culsma_os.program_manager.interactors.resident import ResidentCommandIntera
 def profiles(monkeypatch):
     culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
+    monkeypatch.setenv('CULSMA_HAMILTON_PRIVATE_LABWARE',str(driver/'reference/LabWare'))
     return ResidentDeviceProfileInteractor(DeviceProfileInteractor(DriverProfileInteractor())),driver
 
 
@@ -36,7 +37,7 @@ def test_profile_operations_cross_the_actual_resident_transport(remote):
     query,driver=remote
     profile=next(p for p in query.describe()['profiles'] if p['driver']=='hamilton-layout')
     assert isinstance(query.validate('hamilton-layout',profile['template'])['valid'],bool)
-    path=driver/'examples/test32-water-plate-heat/revision2/test32_water_plate_heat_deck_r2.lay'
+    path=station_layout_fixture()
     imported=query.import_layout('hamilton-layout',{'name':path.name,'encoding':'base64','content':base64.b64encode(path.read_bytes()).decode()})
     assert imported['complete']
     assert query.validate('hamilton-layout',imported['configuration'])['valid']

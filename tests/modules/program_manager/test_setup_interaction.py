@@ -33,14 +33,32 @@ def test_both_credentials_use_the_same_business_entry_and_authoritative_origin(s
     assert {k:v for k,v in resident.calls[0].items() if k!='setup_origin'}=={k:v for k,v in resident.calls[1].items() if k!='setup_origin'}
 
 
-def test_mcp_credential_cannot_confirm_loading_even_if_the_tool_adapter_is_bypassed(shared):
+def test_mcp_confirmation_uses_shared_owner_and_authoritative_origin(shared):
     tokens,resident,operate,confirmation=shared
     raw='Bearer '+tokens.issue_automation_session()
     request=SetupInteractionRequest('confirm','run-1','r1','a'*64,acknowledged=True)
-    with pytest.raises(ConsoleAccessError,match='CONSOLE_CAPABILITY_DENIED'):
-        confirmation.execute(raw,request)
+    confirmation.execute(raw,request)
+    assert resident.calls == [{'action':'setup-confirm','run_id':'run-1','request_id':'r1',
+        'setup_fingerprint':'a'*64,'setup_acknowledged':True,'setup_origin':'local-mcp-process'}]
     with pytest.raises(ConsoleProgramError,match='SETUP_ACTION_UNSUPPORTED'):
         operate.execute(raw,request)
+    assert len(resident.calls) == 1
+
+
+@pytest.mark.parametrize('acknowledged', [False, None, 1, 'true'])
+def test_mcp_requires_explicit_boolean_attestation(shared, acknowledged):
+    tokens,resident,_,confirmation=shared
+    with pytest.raises(ConsoleProgramError,match='SETUP_EXPLICIT_CONFIRMATION_REQUIRED'):
+        confirmation.execute('Bearer '+tokens.issue_automation_session(),
+            SetupInteractionRequest('confirm','run-1','r1','a'*64,acknowledged=acknowledged))
+    assert not resident.calls
+
+
+def test_renderer_cannot_confirm_loading(shared):
+    tokens,resident,_,confirmation=shared
+    with pytest.raises(ConsoleAccessError,match='CONSOLE_CAPABILITY_DENIED'):
+        confirmation.execute('Bearer '+tokens.issue_renderer_session(),
+            SetupInteractionRequest('confirm','run-1','r1','a'*64,acknowledged=True))
     assert not resident.calls
 
 

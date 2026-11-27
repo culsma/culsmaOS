@@ -31,6 +31,7 @@ class NativeRunControlInteractor extends ChangeNotifier {
     return switch (run['status']) {
       'awaiting_setup' => ['cancel'],
       'paused' => ['resume', 'cancel'],
+      'needs_reconciliation' || 'cancel_requested' => ['cancel'],
       'ready' || 'running' || 'waiting' || 'finalizing' => ['pause', 'cancel'],
       _ => [],
     };

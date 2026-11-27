@@ -48,3 +48,34 @@ class SqliteStationConfigurationRepository:
             record = {**value,'draft_id':draft_id,'revision':current+1}
             connection.execute('INSERT INTO configuration_drafts VALUES(?,?,?)',(draft_id,current+1,json.dumps(record,allow_nan=False)))
         return StationConfigurationDraft.from_record(record)
+
+
+class SqliteStationFloorPlanRepository:
+    def __init__(self, connection):
+        self.connection = connection
+        with connection:
+            connection.execute(
+                'CREATE TABLE IF NOT EXISTS station_floor_plan('
+                'id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, record TEXT NOT NULL)'
+            )
+
+    def read(self):
+        row = self.connection.execute('SELECT revision,record FROM station_floor_plan WHERE id=1').fetchone()
+        if row is None:
+            return {'revision': 0, 'draft': {'areas': [], 'equipment': []},
+                    'checked_fingerprint': None, 'applied': None, 'applied_revision': None}
+        return {'revision': row[0], **json.loads(row[1])}
+
+    def save(self, state):
+        value = dict(state)
+        previous = value.pop('revision')
+        with self.connection:
+            self.connection.execute('BEGIN IMMEDIATE')
+            current = self.read()['revision']
+            if current != previous:
+                raise ValueError('FLOOR_PLAN_REVISION_CONFLICT')
+            self.connection.execute(
+                'INSERT OR REPLACE INTO station_floor_plan VALUES (1,?,?)',
+                (current + 1, json.dumps(value, allow_nan=False)),
+            )
+        return {'revision': current + 1, **value}

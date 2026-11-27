@@ -12,8 +12,8 @@ class DeviceInteractor:
         self.consumables = None
 
     def register(self, snapshot):
-        if snapshot.mode != "simulation":
-            raise ValueError("OS_PHYSICAL_DEVICE_UNSUPPORTED")
+        if snapshot.mode not in ("simulation", "physical"):
+            raise ValueError("OS_DEVICE_MODE_UNSUPPORTED")
         self.repository.put(snapshot)
 
     def get(self, device_id):
@@ -95,14 +95,16 @@ class DeviceInteractor:
 
 class DeviceInspectionInteractor:
     """Assemble owner observations; never load a session or advance execution."""
-    def __init__(self, repository: DeviceInspectionRepository, snapshot, workspace, resources, evidence, station_path, station_snapshot):
+    def __init__(self, repository: DeviceInspectionRepository, snapshot, workspace, resources, evidence, station_path, station_snapshot, workspace_snapshot=None):
         self.repository, self.snapshot = repository, snapshot
         self.workspace, self.resources, self.evidence = workspace, resources, evidence
         self.station_path, self.station_snapshot = station_path, station_snapshot
+        self.workspace_snapshot = workspace_snapshot
 
     def execute(self):
         from datetime import datetime, timezone
-        with self.snapshot, self.station_snapshot:
+        from contextlib import nullcontext
+        with self.snapshot, self.station_snapshot, self.workspace_snapshot or nullcontext():
             devices = self.repository.snapshots()
             resources = self.resources.inspect()
             reports = [self.describe(device, resources) for device in devices]
@@ -115,7 +117,8 @@ class DeviceInspectionInteractor:
 
     def preparation_snapshot(self, catalogue, configured=None):
         """Read the registered device matching the driver catalogue; never open hardware."""
-        with self.snapshot, self.station_snapshot:
+        from contextlib import nullcontext
+        with self.snapshot, self.station_snapshot, self.workspace_snapshot or nullcontext():
             candidates = [d for d in ((configured,) if configured is not None else self.repository.snapshots())
                           if d.device_id == catalogue.get('device_id')
                           and d.configuration_revision == catalogue.get('configuration_revision')]
@@ -133,7 +136,7 @@ class DeviceInspectionInteractor:
 
     def describe(self, device, resources):
         from pathlib import Path
-        evidence = self.evidence.inspect(device.device_id)
+        evidence = self.evidence.inspect(device.device_id, mode=device.mode)
         positions = self.workspace.inspect(device, evidence)
         if any(Path(record['run_store']).resolve() != self.snapshot.path.resolve()
                for record in resources['station_reservations']):
@@ -144,7 +147,7 @@ class DeviceInspectionInteractor:
             positions = {**positions, 'status': 'unknown', 'current': None,
                          'unresolved_motion': [*positions['unresolved_motion'], 'external_run_store_history']}
         unresolved = [self.describe_operation(operation) for operation in evidence.operations
-                      if operation.evidence is None or operation.evidence.outcome not in {'completed', 'rejected'}]
+                      if operation.stop is None and (operation.evidence is None or operation.evidence.outcome not in {'completed', 'rejected'})]
         return {'device_id': device.device_id, 'mode': device.mode,
                 'instrument_drivers': device.instrument_drivers,
                 'configuration_revision': device.configuration_revision,

@@ -60,6 +60,15 @@ class RunStateInteractor:
         return self.repository.save(replace(record, status=status,
             error=record.body_error if record.body_outcome == "failed" else None))
 
+    def begin_cancelled_finalization(self, run_id):
+        record = self.get(run_id)
+        if record.status in ('completed', 'failed', 'cancelled') or record.body_outcome == 'cancelled':
+            return record
+        if not self.evidence.cancellation_requested(run_id):
+            raise ValueError('RUN_CANCELLATION_NOT_REQUESTED')
+        return self.repository.save(replace(record, status='finalizing', body_outcome='cancelled',
+            body_error=record.body_error or record.error))
+
     def mark_ready(self, run_id, resolution):
         record = self.get(run_id)
         if record.body_outcome is not None:

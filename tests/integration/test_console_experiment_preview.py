@@ -95,7 +95,20 @@ def test_preview_explains_missing_processing_before_admission(tmp_path):
         assert preparation['plan']['bindings']
         assert not preparation['execution_options']['simulation']
         issue = preparation['device_check']['issues'][0]
-        assert issue['code'] == 'INSTRUMENT_DRIVER_UNAVAILABLE'
+        assert issue['code'] == 'INSTRUMENT_DEVICE_NOT_CONFIGURED'
         assert issue['summary'] and issue['action'] and issue['span']['line']
         assert not shared.client.execute({'action':'runs'})['runs']
+        assert not shared.backend.calls
+
+
+def test_physical_preview_uses_driver_snapshot_mode_without_creating_a_run(tmp_path):
+    shared = SharedSetupHarness(tmp_path, submit=False, programs=True)
+    config = json.loads(shared.context.config_path.read_text())
+    config['mode'] = 'physical'
+    shared.context.config_path.write_text(json.dumps(config))
+    with shared:
+        view = preview(shared)
+        assert view['preparation']['status'] == 'available', view
+        assert view['preparation']['execution_options'] == {'simulation': False, 'hardware': True}
+        assert not shared.client.execute({'action': 'runs'})['runs']
         assert not shared.backend.calls

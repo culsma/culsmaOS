@@ -1,14 +1,16 @@
 """Map program transfer requests to resolved pipetting preparation."""
 from math import isfinite
 from .transfer_intents import TransferIntentInteractor, TransferConstraintInteractor
-from culsma_os.driver_framework.models import MaterialExpectation
+from culsma_os.driver_framework.models import MaterialExpectation, TransferAssessmentPort
 from culsma_os.device_manager.instruments.pipetting.interactors import PipettingExecutionPreparationInteractor
 
 
 class TransferPreparationInteractor(TransferIntentInteractor):
-    def __init__(self, space, device, gateway, device_id, selection_planners=(), preparation=None):
+    def __init__(self, space, device, gateway, device_id, selection_planners=(), preparation=None,
+                 transfer_assessor: TransferAssessmentPort | None = None):
         super().__init__(selection_planners)
         self.space, self.device, self.gateway, self.device_id = space, device, gateway, device_id
+        self.transfer_assessor = transfer_assessor
         self.preparation = preparation or PipettingExecutionPreparationInteractor(gateway)
 
     def resolve_execution(self, pending):
@@ -34,15 +36,24 @@ class TransferPreparationInteractor(TransferIntentInteractor):
         return self.preparation.prepare_context(run_id, layout, device, expectations)
 
     def preflight(self, pending, space, device, scope_id, allocation_steps, physical_positions=None):
+        intent, checks = self.assess_preflight(pending, space, device, scope_id, allocation_steps, physical_positions)
+        for check in checks:
+            if check['status'] == 'incompatible':
+                raise ValueError(check['message'])
+        return intent
+
+    def assess_preflight(self, pending, space, device, scope_id, allocation_steps, physical_positions=None):
         decision = self.resolve_execution(pending)
         intent = decision.intent
         if intent is None:
-            return None
+            return None, ()
         self.preparation.validate_intent(intent, device)
         material = pending.physical_material_state()
         layout = space.preview(scope_id, material, allocation_steps)
-        self.prepare_context(layout.run_id, layout, device, material)
-        return intent
+        context = self.prepare_context(layout.run_id, layout, device, material)
+        checks = (self.transfer_assessor.assess_transfer(intent, layout.bindings, context.expected_material)
+                  if self.transfer_assessor is not None else ())
+        return intent, checks
 
     def prepare(self, request):
         pending = request.pending

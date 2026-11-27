@@ -1,7 +1,7 @@
 """Native deck fixtures shared by integration suites."""
+from tests.support.paths import station_layout_fixture
 import pytest
 import json
-from pathlib import Path
 from tests.support.integration.shared_setup import SharedSetupHarness
 
 
@@ -11,11 +11,9 @@ def request(shared, action, fingerprint, **extra):
 
 
 def native_station(tmp_path, monkeypatch):
-    culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
+    pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     from culsma_driver_hamilton.assembly import build_configuration_profile
-    driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
-    source=driver/'examples/test32-water-plate-heat/revision2/test32_water_plate_heat_deck_r2.lay'
+    source=station_layout_fixture()
     shared=SharedSetupHarness(tmp_path,submit=False)
     configuration=json.loads(shared.context.config_path.read_text())
     configuration['layout']=build_configuration_profile().import_layout(source.read_bytes(),source.name)['configuration']

@@ -65,25 +65,25 @@
       "path": "frontend/console/test/goldens/hamilton-1400.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
-      "sha256": "ae49e70a6502462b804853c91b2570e3c8b1fb856f95d166524b2c441244f0b5"
+      "sha256": "28ea457523f83afcc68608ba4a83b6e19f03d2d23fbc7ccd9fc665b1d4f6d21e"
     },
     {
       "path": "frontend/console/test/goldens/hamilton-export-1400.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
-      "sha256": "8a01eee0578d7d15988b01399af1d51cf4a67e82420df0a133eca921122df7a6"
+      "sha256": "18d4f42e1be57f8f444a038672099bfd81ec42fe328b8019027f65c1e9c2f648"
     },
     {
       "path": "frontend/console/test/goldens/layout-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
-      "sha256": "069c0e1132cfb65baae67a385135d86fe8daef997ef71671fde42e94e895b380"
+      "sha256": "b081e2bc88c3b566cdaa31e0f1469239657b4dcf4db3477f8e6a9056189a0305"
     },
     {
       "path": "frontend/console/test/goldens/layout-390.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/layout/golden_test.dart",
-      "sha256": "9ff7760634889a1a6ccf3e1322aac619599132e5b3d7b2a30136d6f5ff32aca2"
+      "sha256": "2d082e967ee8e63b563d4a672a740f777c9b04f9b146af78b7ddf84b51e91db9"
     },
     {
       "path": "frontend/console/test/goldens/native-experiment-1100.png",
@@ -101,13 +101,13 @@
       "path": "frontend/console/test/goldens/native-position-1100.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/mutation_widget_test.dart",
-      "sha256": "34bc47fb53fa959fcc0947761bcd35d00525ca7f618a174f6994978dc601221a"
+      "sha256": "ba21686f3e62e38d8af254570d571ddb0c673064871761d4f14058efcbce41d1"
     },
     {
       "path": "frontend/console/test/goldens/native-position-390.png",
       "kind": "golden",
       "source": "Reviewed deterministic Flutter baseline; source: frontend/console/test/console/mutation_widget_test.dart",
-      "sha256": "ee6a962fecc29da79abc48dae72c7e35e70dd9176a6373a2216b5a1eec83281a"
+      "sha256": "285fd198a1cdce5091d52a7262343a0e3a3c49d930a61a98e90914e7c1448743"
     },
     {
       "path": "frontend/console/test/goldens/native-system_info-1100.png",
@@ -119,13 +119,13 @@
       "path": "tests/modules/console/goldens/carrier-settings-1440.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/carriers_browser.mjs",
-      "sha256": "06db322b09792f6011406b12f07c9a41e40153f63549308bfbcf7f7586019043"
+      "sha256": "524dc134fb205fb87c5860fdf0fe45ac9a8d472f4ba718c0cb63e6f32f66f3bb"
     },
     {
       "path": "tests/modules/console/goldens/carrier-settings-390.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/carriers_browser.mjs",
-      "sha256": "e7d846c80f74bc4e86a5a0ce3fd9b4cdb55ada3580b16caee00b2465e3acf072"
+      "sha256": "1e3f7b40fd35376c5583c426f501dfe1bd0663b66072595134276145a3449e37"
     },
     {
       "path": "tests/modules/console/goldens/desktop-1280.png",
@@ -143,25 +143,25 @@
       "path": "tests/modules/console/goldens/experiment-preview-1280.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/workstation_flow_browser.mjs",
-      "sha256": "01969885ce8b38881c3314bf14e573012d2ae78797fbeee28e921eff10669f15"
+      "sha256": "99df04032f1f3e8cc098fc79cdb6a3fd784cf59920cabc04781e3b8c0c1566f2"
     },
     {
       "path": "tests/modules/console/goldens/experiment-preview-390.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/workstation_flow_browser.mjs",
-      "sha256": "4a9b507115efe2071df5a2f1164872ff3e165500106baec6e0db35853e43d892"
+      "sha256": "b0d07d5f403f4d558d73125f23a8f99b4799b16ea749c386998e1758491799dc"
     },
     {
       "path": "tests/modules/console/goldens/experiment-result-1280.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/workstation_flow_browser.mjs",
-      "sha256": "14809a74ff63f5f1e26a48de8fd209e56e6a36d2b081084447ff91256b35e710"
+      "sha256": "5020f2e838de8bbbb7800ddcd036dc5a574b94e0b8c9981b2421fb4b353ce719"
     },
     {
       "path": "tests/modules/console/goldens/experiment-result-390.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/workstation_flow_browser.mjs",
-      "sha256": "278c2809781a04ebd4336b9a396633b871fe2d52fc18d129f519a875a66aeb99"
+      "sha256": "10f7635d40f1ef5016bd4c05426fc4df1a883950072416af61afb13d1d074406"
     },
     {
       "path": "tests/modules/console/goldens/labware-editor-1440.png",
@@ -179,25 +179,25 @@
       "path": "tests/modules/console/goldens/layout-import-1280.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/layout_import_browser.mjs",
-      "sha256": "7624fd306e19d2fd18ad2910d093efe56765a6b7801eb82da84f4940176d043d"
+      "sha256": "cdd123c3d2eed5b1ccdac6ecfed86ff8b6f420d6b4dbba7da65ddd5cad0c0686"
     },
     {
       "path": "tests/modules/console/goldens/layout-import-390.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/layout_import_browser.mjs",
-      "sha256": "faee8a2550a14354f9ac67106c31a471dfaa2175cdc9111784a13b45851e7d05"
+      "sha256": "690cf6f8477e6de2c2637877945ab019e8bf27d8ac96159bd542dd0e27106e4d"
     },
     {
       "path": "tests/modules/console/goldens/loading-layout-1280.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/loading_layout_browser.mjs",
-      "sha256": "8b86504f12888595f199c265acfdd1f6494c1deab119daccc093d3e62e1cb121"
+      "sha256": "a0e809da2d623f7f95c2476cb8f2d1cbe1c02ef1f8ff147f896735d249c58cc5"
     },
     {
       "path": "tests/modules/console/goldens/loading-layout-390.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/loading_layout_browser.mjs",
-      "sha256": "6057274697bae4b0f272f78b6f5facae846f0abf735bb4edff0ceca1f57a8d01"
+      "sha256": "993a0a14e471e4eed89443b85beeddd0174306414214dccce179757952e0f095"
     },
     {
       "path": "tests/modules/console/goldens/occupied-labware-1440.png",
@@ -209,37 +209,37 @@
       "path": "tests/modules/console/goldens/occupied-labware-390.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/labware_browser.mjs",
-      "sha256": "426aa559f908749162e715e492af6766f73be90f0e92535849629c4143540b31"
+      "sha256": "83fbf31820d854a981cd6c358538992921f88adbc1e44d0c611ae757d57e701f"
     },
     {
       "path": "tests/modules/console/goldens/overview-layout-1280-right.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/overview_layout_browser.mjs",
-      "sha256": "5c6b98f4bd15e1e1f5e87cd139f8581f13ab89d83b329a0daecb489ebd82ad05"
+      "sha256": "8647ec5cf1e31ceb7258701b56267a46d255e43ad2cecc1e70c175be4edd1c33"
     },
     {
       "path": "tests/modules/console/goldens/overview-layout-1280.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/overview_layout_browser.mjs",
-      "sha256": "133fee1765ed0f2160bd869f90a836d58cf80af74787c2bb6f86ec76c221fe67"
+      "sha256": "05e13838d93f71196057c6eebe13faa96d14824fcd50963806b729d5058849ba"
     },
     {
       "path": "tests/modules/console/goldens/overview-layout-390-right.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/overview_layout_browser.mjs",
-      "sha256": "abd5c57be2423dcc2a16dcc9947f48bb184fbff936486f89fc1dbad2b4090704"
+      "sha256": "343e1dcd2aa1036bd2a7be9abed0cfe3604fd3d24965df76b48d7cba5f9db729"
     },
     {
       "path": "tests/modules/console/goldens/overview-layout-390.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/overview_layout_browser.mjs",
-      "sha256": "f991968c83b5a50894d91b664e8e0da72f65e6b229f1a3304a3bf1db19f3c16b"
+      "sha256": "b7f6c96c947fa371682b7af7e253d6ed15b989100381b7ed6f3d3d733ab73e31"
     },
     {
       "path": "tests/modules/console/goldens/run-setup-1280.png",
       "kind": "golden",
       "source": "Reviewed legacy browser reference baseline (not product UI); source: tests/support/console/setup_browser.mjs",
-      "sha256": "5a46c1b703d922367da9e106f1a68b7bccb8dafd4a413af8bb6c88d3044e0743"
+      "sha256": "c6b4cd907beac30147548f6316b807e01761b705256feeab0ca764ac4ef011f7"
     },
     {
       "path": "tests/modules/console/goldens/view-reveal-1280.png",
@@ -317,13 +317,31 @@
       "path": "frontend/console/test/goldens/native-loading-plan-1280.png",
       "kind": "golden",
       "source": "Native preparation layout; source: frontend/console/test/console/preparation_layout_test.dart",
-      "sha256": "4dad7ef6c72007971df85a7756c14fcf422c1f8cccb0fcd1bde7ca7c9fbe8401"
+      "sha256": "76a84bed66f66260344cacb9f22fb1f25ab8487b5de4d5004d22b9c7579b7f85"
     },
     {
       "path": "frontend/console/test/goldens/native-loading-plan-390.png",
       "kind": "golden",
       "source": "Native preparation layout; source: frontend/console/test/console/preparation_layout_test.dart",
-      "sha256": "af94c209578d111b88da62d255339bba55900d0f2abc151c4ab175a782134aff"
+      "sha256": "d4fdada66cb8871f6d39664f6b31bd7f19497310b4f8dfcca2e54ac51293c1fa"
+    },
+    {
+      "path": "frontend/console/test/goldens/loading-confirmation-overview.png",
+      "kind": "golden",
+      "source": "Native loading confirmation fixture; source: frontend/console/test/console/preparation_layout_test.dart",
+      "sha256": "36da43ee75be87d350a906ac2351cb91e70aa9ee637659fd549f476e4dcb9ce1"
+    },
+    {
+      "path": "frontend/console/test/goldens/loading-confirmation-hover.png",
+      "kind": "golden",
+      "source": "Native loading confirmation fixture; source: frontend/console/test/console/preparation_layout_test.dart",
+      "sha256": "1d98ef3fe9cee12e800c5e6720ac8e956db4ee1327e5fe6dc3bb00477174b551"
+    },
+    {
+      "path": "frontend/console/test/goldens/loading-confirmation-selected.png",
+      "kind": "golden",
+      "source": "Native loading confirmation fixture; source: frontend/console/test/console/preparation_layout_test.dart",
+      "sha256": "0429a376b5bba3f87fd6f3cf24d44345ac50d8c2f65ef78cbe73aa10facb3689"
     },
     {
       "path": "frontend/console/test/goldens/run-progress-1100.png",
@@ -336,6 +354,96 @@
       "kind": "test-golden",
       "source": "Reviewed Flutter 3.47.7 run progress panel screenshot; simulation status only",
       "sha256": "31a646b7df4eaf6ca22a877994ed85df015cc0af8e80c64a7d29e361dd118bd4"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-deck-bounds-1100.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "253d5ec6b603639b224310bbfd04fbebc8d439140c6a74c0f0d6d8887523bd6b"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-deck-bounds-390.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "fdbd15a6e2d99bb18306cd2606a01259d5057552efe31f4b98bcd44e6c88fc50"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-device-settings-1100.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "96225bf50a27137916e1237b0fa2e9d5016f65c2e079979d4a9f8c328017cb9d"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-device-settings-390.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "765d44ab67a677e043d55382c4f341e59e75740b8a9e524f0f6d0139758db722"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-expansion-area-1100.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "c78d7ea40a45c679e99b286629fc18db06e2212cf1b3a72827e9f7c97329f909"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-expansion-area-390.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "f09b8eaae8c92053b7f3e20cd568707bd9ed4c43566656d11459a00c6522e500"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-instrument-placement-1100.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "05ff9a8f4793bb7006db24f9c31bdfbcd3b9c4a2ee5a6090d94222e872b8c425"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-instrument-placement-390.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "134e64a537ba79037a3d60e253c2e1b735a032b96a1ee80d83071d535f79e5f8"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-instrument-placement-end-390.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "7b2b40351d5e59451da2e160230b089d190bbe457c7da11013b190e217372096"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-settings-1100.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "b3f29799f8c6eef915bba6db35b3f478ac03f76e3039b8d8e2ab190289aa7af0"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-settings-390.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "07d7bccb9ab7b5f26e6177a5fb4cea4551229e454da7d51afcbd191451d2f922"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-workstation-1100.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "fc07f1906be5301ddd078cc98e2ad513e4b500ca3cc5c2b0cca3860ce4d77beb"
+    },
+    {
+      "path": "frontend/console/test/goldens/floor-plan-workstation-390.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "7bb4dcf49e95876ac1e6c0a94dc53ec6b4bec2e65462aaa923cc795e61315894"
+    },
+    {
+      "path": "frontend/console/test/goldens/physical-deck-whole-sites.png",
+      "kind": "test-golden",
+      "source": "Flutter console widget test rendering of the workstation fixture.",
+      "sha256": "6ca294654d6d54a9368d7f3da8bc46443226b16459801ec9b6e62b6774b33264"
+    },
+    {
+      "path": "frontend/console/windows/runner/resources/app_icon.ico",
+      "kind": "application-icon",
+      "source": "Unmodified Flutter Windows runner template icon (flutter_template_images 5.0.0).",
+      "sha256": "c098d3fc85cacff98b8e69811b48e9f0d852fcee278132d794411d978869cbf8"
     }
   ]
 }

@@ -13,11 +13,15 @@ class SetupProgramPreflightInteractor:
         try:
             configured = self.snapshot_reader.execute(self.config_path) if self.snapshot_reader is not None else None
             snapshot, positions = self.devices.preparation_snapshot(catalogue, configured)
-            scope = self.scopes.build(snapshot, catalogue, loading, positions)
+            read_assessor = getattr(self.snapshot_reader, 'transfer_assessor', None)
+            options = ({'transfer_assessor': read_assessor(self.config_path, snapshot.configuration_revision)}
+                       if read_assessor is not None else {})
+            scope = self.scopes.build(snapshot, catalogue, loading, positions, **options)
             try:
                 report, _ = scope.preflight.inspect(compiled.plan, compiled.state, 'preview',
                     workflow=workflow if workflow and workflow.get('enabled') else None)
                 report['issues'] = PreparationIssueInteractor().describe(report['diagnostics'])
+                report['execution_mode'] = snapshot.mode
                 return report
             finally:
                 scope.close()

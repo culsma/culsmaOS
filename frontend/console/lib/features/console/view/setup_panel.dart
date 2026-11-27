@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../interactor/setup_interactor.dart';
-import '../model/console_model.dart';
-import 'recorded_deck.dart';
+import '../interactor/run_review_interactor.dart';
+import 'preparation_layout.dart';
 
 class NativeSetupPanel extends StatelessWidget {
   final NativeSetupInteractor controller;
@@ -11,15 +11,6 @@ class NativeSetupPanel extends StatelessWidget {
     required this.controller,
     required this.run,
   });
-  String contents(Map? values) => values == null || values.isEmpty
-      ? 'Empty'
-      : values.entries
-            .map(
-              (e) => e.value is Map
-                  ? '${e.key}: ${e.value['value']} ${e.value['unit'] ?? ''}'
-                  : '${e.key}: ${e.value}',
-            )
-            .join(' · ');
   @override
   Widget build(BuildContext context) {
     final c = controller, id = run['run_id'] as String, plan = c.plans[id];
@@ -43,10 +34,6 @@ class NativeSetupPanel extends StatelessWidget {
         ? history.first['error']?.toString()
         : null;
     final problem = c.errors[id] ?? latestError;
-    final deck = RecordedDeck.fromLayout({
-      'status': 'available',
-      'layout': plan['layout'],
-    });
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 16),
       child: Padding(
@@ -55,13 +42,19 @@ class NativeSetupPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              editable ? 'Load the experiment' : 'Experiment loading plan',
+              editable
+                  ? 'Prepare loading · awaiting execution confirmation'
+                  : 'Experiment loading plan',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
               '${editable ? 'Plan' : 'Preparation status'}: ${plan['phase'] ?? 'unavailable'}',
             ),
+            if (editable)
+              const Text(
+                'Not submitted for execution. Confirm loading to submit and run.',
+              ),
             if (!editable)
               const Text(
                 'Loading confirmation records preparation only; it does not mean execution succeeded.',
@@ -83,50 +76,11 @@ class NativeSetupPanel extends StatelessWidget {
                     'Waiting for a valid loading plan.',
               ),
             if (c.statuses[id] != null) Text(c.statuses[id]!),
-            if (deck != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: RecordedDeckBoard(deck: deck, keys: {}),
-              ),
-            for (final item in plan['loadout'] as List? ?? [])
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${item['model'] ?? item['labware']} · ${item['labware']}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(
-                      'Carrier ${item['placement']?['carrier'] ?? '—'} · track ${item['placement']?['track'] ?? '—'} · site ${item['placement']?['site'] ?? '—'}',
-                    ),
-                    Text(
-                      item['placement']?['orientation'] ??
-                          'Use the declared orientation.',
-                    ),
-                    const SizedBox(height: 8),
-                    for (final vessel in item['containers'] as List? ?? [])
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Chip(label: Text('${vessel['well']}')),
-                        title: Text(
-                          '${vessel['name']} · ${vessel['volume_uL']} µL initially',
-                        ),
-                        subtitle: Text(contents(vessel['contents'])),
-                      ),
-                  ],
-                ),
-              ),
-            for (final supply in plan['supplies'] as List? ?? [])
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  'Supply ${supply['id']} · ${supply['model']}\nCarrier ${supply['carrier'] ?? '—'} · track ${supply['track'] ?? '—'} · site ${supply['site'] ?? '—'}\n'
-                  '${supply['available']} declared available · positions ${(supply['positions'] as List? ?? []).join(', ')}\n'
-                  '${supply['requirement_status'] ?? ''}',
-                ),
-              ),
+            NativePreparationLayout(
+              key: ValueKey('setup-layout-$id'),
+              plan: plan,
+              review: NativeRunReviewInteractor(),
+            ),
             if (editable && valid) preferences(context, id, plan),
             if (c.pending[id] != null) ...[
               const SizedBox(height: 16),

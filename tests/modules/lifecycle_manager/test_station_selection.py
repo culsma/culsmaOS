@@ -32,7 +32,8 @@ def test_selection_survives_reconnect_without_touching_current_station_data(tmp_
     assert result['resident']=={'status':'not_observed','driver':None}
     assert data.read_bytes()==b'existing station data'
     assert json.loads(repository.path.read_text())=={'profile':'second'}
-    assert repository.path.stat().st_mode & 0o777==0o600
+    if __import__('os').name != 'nt':
+        assert repository.path.stat().st_mode & 0o777==0o600
     reconnected=StationSelectionInteractor(tokens,FileStationSelectionRepository(repository.path,repository.catalogue,'first'),'second')
     status=reconnected.execute(raw,StationSelectionRequest('status'))
     assert status['selected_profile']==status['connected_profile']=='second'

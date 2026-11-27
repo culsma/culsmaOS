@@ -53,7 +53,8 @@ def test_shared_setup_uses_fixed_authorization_and_thin_transport_adapters():
     mcp=ast.parse((source/'console/adapters/mcp.py').read_text())
     methods={n.name for n in ast.walk(mcp) if isinstance(n,ast.FunctionDef)}
     assert {'loading_plan','revise_loading_plan','begin_loading','loading_request_status'} <= methods
-    assert not any('confirm' in name for name in methods)
+    assert 'confirm_loading' in methods
+    assert 'self.setup_confirmation.execute' in (source/'console/adapters/mcp.py').read_text()
     web=(source/'console/web/setup.js').read_text()
     assert 'setInterval' not in web and 'setupFingerprint' in web
     assert "action:'setup.confirm'" in web and "field:'/setup/loaded'" in web

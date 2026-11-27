@@ -5,6 +5,7 @@ from ..models import AttemptRecord, ExecutionEvidence, LogicalCompletion
 
 
 class EvidenceInspectionRepository(Protocol):
+    def stops(self) -> dict: ...
     def attempts(self, device_id) -> tuple[AttemptRecord, ...]: ...
     def evidence(self) -> tuple[ExecutionEvidence, ...]: ...
     def available(self) -> bool: ...
@@ -18,6 +19,10 @@ class SqliteEvidenceInspectionRepository:
 
     def available(self):
         return {'os_attempts', 'os_evidence'} <= self.snapshot.tables
+
+    def stops(self):
+        return {row[0]: json.loads(row[1]) for row in self.snapshot.rows(
+            'os_attempt_stops', 'SELECT attempt_id,record FROM os_attempt_stops')}
 
     def attempts(self, device_id):
         records = (json.loads(row[0]) for row in self.snapshot.rows(

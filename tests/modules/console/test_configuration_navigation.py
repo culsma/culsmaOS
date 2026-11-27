@@ -126,3 +126,37 @@ app.configuration.activeRecord={...record,revision:3};
 assert.deepEqual(view.model().configured,[]);
 assert.equal(view.model().record,null);
 """)
+
+
+def test_mode_selector_saves_a_revision_without_activating_hardware():
+    ConfigurationNavigationHarness().run("""
+class Element {
+ constructor(tag,text=''){this.tag=tag;this.textContent=text;this.children=[];this.listeners={};}
+ append(...children){this.children.push(...children);}
+ setAttribute(){}
+ addEventListener(name,handler){this.listeners[name]=handler;}
+}
+globalThis.document={createElement:tag=>new Element(tag)};
+const draft={draft_id:'station',revision:2,driver:'device-plugin',title:'Station',configuration:{layout:{rack:'A'}}};
+const calls=[],starts=[];
+const app={card:title=>new Element('section',title),element:(tag,text)=>new Element(tag,text),
+ configDirty:()=>false,startConfigDraft:(...args)=>starts.push(args),
+ configurationFetch:async(path,request)=>{
+   calls.push(request);
+   if(request.action==='execution_options')return {selected:{mode:'simulation',simulator:'vendor'},implementations:[
+     {mode:'simulation',simulator:'vendor',label:'Vendor simulator'},{mode:'physical',simulator:null,label:'Hardware'}]};
+   return {draft:{...draft,revision:3,configuration:{...draft.configuration,execution_selection:request.configuration}}};
+ }};
+const controller=new ConsoleConfiguration(app),node=controller.renderExecutionSelection(draft);
+await new Promise(resolve=>setImmediate(resolve));
+const select=node.children.find(n=>n.tag==='select'),save=node.children.find(n=>n.tag==='button');
+assert.equal(select.children.length,2);assert.equal(save.disabled,false);
+select.value=JSON.stringify({mode:'physical',simulator:null});
+await save.listeners.click();
+assert.deepEqual(calls.map(c=>c.action),['execution_options','select_execution']);
+assert.equal(starts[0][3].revision,3);assert.deepEqual(starts[0][1].layout,{rack:'A'});
+assert.equal(draft.revision,2);
+app.configDirty=()=>true;
+const unsaved=controller.renderExecutionSelection(draft);
+assert.equal(unsaved.children.some(n=>n.tag==='select'),false);
+""")

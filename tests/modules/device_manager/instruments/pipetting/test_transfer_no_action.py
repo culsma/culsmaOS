@@ -256,7 +256,7 @@ class TestTransferNoAction:
         app.close()
         artifacts=tmp_path/'cli-output'
         command=[str(Path(sys.executable).parent/'culsma')] if entry=='language' else [sys.executable,'-m','culsma_os.cli']
-        result=subprocess.run([*command,'run',str(tmp_path/'protocol.culs'),'--driver','opentrons-simulator','--driver-config',str(context.config_path),'--artifacts-dir',str(artifacts)],capture_output=True,text=True,cwd=tmp_path)
+        result=subprocess.run([*command,'run',str(tmp_path/'protocol.culs'),'--driver','os-opentrons-simulator' if entry=='language' else 'opentrons-simulator','--driver-config',str(context.config_path),'--artifacts-dir',str(artifacts)],capture_output=True,text=True,cwd=tmp_path)
         assert result.returncode==0,result.stdout+result.stderr
         report=json.loads((artifacts/'run.json').read_text())
         assert report['user_result']['os']['status']=='completed'

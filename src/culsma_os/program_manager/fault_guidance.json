@@ -86,5 +86,17 @@
   "culsma.device.method_not_registered": {
     "title": "The prepared method is not available on this Agent",
     "check": "Ask the device specialist to commission the exact prepared method on the Agent. The method was not dispatched; changing a protocol may require new commissioning."
+  },
+  "culsma.liquid.clogged": {
+    "title": "Pipette blockage detected",
+    "check": "Inspect the affected tip and liquid after the device has stopped. Replace the tip and review possible partial aspiration before preparing again."
+  },
+  "culsma.liquid.aspiration_improper": {
+    "title": "Aspiration monitoring reported an error",
+    "check": "Check source liquid, tip immersion and the tip. Air or an abnormal pressure change may have interrupted aspiration; transferred volume is not measured."
+  },
+  "culsma.liquid.transfer_unverified": {
+    "title": "Liquid transfer was interrupted or could not be verified",
+    "check": "Review the channel error and the last attempted step. A missing or incomplete monitoring result cannot establish successful aspiration."
   }
 }

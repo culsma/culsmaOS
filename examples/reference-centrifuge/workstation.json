@@ -1,0 +1,37 @@
+{
+  "schema_version": 2,
+  "robot_type": "Flex",
+  "api_level": "2.20",
+  "pipette": "flex_1channel_1000",
+  "mount": "left",
+  "tiprack": {"load_name": "opentrons_flex_96_tiprack_1000ul", "slot": "D3"},
+  "labware": {
+    "assay": {"load_name": "nest_96_wellplate_200ul_flat", "slot": "D1"},
+    "tubes": {"load_name": "opentrons_24_tuberack_eppendorf_2ml_safelock_snapcap", "slot": "B2"}
+  },
+  "bindings": {
+    "entry.s1::well::A1::alloc": {"labware": "assay", "well": "A1"},
+    "entry.s3::alloc": {"labware": "tubes", "well": "A1"},
+    "entry.s4::alloc": {"labware": "tubes", "well": "A2"}
+  },
+  "reference_devices": {
+    "rotor": {
+      "slot": "B1",
+      "profile": {
+        "profile_id": "reference_cooled_v1",
+        "drive_unit": "g",
+        "drive_range": {"minimum": 250, "maximum": 5000},
+        "max_duration_seconds": 3600,
+        "temperature_range_celsius": {"minimum": 4, "maximum": 40},
+        "labware_type": "nest_96_wellplate_200ul_flat",
+        "max_imbalance_grams": 0.5
+      },
+      "sample_masses_grams": {"assay": 20},
+      "counterweight": {"labware": "balance", "mass_grams": 20}
+    }
+  },
+  "labware_moves": {
+    "entry.s6.b.s0": [{"labware": "assay", "destination": "module:rotor"}],
+    "entry.s7": [{"labware": "assay", "destination": "D1"}]
+  }
+}

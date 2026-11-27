@@ -87,7 +87,7 @@ void main() {
     },
   );
   test(
-    'failed durable save, mismatched receipt and unknown execution do not enable unsafe control',
+    'failed save and mismatched receipt block replay; unresolved runs allow cancellation only',
     () async {
       final api = ControlApi(),
           repo = MemoryConsoleMutationRepository()..failSave = true,
@@ -101,8 +101,9 @@ void main() {
       expect(c.errors['run'], contains('does not match'));
       expect(
         c.actions({'run_id': 'other', 'status': 'needs_reconciliation'}),
-        isEmpty,
+        ['cancel'],
       );
+      expect(c.actions({'run_id': 'other', 'status': 'cancel_requested'}), ['cancel']);
       c.dispose();
     },
   );

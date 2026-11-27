@@ -3,6 +3,7 @@ import errno
 import hashlib
 import json
 import os
+from culsma_os.platform_support import HostFileIO as file_io
 from pathlib import Path, PurePosixPath
 import re
 import shutil
@@ -44,6 +45,13 @@ class FileProgramSourceRepository:
                 or any(part in {'', '.', '..'} for part in value.split('/'))
                 or PurePosixPath(value).suffix != '.culs'):
             raise ConsoleProgramError('PROGRAM_ID_INVALID')
+        if os.name == 'nt':
+            from culsma_os.platform_support import WindowsFileHandles
+            try:
+                for part in value.split('/'):
+                    WindowsFileHandles.component(part)
+            except OSError as error:
+                raise ConsoleProgramError('PROGRAM_ID_INVALID') from error
         return value
 
     def source_ids(self):
@@ -57,7 +65,7 @@ class FileProgramSourceRepository:
             raise ConsoleProgramError('PROGRAM_SOURCE_UNAVAILABLE', 'unavailable') from error
         for parent, directories, files in os.walk(self.root, followlinks=False, onerror=walk_error):
             directories[:] = sorted(name for name in directories if not name.startswith('.')
-                and not (Path(parent)/name).is_symlink())
+                and not file_io.is_link(Path(parent)/name))
             for name in sorted(files):
                 if name.startswith('.') or not name.endswith('.culs'):
                     continue
@@ -73,12 +81,12 @@ class FileProgramSourceRepository:
         self.validate_id(name)
         descriptor = None
         try:
-            descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            descriptor = file_io.open(directory, os.O_RDONLY | file_io.O_DIRECTORY | file_io.O_NOFOLLOW)
             parts = PurePosixPath(name).parts
             for part in parts[:-1]:
-                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor)
-                os.close(descriptor); descriptor = child
-            child = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=descriptor)
+                child = file_io.open(part, os.O_RDONLY | file_io.O_DIRECTORY | file_io.O_NOFOLLOW, dir_fd=descriptor)
+                file_io.close(descriptor); descriptor = child
+            child = file_io.open(parts[-1], os.O_RDONLY | file_io.O_NOFOLLOW | file_io.O_NONBLOCK, dir_fd=descriptor)
             with os.fdopen(child, 'rb') as stream:
                 if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                     raise ConsoleProgramError('PROGRAM_SOURCE_NOT_REGULAR')
@@ -90,7 +98,7 @@ class FileProgramSourceRepository:
             raise ConsoleProgramError('PROGRAM_SOURCE_UNAVAILABLE', 'unavailable') from error
         finally:
             if descriptor is not None:
-                os.close(descriptor)
+                file_io.close(descriptor)
 
     def enabled(self):
         return self.root is not None
@@ -144,7 +152,7 @@ class FileProgramSourceRepository:
                     for name, value in sources.items():
                         path = temporary/name
                         path.parent.mkdir(parents=True, exist_ok=True)
-                        path.write_text(value, encoding='utf-8')
+                        path.write_bytes(value.encode('utf-8'))
                     (temporary/'manifest.json').write_text(json.dumps(sorted(sources)), encoding='utf-8')
                     try:
                         temporary.rename(target)

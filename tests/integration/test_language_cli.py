@@ -52,7 +52,7 @@ class TestLanguageCLI:
                 "run",
                 str(SOURCE),
                 "--driver",
-                "opentrons-simulator",
+                "os-opentrons-simulator",
                 "--driver-config",
                 str(DECK),
                 "--artifacts-dir",
@@ -109,7 +109,7 @@ class TestLanguageCLI:
                 "run",
                 str(source),
                 "--driver",
-                "opentrons-simulator",
+                "os-opentrons-simulator",
                 "--driver-config",
                 str(DECK),
                 "--json",
@@ -119,3 +119,16 @@ class TestLanguageCLI:
             cli.main()
         assert error.value.code == 1
 
+
+
+@pytest.mark.parametrize('provider,uses_os',[('opentrons-simulator',False),('os-opentrons-simulator',True)])
+def test_coinstalled_providers_execute_the_selected_runtime(tmp_path, provider, uses_os):
+    pytest.importorskip('culsma_opentrons.standalone')
+    result = subprocess.run([sys.executable,'-m','culsma.cli','run',str(SOURCE),
+        '--driver',provider,'--driver-config',str(DECK),'--artifacts-dir',str(tmp_path),'--json'],
+        capture_output=True,text=True,cwd=tmp_path,timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads(result.stdout)
+    assert report['ok']
+    assert ('os' in report['report']) is uses_os
+    assert (tmp_path/'culsma-os.sqlite3').exists() is uses_os

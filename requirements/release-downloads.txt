@@ -1,0 +1,2 @@
+culsma==1.0.11
+culsma-opentrons-simulator @ https://github.com/culsma/culsma-driver-opentrons/releases/download/v0.1.0/culsma_opentrons_simulator-0.1.0-py3-none-any.whl#sha256=0a68156db50fbae39378123beaf97f0d1faada69333989cd53deeba268917cdd

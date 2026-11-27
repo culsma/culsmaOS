@@ -4,22 +4,10 @@ from dataclasses import replace
 import json
 import pytest
 from culsma_os.bootstrap import OSApplicationFactory
-from culsma_os.program_manager.models import RunRequest
 from tests.support.integration.hamilton import fixture, HamiltonOperationTestBackend
 
 
-class SetupFixture:
-    @staticmethod
-    def app(context, backend=None):
-        from culsma_hamilton_os.providers import HamiltonOSDeviceFactory
-        return OSApplicationFactory(session_factories={'hamilton-agent': HamiltonOSDeviceFactory(
-            backend_factory=backend or HamiltonOperationTestBackend())}).build(context)
-
-    @staticmethod
-    def submit(app, compiled):
-        app.client.start()
-        run_id = app.client.submit_run(RunRequest(compiled.plan, compiled.state))
-        return run_id, app.client.setup_plan(run_id)
+from tests.support.integration.hamilton_setup import SetupFixture
 
 
 def test_loading_plan_contains_materials_and_native_locations_and_requires_confirmation(fixture):
@@ -181,9 +169,9 @@ def test_plate_group_is_automatically_bound_as_one_physical_plate(fixture):
 def test_local_cli_show_begin_confirm_and_resume_use_the_same_saved_plan(fixture, monkeypatch, capsys):
     compiled, context = fixture
     backend = HamiltonOperationTestBackend()
-    from culsma_hamilton_os.providers import HamiltonAgentBackendFactory
+    from culsma_hamilton_os.providers import HamiltonVenusBackendFactory
     from culsma_os.cli import CulsmaOSCLI
-    monkeypatch.setattr(HamiltonAgentBackendFactory, 'build', lambda self, configuration: backend)
+    monkeypatch.setattr(HamiltonVenusBackendFactory, 'build', lambda self, configuration, workspace: backend)
     app = SetupFixture.app(context)
     run_id, plan = SetupFixture.submit(app, compiled)
     app.close()

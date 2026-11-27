@@ -1,5 +1,5 @@
 """Existing OS pipeline with an external Hamilton plugin and labelled execution doubles."""
-from pathlib import Path
+from tests.support.paths import HAMILTON_TRANSFER
 import json
 import os
 import socket
@@ -39,16 +39,11 @@ class HamiltonSetupFixture:
 
 @pytest.fixture
 def fixture(tmp_path, monkeypatch):
-    vendor=pytest.importorskip('culsma_driver_hamilton')
-    driver=Path(vendor.__file__).resolve().parents[2]
-    labware=Path(os.environ.get('CULSMA_HAMILTON_LABWARE_ROOT', driver/'reference/LabWare'))
-    if not (labware/'ML_STAR/CORE/VStarWaste_8Pos.rck').is_file():
-        pytest.skip('Optional local Hamilton definitions unavailable')
-    monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(labware))
+    pytest.importorskip('culsma_driver_hamilton')
     def forbidden(*args,**kwargs): pytest.fail('Local contract test attempted network or process launch')
     monkeypatch.setattr(socket,'create_connection',forbidden)
     monkeypatch.setattr(subprocess,'Popen',forbidden)
-    example=driver/'examples/os-transfer-input'
+    example=HAMILTON_TRANSFER
     source=tmp_path/'transfer.culs';source.write_text((example/'transfer.culs').read_text())
     original=json.loads((example/'setup.json').read_text())
     configuration={'schema':'culsma_hamilton_device_v1','device_id':'hamilton-contract-test','mode':'simulation',

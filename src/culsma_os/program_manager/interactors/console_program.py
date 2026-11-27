@@ -15,19 +15,17 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
     def perform(self, request):
         if not isinstance(request,ConsoleProgramRequest) or not isinstance(request.action,str):
             raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
-        if not isinstance(request.source_scope,str) or request.source_scope not in self.scopes or request.source_scope!='programs' and request.action not in {'inspect','preview','submit','start'}:raise ConsoleProgramError('PROGRAM_SOURCE_SCOPE_INVALID')
-        if request.profile_bindings is not None and (request.action not in {'start','submit'} or not isinstance(request.profile_bindings, dict)):
-            raise ConsoleProgramError('PROFILE_RUN_BINDINGS_INVALID')
+        if not isinstance(request.source_scope,str) or request.source_scope not in self.scopes or request.source_scope!='programs' and request.action not in {'inspect','preview','submit','start','prepare'}:raise ConsoleProgramError('PROGRAM_SOURCE_SCOPE_INVALID')
         source=self.scopes[request.source_scope]
         values = {'program_id':request.program_id,'snapshot_id':request.snapshot_id,
                   'request_id':request.request_id,'run_id':request.run_id}
         if request.configuration_fingerprint is not None:
-            if not isinstance(request.configuration_fingerprint,str) or request.action not in {'submit','start'} or re.fullmatch(r'[a-f0-9]{64}',request.configuration_fingerprint) is None:
+            if not isinstance(request.configuration_fingerprint,str) or request.action not in {'submit','start','prepare'} or re.fullmatch(r'[a-f0-9]{64}',request.configuration_fingerprint) is None:
                 raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
         if request.workflow_revision is not None and (
-                request.action != 'start' or type(request.workflow_revision) is not int or request.workflow_revision < 0):
+                request.action not in {'start', 'prepare'} or type(request.workflow_revision) is not int or request.workflow_revision < 0):
             raise ConsoleProgramError('PROGRAM_REQUEST_INVALID')
-        required = {'list':set(),'inspect':{'program_id'},'preview':{'program_id'},'submit':{'program_id','snapshot_id','request_id'},'start':{'program_id','snapshot_id','request_id'},
+        required = {'list':set(),'inspect':{'program_id'},'preview':{'program_id'},'submit':{'program_id','snapshot_id','request_id'},'start':{'program_id','snapshot_id','request_id'},'prepare':{'program_id','snapshot_id','request_id'},
                     'control-status':{'run_id','request_id'},'pause':{'run_id','request_id'},'resume':{'run_id','request_id'},'cancel':{'run_id','request_id'}}
         if (request.action not in required or {key for key,value in values.items() if value is not None} != required[request.action]
                 or any(value is not None and (not isinstance(value,str) or not value) for value in values.values())):
@@ -63,13 +61,13 @@ class ConsoleProgramInteractor(AuthorizedInteractor):
             'library_roots':[str(snapshot.directory)],'request_id':request.request_id}
         if request.configuration_fingerprint is not None:
             payload['configuration_fingerprint'] = request.configuration_fingerprint
-        if request.profile_bindings is not None:
-            payload['profile_bindings'] = request.profile_bindings
         if request.workflow_revision is not None:
             payload['workflow_revision'] = request.workflow_revision
         result = self.command(payload)
         return {'run':result,'snapshot_id':snapshot.snapshot_id,'program_id':request.program_id,
-                'configuration':'running_service','effect':'admitted_to_resident_queue'}
+                'configuration':'running_service','effect':('preparation_created'
+                    if request.action == 'prepare' or result.get('status') == 'awaiting_setup'
+                    else 'admitted_to_resident_queue')}
 
     def validate_identity(self, value):
         if re.fullmatch(r'[A-Za-z0-9_-]{1,128}',value) is None:

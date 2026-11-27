@@ -214,14 +214,50 @@ export class ConsoleConfiguration {
       a.configButton('Export validated configuration',() => a.configAction('export'),'export-draft',{action:'configuration.export'}));return node;
   }
 
+  renderExecutionSelection(record) {
+    const a=this.app, runtime=a.card('Execution mode');
+    if (!record || a.configDirty?.()) {
+      runtime.append(a.element('p','Save a setup before choosing its execution mode.','note'));
+      return runtime;
+    }
+        const selector=document.createElement('select');
+        selector.setAttribute('aria-label','Execution implementation'); selector.disabled=true;
+        const save=a.element('button','Save execution choice'); save.disabled=true;
+        const message=a.element('p','Apply the saved configuration while the station is idle.','note'); runtime.append(selector,save,message);
+        a.configurationFetch('/api/v1/configuration/drafts',
+          {action:'execution_options',draft_id:record.draft_id,revision:record.revision}).then(result=>{
+            result.implementations.forEach(choice=>{
+              const option=document.createElement('option');option.textContent=choice.label;
+              option.value=JSON.stringify({mode:choice.mode,simulator:choice.simulator});
+              option.selected=choice.mode===result.selected.mode && choice.simulator===result.selected.simulator;
+              selector.append(option);
+            }); selector.disabled=false;save.disabled=false;
+        }).catch(error=>{message.textContent=error.message;});
+        save.addEventListener('click',async()=>{
+          save.disabled=true;
+          try {
+            const result=await a.configurationFetch('/api/v1/configuration/drafts',
+              {action:'select_execution',draft_id:record.draft_id,revision:record.revision,
+               configuration:JSON.parse(selector.value)});
+            a.startConfigDraft(result.draft.driver,result.draft.configuration,result.draft.title,result.draft);
+            message.textContent='Choice saved. Apply this configuration when the station is idle.';
+            a.renderConfiguration?.();
+          } catch(error) {message.textContent=error.message;save.disabled=false;}
+        });
+    return runtime;
+  }
+
   render() {
     const a = this.app;const context = a.element('div','','configuration-context');
     const origin = a.activation.view?.active?.origin;
     context.append(a.element('span',origin ? `Current configuration: ${origin.title} · r${origin.revision}`:'Current configuration: service startup settings'));
     const link = a.element('a','System Info');link.href = '#system';context.append(link);
-    const nodes = [context,this.carriers.render()];
+    const nodes = [context,this.renderExecutionSelection(a.configDraft || this.activeRecord),this.carriers.render()];
     if (a.configWorking) {
-      const advanced=a.element('details','','card section config-advanced');advanced.append(a.element('summary','Advanced layout configuration'),this.renderEditor(),this.renderChanges());nodes.push(advanced);
+      const advanced=a.element('details','','card section config-advanced');
+      advanced.open=!!this.layoutEditorExpanded;
+      advanced.addEventListener('toggle',()=>{if(advanced.isConnected)this.layoutEditorExpanded=advanced.open;});
+      advanced.append(a.element('summary','Advanced layout configuration'),this.renderEditor(),this.renderChanges());nodes.push(advanced);
     }
     nodes.push(this.renderAdvanced());a.content.replaceChildren(...nodes);this.carriers.attachPreview();a.updateConfigActions();
   }
@@ -268,8 +304,8 @@ export class ConsoleSystemInformation {
       nodes.push(definitions);
     } else if(section==='runtime') {
       const runtime=a.card('Declared runtime environment'),configuration=model.record?.configuration;
-      runtime.append(a.details([['Execution mode',configuration?.mode],['Execution strategy',configuration?.execution_strategy],
-        ['Simulation backend',configuration?.agent?.simulation_backend]]),
+      runtime.append(a.details([['Execution mode',configuration?.execution_selection?.mode || configuration?.mode],['Execution strategy',configuration?.execution_strategy],
+        ['Simulation backend',configuration?.execution_selection?.simulator || configuration?.agent?.simulation_backend]]),
         a.element('p','These values require a matching saved active configuration. Per-run evidence identifies the backend actually used.','note'));
       const feedback=a.card('Execution feedback');feedback.append(a.element('p','Drivers may return an operation receipt or one receipt for an entire batch. Inspect each run’s evidence coverage; intermediate hardware progress is not inferred.','note'));
       const versions=a.card('Version details');versions.append(a.badge('planned'),a.element('p','A unified OS and driver version report is not exposed by the current console interface.','note'));

@@ -12,7 +12,7 @@ from tests.support.integration.shared_setup import SharedSetupHarness
 def test_browser_observes_real_mcp_edits_and_operator_confirms_loading(tmp_path,monkeypatch):
     culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
+    monkeypatch.setenv('CULSMA_HAMILTON_PRIVATE_LABWARE',str(driver/'reference/LabWare'))
     artifacts=ROOT/'run-artifacts/ui-tests'
     artifacts.mkdir(parents=True,exist_ok=True)
     with SharedSetupHarness(tmp_path) as shared:

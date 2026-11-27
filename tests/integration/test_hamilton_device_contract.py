@@ -61,10 +61,10 @@ def test_unknown_remote_operation_uses_original_isolation_and_blocks_next_transf
 def test_original_language_cli_routes_through_installed_hamilton_os_entries(fixture,monkeypatch,tmp_path,capsys):
     import sys
     from culsma import cli
-    from culsma_hamilton_os.providers import HamiltonAgentBackendFactory
+    from culsma_hamilton_os.providers import HamiltonVenusBackendFactory
     _,context=fixture
     backend=HamiltonOperationTestBackend()
-    monkeypatch.setattr(HamiltonAgentBackendFactory,'build',lambda self,configuration:backend)
+    monkeypatch.setattr(HamiltonVenusBackendFactory,'build',lambda self,configuration,workspace:backend)
     source=context.config_path.parent/'transfer.culs'
     monkeypatch.setattr(sys,'argv',['culsma','run',str(source),'--driver','hamilton-agent',
         '--driver-config',str(context.config_path),'--artifacts-dir',str(tmp_path/'cli-artifacts'),'--json'])

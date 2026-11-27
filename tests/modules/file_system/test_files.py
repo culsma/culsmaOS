@@ -52,8 +52,11 @@ def test_links_and_fifo_never_open_or_follow(browser,tmp_path):
     outside=tmp_path/'outside';outside.mkdir();(outside/'secret').write_text('secret')
     (root/'linked').symlink_to(outside,target_is_directory=True)
     (root/'file-link').symlink_to(outside/'secret')
-    os.mkfifo(root/'pipe')
-    for path in ('linked/secret','file-link','pipe'):
+    paths = ['linked/secret', 'file-link']
+    if hasattr(os, 'mkfifo'):
+        os.mkfifo(root/'pipe')
+        paths.append('pipe')
+    for path in paths:
         with pytest.raises(FileReadError):repo.preview('installation',path)
     with pytest.raises(FileReadError):repo.list_directory('installation','linked',0)
     assert all(not x['openable'] for x in repo.list_directory('installation','',0)['entries'])
@@ -61,7 +64,7 @@ def test_links_and_fifo_never_open_or_follow(browser,tmp_path):
 
 def test_bounded_utf8_preview_binary_metadata_and_pagination(browser):
     root,_,repo,_,_=browser
-    (root/'text').write_text('hello'+chr(0x03bb)*40000)
+    (root/'text').write_text('hello'+chr(0x03bb)*40000, encoding='utf-8')
     result=repo.preview('installation','text')
     assert result['truncated'] and result['content'].startswith('hello') and len(result['content'].encode())<=repo.preview_bytes
     (root/'binary').write_bytes(b'\x00\xff')

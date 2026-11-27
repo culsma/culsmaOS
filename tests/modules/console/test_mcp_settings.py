@@ -1,4 +1,5 @@
 """MCP settings use the real Auth owner, SQLite store and installed driver profiles."""
+from tests.support.paths import station_layout_fixture
 from copy import deepcopy
 from pathlib import Path
 import base64
@@ -14,7 +15,7 @@ from culsma_os.workspace_manager.models import ConfigurationError, StationConfig
 def settings(tmp_path,monkeypatch):
     culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
+    monkeypatch.setenv('CULSMA_HAMILTON_PRIVATE_LABWARE',str(driver/'reference/LabWare'))
     value=ConsoleSettings(tmp_path/'station.sock',0,tmp_path/'drafts.sqlite3',tmp_path/'projects',tmp_path/'snapshots',tmp_path/'Home',serve_frontend=False)
     factory=ConsoleApplicationFactory()
     from culsma_os.device_manager.interactors import DeviceProfileInteractor
@@ -48,7 +49,7 @@ def test_mcp_and_http_share_revisions_and_preserve_stale_edits(settings):
 
 def test_vendor_conversion_validation_and_archives_use_real_driver(settings):
     bridge,_,_,driver=settings;tools=bridge.server
-    path=driver/'examples/test32-water-plate-heat/revision2/test32_water_plate_heat_deck_r2.lay'
+    path=station_layout_fixture()
     imported=tools.import_vendor_layout('hamilton-layout',{'name':path.name,'encoding':'base64','content':base64.b64encode(path.read_bytes()).decode()})
     assert imported['import_report']['complete']
     draft=tools.create_configuration('Imported layout','hamilton-layout',imported['import_report']['configuration'])['draft']

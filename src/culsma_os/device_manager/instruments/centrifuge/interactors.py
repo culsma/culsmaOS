@@ -62,4 +62,4 @@ class CentrifugeMethodBindingInteractor:
             raise ValueError("PROCESSING_METHOD_PROFILE_INVALID")
         binding = ProcessingMethodProfile(profile["profile_id"], profile["revision"], float(profile["duration_seconds"]))
         return CentrifugeIntent(intent.step_id, intent.targets, intent.drive_value, intent.drive_unit,
-                                binding.duration_seconds, binding, intent.program_kind)
+                                binding.duration_seconds, binding, intent.program_kind, intent.environment_conditions)

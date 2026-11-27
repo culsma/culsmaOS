@@ -5,6 +5,10 @@ from ..models import ExecutionEvidence, AttemptRecord, LogicalCompletion
 
 
 class EvidenceRepository(Protocol):
+    def request_cancellation(self, run_id): ...
+    def cancellation_requested(self, run_id): ...
+    def record_stop(self, attempt_id, proof): ...
+    def find_stop(self, attempt_id): ...
     def attempts_for_device(self, device_id): ...
 
     def record_logical_completion(self, completion: LogicalCompletion) -> None: ...
@@ -31,6 +35,8 @@ class SqliteEvidenceRepository:
     def __init__(self, connection):
         self.connection = connection
         with connection:
+            connection.execute('CREATE TABLE IF NOT EXISTS os_run_cancellations(run_id TEXT PRIMARY KEY)')
+            connection.execute('CREATE TABLE IF NOT EXISTS os_attempt_stops(attempt_id TEXT PRIMARY KEY,record TEXT NOT NULL)')
             connection.execute(
                 "CREATE TABLE IF NOT EXISTS os_attempts(attempt_id TEXT PRIMARY KEY,effect_id TEXT UNIQUE,record TEXT)"
             )
@@ -40,6 +46,25 @@ class SqliteEvidenceRepository:
             connection.execute(
                 "CREATE TABLE IF NOT EXISTS os_evidence(evidence_id TEXT PRIMARY KEY,effect_id TEXT UNIQUE,record TEXT)"
             )
+
+    def request_cancellation(self, run_id):
+        with self.connection:
+            self.connection.execute('INSERT OR IGNORE INTO os_run_cancellations VALUES(?)', (run_id,))
+
+    def cancellation_requested(self, run_id):
+        return self.connection.execute('SELECT 1 FROM os_run_cancellations WHERE run_id=?', (run_id,)).fetchone() is not None
+
+    def record_stop(self, attempt_id, proof):
+        payload = json.dumps(proof, sort_keys=True)
+        with self.connection:
+            old = self.find_stop(attempt_id)
+            if old is not None and old != proof:
+                raise ValueError('ATTEMPT_STOP_CONFLICT')
+            self.connection.execute('INSERT OR IGNORE INTO os_attempt_stops VALUES(?,?)', (attempt_id, payload))
+
+    def find_stop(self, attempt_id):
+        row = self.connection.execute('SELECT record FROM os_attempt_stops WHERE attempt_id=?', (attempt_id,)).fetchone()
+        return json.loads(row[0]) if row else None
 
     def record_intent(self, attempt):
         payload = json.dumps(asdict(attempt), sort_keys=True)

@@ -17,6 +17,8 @@ class RecordingUseCase:
     ('run_status',{'run_id':'run'},'observation','run'),
     ('loading_plan',{'run_id':'run'},'setup','show'),
     ('revise_loading_plan',{'run_id':'run','fingerprint':'a'*64,'request_id':'revise','fixed':{'alloc':{'labware':'plate','well':'A1'}}},'setup','revise'),
+    ('confirm_loading',{'run_id':'run','fingerprint':'a'*64,'request_id':'confirm','acknowledged':True},'setup_confirmation','confirm'),
+    ('prepare_program',{'program_id':'transfer.culs','snapshot_id':'snapshot','request_id':'prepare'},'programs','prepare'),
     ('begin_loading',{'run_id':'run','fingerprint':'a'*64,'request_id':'begin'},'setup','begin'),
     ('loading_request_status',{'run_id':'run','request_id':'begin'},'setup','status'),
     ('list_programs',{},'programs','list'),
@@ -28,7 +30,7 @@ class RecordingUseCase:
     ('control_run',{'run_id':'run','action':'cancel','request_id':'cancel'},'programs','cancel'),
 ])
 def test_tools_forward_unchanged_process_credential_and_typed_request(method,arguments,owner,action):
-    entries={name:RecordingUseCase() for name in ['setup','programs','observation']}
+    entries={name:RecordingUseCase() for name in ['setup','programs','observation','setup_confirmation']}
     adapter=MCPServerAdapter(**entries)
     adapter.raw_credential='Bearer explicit-test-credential'
     assert getattr(adapter,method)(**arguments)=={'result':'delegated'}

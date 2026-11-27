@@ -50,7 +50,7 @@ class TestFrameworkProtocol:
         app.close()
         artifacts = tmp_path / "cli-artifacts"
         process = subprocess.run([sys.executable, "-m", entry, "run", str(tmp_path / "protocol.culs"),
-            "--driver", "opentrons-simulator", "--driver-config", str(context.config_path),
+            "--driver", "os-opentrons-simulator" if entry == "culsma.cli" else "opentrons-simulator", "--driver-config", str(context.config_path),
             "--artifacts-dir", str(artifacts)], capture_output=True, text=True, timeout=90)
         assert process.returncode == 0, process.stdout + process.stderr
         result = json.loads((artifacts / "run.json").read_text())

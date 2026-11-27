@@ -64,7 +64,7 @@ class TestHostedRuntime(HostedRuntimeFixture):
             EffectResolution("effect", "evidence", "", "hash", "simulation", "ok", {})
         with pytest.raises(ValueError):
             EffectResolution(
-                "effect", "evidence", "registration", "hash", "physical", "ok", {}
+                "effect", "evidence", "registration", "hash", "invalid", "ok", {}
             )
 
     def test_unsupported_operation_has_no_actions(self):
@@ -140,3 +140,30 @@ class TestHostedGroupRuntime(TestHostedRuntime):
         saved=host.codec.loads(checkpoint)
         assert any(s.op=="MutationGroup" for p in saved["plan"].plans for s in p.steps)
 
+
+
+class TestExecutionMode(HostedRuntimeFixture):
+    @pytest.mark.parametrize('mode,other', [('physical', 'simulation'), ('simulation', 'physical')])
+    def test_resume_and_restore_cannot_switch_completed_effect_mode(self, mode, other):
+        plan = self.plan()
+        host = HostedRuntimeInteractor(execution_mode=mode)
+        checkpoint = host.advance(host.create(plan, init_state(plan), 'mode-bound-run'))
+        resolution = replace(self.resolution(host, host.pending(checkpoint)), mode=mode)
+        with pytest.raises(HostContractError, match='HOST_RESOLUTION_MODE_MISMATCH'):
+            host.resume(checkpoint, replace(resolution, mode=other))
+        completed = host.resume(checkpoint, resolution)
+        assert host.restore(completed)
+        with pytest.raises(HostContractError, match='HOST_RESOLUTION_MODE_MISMATCH'):
+            HostedRuntimeInteractor(execution_mode=other).restore(completed)
+
+    def test_no_action_group_recovery_uses_the_station_mode(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from culsma_os.recovery_manager.interactors import RecoveryInteractor
+        pending = SimpleNamespace(effect_id='group', members=(object(), object()))
+        evidence = Mock(); evidence.find_attempt.return_value = None
+        logical = Mock(); logical.is_no_action.return_value = True
+        execution = SimpleNamespace(host=HostedRuntimeInteractor(execution_mode='physical'))
+        recovery = RecoveryInteractor(Mock(), execution, evidence, Mock(), Mock(), Mock(), logical=logical)
+        recovery.reconcile_group('run', pending)
+        logical.complete_group.assert_called_once_with('run', pending, 'physical')

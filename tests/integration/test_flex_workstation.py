@@ -121,9 +121,8 @@ def test_completed_move_registration_recovers_without_replay(tmp_path,monkeypatc
 def test_flex_workstation_resident_fifo(tmp_path):
     import sqlite3
     from culsma_os.lifecycle_manager.models import ResidentHostSettings
-    from culsma_os.resource_manager.interactors import StationPathInteractor
     from tests.support.integration.resident_host import ResidentHarness
-    from tests.support.integration.resident_docking import ObservedMotionFactory
+    from tests.support.integration.resident_docking import ObservedMotionFactory, opentrons_motion_database
     _,context,app=FlexWorkstationFixture().build(tmp_path);app.close()
     probe=ObservedMotionFactory(gate_kind='PreparedOrbitalShake')
     class WorkstationHarness(ResidentHarness):
@@ -145,7 +144,7 @@ def test_flex_workstation_resident_fifo(tmp_path):
             assert not any(a['run_id']==second for a in attempts)
         probe.release.set()
         for identity in (first,second):harness.wait(lambda:harness.status(identity)['status']=='completed',timeout=20)
-        with sqlite3.connect(StationPathInteractor().database_path(context)) as connection:
+        with sqlite3.connect(opentrons_motion_database(context)) as connection:
             revision,positions=connection.execute('SELECT revision,positions FROM os_labware_positions').fetchone()
             assert revision==10 and json.loads(positions)['assay']=='D1' and json.loads(positions)['captured']=='D2'
             assert connection.execute('SELECT COUNT(*) FROM os_motion_registrations').fetchone()[0]==10
@@ -165,7 +164,7 @@ def test_joint_workstation_cli(tmp_path,entry):
     _,context,app=FlexWorkstationFixture().build(tmp_path);app.close()
     artifacts=tmp_path/'cli-output'
     completed=subprocess.run([sys.executable,'-m','culsma.cli' if entry=='language' else 'culsma_os.cli','run',str(tmp_path/'protocol.culs'),
-        '--driver','opentrons-simulator','--driver-config',str(context.config_path),'--artifacts-dir',str(artifacts)],capture_output=True,text=True,timeout=45)
+        '--driver','os-opentrons-simulator' if entry=='language' else 'opentrons-simulator','--driver-config',str(context.config_path),'--artifacts-dir',str(artifacts)],capture_output=True,text=True,timeout=45)
     assert completed.returncode==0,completed.stdout+completed.stderr
     result=json.loads((artifacts/'run.json').read_text())
     assert result['ok'] and result['user_result']['os']['status']=='completed'

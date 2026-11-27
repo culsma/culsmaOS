@@ -26,8 +26,9 @@ def test_missing_deleted_file_and_special_file_do_not_create_or_block(files):
     with pytest.raises(FileReadError,match='FILE_REVISION_CONFLICT'):
         files.write_document('deleted.culs',b'edited',created['revision'])
     assert not (files.root/'deleted.culs').exists()
-    os.mkfifo(files.root/'fifo.culs')
-    with pytest.raises(FileReadError,match='FILE_PREVIEW_NOT_REGULAR'):files.read_document('fifo.culs')
+    if hasattr(os, 'mkfifo'):
+        os.mkfifo(files.root/'fifo.culs')
+        with pytest.raises(FileReadError,match='FILE_PREVIEW_NOT_REGULAR'):files.read_document('fifo.culs')
     assert not list(files.root.glob('.save-*'))
 
 

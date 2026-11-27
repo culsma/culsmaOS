@@ -1,4 +1,5 @@
 """Actual CLI and official MCP client against real Hamilton rules and SQLite."""
+from tests.support.paths import HAMILTON_TRANSFER
 import json
 import os
 from pathlib import Path
@@ -18,7 +19,7 @@ def test_static_profiles_over_stdio_without_resident(tmp_path):
            if not any(word in key.upper() for word in ('TOKEN', 'SECRET', 'PASSWORD', 'API_KEY'))}
     env['PYTHONPATH'] = os.pathsep.join(paths)
     result = subprocess.run([sys.executable, '-m', 'tests.support.console.instrument_profiles_mcp_client',
-        str(tmp_path), str(driver/'tools/local_console/fixtures/magnetic/device.json')], cwd=ROOT,
+        str(tmp_path), str(HAMILTON_TRANSFER/'magnetic.json')], cwd=ROOT,
         env=env, capture_output=True, text=True, timeout=45)
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == {'profile_tools': 5, 'saved_revisions': 2, 'hardware_operations': 0}

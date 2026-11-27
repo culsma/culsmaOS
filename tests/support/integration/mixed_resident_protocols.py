@@ -23,8 +23,8 @@ class MixedProtocolFactory(ResidentProtocolFactory):
         super().__init__(gate_kind)
         self.fault = fault
 
-    def build(self, context):
-        port, *description = super().build(context)
+    def build_selected(self, context, selection):
+        port, *description = super().build_selected(context, selection)
         if self.fault == 'thermal':
             module = port.session.backend.modules['cycler']
             module.set_block_temperature = DeviceFault(module.set_block_temperature, hit=1, after=True)

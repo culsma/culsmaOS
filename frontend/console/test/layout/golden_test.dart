@@ -37,7 +37,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Advanced layout editor'));
+      await tester.tap(find.text('Saved setups'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await expectLater(
@@ -62,7 +62,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Advanced layout editor'));
+    await tester.tap(find.text('Saved setups'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await expectLater(
@@ -96,7 +96,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Advanced layout editor'));
+    await tester.tap(find.text('Saved setups'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('export-native-layout')));
     await tester.pumpAndSettle();

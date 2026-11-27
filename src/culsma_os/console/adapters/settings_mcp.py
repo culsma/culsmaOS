@@ -15,7 +15,8 @@ class MCPSettingsTools:
             (self.configuration, [(self.configuration_profiles, True), (self.list_configurations, True),
                 (self.read_configuration, True), (self.create_configuration, False),
                 (self.save_configuration, False), (self.validate_configuration, True),
-                (self.export_configuration, True), (self.export_vendor_layout, True),
+                (self.export_configuration, True), (self.execution_mode_options, True),
+                (self.select_execution_mode, False), (self.export_vendor_layout, True),
                 (self.import_vendor_layout, True)]),
             (self.bindings, [(self.review_program_bindings, True)]),
             (self.activation, [(self.configuration_status, True), (self.apply_configuration, False)]),
@@ -44,6 +45,18 @@ class MCPSettingsTools:
     def save_configuration(self, draft_id: str, expected_revision: int, title: str, driver: str, configuration: dict[str, Any]) -> dict[str, Any]:
         """Save configuration edits against the revision read earlier; stale edits are rejected."""
         return self.configuration.execute(self.raw_credential, StationConfigurationRequest('save', draft_id, expected_revision, title, driver, configuration))
+
+    def execution_mode_options(self, draft_id: str, revision: int) -> dict[str, Any]:
+        """List the installed driver's execution implementations and the OS selection."""
+        return self.configuration.execute(self.raw_credential,
+            StationConfigurationRequest('execution_options', draft_id, revision))
+
+    def select_execution_mode(self, draft_id: str, revision: int,
+                              mode: Literal['simulation', 'physical'], simulator: str | None = None) -> dict[str, Any]:
+        """Save the OS execution choice as a new draft revision; apply_configuration activates it while idle."""
+        return self.configuration.execute(self.raw_credential,
+            StationConfigurationRequest('select_execution', draft_id, revision,
+                                        configuration={'mode': mode, 'simulator': simulator}))
 
     def validate_configuration(self, draft_id: str, revision: int) -> dict[str, Any]:
         """Run the same static driver checks as System Settings; not physical inspection."""

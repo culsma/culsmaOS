@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.3 — 2026-11-27
+
+- Install the Opentrons simulator from its public driver release alongside Culsma 1.0.11. The OS also supports a separately installed Hamilton driver.
+- Review highlighted loading positions and confirm a prepared run through MCP. Track cancellation and outstanding device cleanup before releasing the workstation.
+- Preserve the expanded layout editor after saving, and keep loading highlights visible in desktop and narrow browser views.
+- Include the browser acceptance fixtures and Windows build inputs in the source archive. This release provides the OS wheel and source distribution.
+
+## 0.2.1 — Internal Windows validation
+
+- Save and apply the workstation execution mode from System Settings or MCP. The OS selects the implementation and preserves the configured device inventory across mode changes.
+- Route supported Hamilton module commands and receipts through the selected simulation or physical implementation, without automatic fallback.
+- Read and write labware movement state in the same mode-specific store.
+
 ## 0.2.0 — 2026-11-09
 
 - Check proposed experiment loading against the same instrument preparation policies used by execution. App and MCP retain the proposed layout and identify unsupported steps before creating a run.

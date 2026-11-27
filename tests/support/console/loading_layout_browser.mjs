@@ -1,3 +1,4 @@
+import {visiblePanelScreenshot} from './visible_panel.mjs';
 import {createRequire} from 'node:module';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
@@ -45,7 +46,7 @@ try {
   await page.locator('#operation-status').evaluate(node=>{node.style.visibility='hidden';});
   for(const width of [1280,390]) {
     await page.setViewportSize({width,height:960});
-    const actual=await graph.screenshot({path:`${output}/loading-layout-${width}.png`,animations:'disabled'});
+    const actual=await visiblePanelScreenshot(graph, {path:`${output}/loading-layout-${width}.png`,animations:'disabled'}, deck);
     const baseline=`${baselines}/loading-layout-${width}.png`;
     if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1') writeFileSync(baseline,actual);
     else {

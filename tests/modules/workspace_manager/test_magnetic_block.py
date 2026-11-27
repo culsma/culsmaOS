@@ -168,8 +168,8 @@ def test_block_resident_fifo_runs(tmp_path):
         inspection=harness.client.execute({'action':'device-status'})
         assert inspection
         import sqlite3
-        from culsma_os.resource_manager.interactors import StationPathInteractor
-        with sqlite3.connect(StationPathInteractor().database_path(context)) as connection:
+        from tests.support.integration.resident_docking import opentrons_motion_database
+        with sqlite3.connect(opentrons_motion_database(context)) as connection:
             row=connection.execute('SELECT revision,positions FROM os_labware_positions').fetchone()
             assert row[0]==4 and json.loads(row[1])['assay']=='D1'
             assert connection.execute('SELECT COUNT(*) FROM os_motion_registrations').fetchone()[0]==4

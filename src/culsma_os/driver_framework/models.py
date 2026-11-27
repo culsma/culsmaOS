@@ -1,10 +1,10 @@
+from .execution_mode import ExecutionMode
 from dataclasses import dataclass
 from typing import Any, Protocol
 from culsma_os.device_manager.instruments.execution_models import ThermalHoldIntent, OrbitalShakeIntent, CentrifugeIntent, MagneticSeparationIntent, MagneticReleaseIntent
 from culsma_os.program_manager.models import PendingEffect
 from culsma.pipeline.plan_nodes import PlanStep
 from culsma_os.device_manager.instruments.pipetting.models import TransferIntent, TransferGroupIntent
-from culsma_os.device_manager.instruments.models import ResolvedModuleMethod
 from pathlib import Path
 from dataclasses import field
 from typing import ContextManager
@@ -24,12 +24,25 @@ class MaterialExpectation:
 class PlanContext:
     run_id: str
     device_id: str
-    mode: str
+    mode: ExecutionMode
     configuration_revision: str
     layout_revision: str
     calibration_revision: str
     resource_ids: tuple[str, ...]
     expected_material: tuple[MaterialExpectation, ...] = ()
+
+    def __post_init__(self):
+        object.__setattr__(self, 'mode', ExecutionMode(self.mode))
+
+
+class TransferAssessmentPort(Protocol):
+    """Optional read-only capability for checks on a projected physical transfer.
+
+    Each finding identifies the check, step, location and status. An
+    incompatible finding carries the operator-facing diagnostic in message.
+    """
+    def assess_transfer(self, intent: TransferIntent, bindings: tuple[SpaceBinding, ...],
+                        expectations: tuple[MaterialExpectation, ...]) -> list[dict]: ...
 
 
 class MaterialExpectationPort(Protocol):
@@ -42,7 +55,7 @@ class BatchOperation:
     intent: LabwareMoveIntent | TransferIntent | ThermalHoldIntent | OrbitalShakeIntent | CentrifugeIntent | MagneticSeparationIntent | MagneticReleaseIntent
     bindings: tuple[SpaceBinding, ...]
     description: dict = field(default_factory=dict)
-    method: ResolvedModuleMethod | None = None
+    expected_material: tuple[MaterialExpectation, ...] = field(default=(), kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -73,6 +86,11 @@ class DeviceExecutionPort(Protocol):
     def check_ready(self): ...
 
     def close(self): ...
+
+
+class DeviceCancellationPort(Protocol):
+    """Optional recovery capability; returns stopped ownership, not liquid completion."""
+    def cancel_attempt(self, attempt_id: str, mode: ExecutionMode, description: dict) -> dict: ...
 
 
 @dataclass(frozen=True)
@@ -129,11 +147,14 @@ class DeviceFaultMappingPort(Protocol):
 @dataclass(frozen=True)
 class DeviceReceipt:
     outcome: str
-    mode: str
+    mode: ExecutionMode
     step_id: str
     configuration_revision: str
     payload: dict[str, Any]
     consumed_resources: dict[str, int]
+
+    def __post_init__(self):
+        object.__setattr__(self, 'mode', ExecutionMode(self.mode))
 
     @property
     def faults(self) -> tuple[DeviceFault, ...]:

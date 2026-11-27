@@ -103,32 +103,20 @@ class FileModuleProfileRepository:
             return SqliteModuleProfileRepository(connection).save_revision(draft)
 
 
-class FileRunProfileBindingRepository:
-    """Immutable selections captured before run admission; no latest lookup at dispatch."""
+class LegacyRunMethodCheck:
+    """Stop a pending legacy run before dispatch if it used step method selections."""
     def __init__(self, path):
         from pathlib import Path
         self.path = Path(path)
 
-    def save(self, run_id, profiles):
+    def require_unbound(self, run_id):
         from contextlib import closing
         import sqlite3
-        with closing(sqlite3.connect(self.path, timeout=5)) as connection, connection:
-            codec = SqliteModuleProfileRepository(connection)
-            payload = json.dumps({step: codec.encode(profile) for step, profile in profiles.items()}, sort_keys=True)
-            connection.execute('CREATE TABLE IF NOT EXISTS instrument_run_profiles(run_id TEXT PRIMARY KEY,payload TEXT NOT NULL)')
-            row = connection.execute('SELECT payload FROM instrument_run_profiles WHERE run_id=?', (run_id,)).fetchone()
-            if row is not None and row[0] != payload:
-                raise ModuleProfileError('PROFILE_RUN_BINDING_CONFLICT')
-            connection.execute('INSERT OR IGNORE INTO instrument_run_profiles VALUES(?,?)', (run_id, payload))
-
-    def get(self, run_id):
-        from contextlib import closing
-        import sqlite3
-        if not self.path.exists(): return {}
-        with closing(sqlite3.connect(self.path, timeout=5)) as connection:
-            if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='instrument_run_profiles'").fetchone() is None:
-                return {}
-            row = connection.execute('SELECT payload FROM instrument_run_profiles WHERE run_id=?', (run_id,)).fetchone()
-            if row is None: return {}
-            codec = SqliteModuleProfileRepository(connection)
-            return {step: codec.decode(profile) for step, profile in json.loads(row[0]).items()}
+        if not self.path.exists():
+            return
+        with closing(sqlite3.connect(self.path.resolve().as_uri() + '?mode=ro', uri=True, timeout=5)) as connection:
+            table = connection.execute("SELECT 1 FROM sqlite_master WHERE name='instrument_run_profiles' AND type='table'").fetchone()
+            if table:
+                row = connection.execute('SELECT payload FROM instrument_run_profiles WHERE run_id=?', (run_id,)).fetchone()
+                if row and json.loads(row[0]) != {}:
+                    raise ModuleProfileError('PROFILE_RUN_BINDINGS_RETIRED')

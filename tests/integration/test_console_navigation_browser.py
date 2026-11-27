@@ -12,7 +12,7 @@ def test_single_workstation_navigation_preserves_the_loading_gate(tmp_path,monke
     culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     from pathlib import Path
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
+    monkeypatch.setenv('CULSMA_HAMILTON_PRIVATE_LABWARE',str(driver/'reference/LabWare'))
     output=ROOT/'run-artifacts/ui-tests';output.mkdir(parents=True,exist_ok=True)
     with SharedSetupHarness(tmp_path) as shared:
         result=subprocess.run([os.environ.get('CULSMA_OS_NODE','node'),str(ROOT/'tests/support/console/navigation_browser.mjs'),

@@ -183,10 +183,19 @@ def test_benchmark02_handoff_survives_restart_and_executes_each_stage_once(tmp_p
 
 
 def test_external_fixture_provider_and_opt_in_are_simulation_only(tmp_path):
+    from culsma_os.driver_framework.execution_mode import (
+        ExecutionMode, ExecutionSelection, PhysicalExecutionImplementation,
+    )
+
     class PhysicalModeFixture(OpentronsSessionFactory):
-        def build(self, context):
-            port, snapshot, positions, capacities, mapper = super().build(context)
-            return port, replace(snapshot, mode="physical"), positions, capacities, mapper
+        def execution_implementations(self):
+            return (PhysicalExecutionImplementation("Test fixture only", self.build_selected),)
+
+        def build_selected(self, context, selection):
+            # Exercise physical-mode guards using an in-process simulator, never hardware.
+            port, snapshot, positions, capacities, mapper = super().build_selected(
+                context, ExecutionSelection(ExecutionMode.SIMULATION, "opentrons"))
+            return port, replace(snapshot, mode=selection.mode.value), positions, capacities, mapper
 
     context, phase_a, _, _ = SelectivePlatingFixture().prepare(tmp_path)
     factory = OSApplicationFactory()
@@ -203,9 +212,10 @@ def test_external_fixture_provider_and_opt_in_are_simulation_only(tmp_path):
     finally:
         ordinary.close()
     physical_factory = OSApplicationFactory({"opentrons-simulator": PhysicalModeFixture()})
+    physical_context = replace(context, execution_selection=ExecutionSelection(ExecutionMode.PHYSICAL))
     with pytest.raises(ValueError, match="EXTERNAL_SIMULATION_REQUIRED"):
-        physical_factory.build(context, external_simulation=True)
-    physical = physical_factory.build(context)
+        physical_factory.build(physical_context, external_simulation=True)
+    physical = physical_factory.build(physical_context)
     try:
         physical.client.start()
         with pytest.raises(ValueError, match="RUN_SIMULATION_MODE_REQUIRED"):

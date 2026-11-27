@@ -30,8 +30,9 @@ def test_http_and_mcp_protect_physical_confirmation_with_the_same_auth_owner(ser
     body.update(action='confirm',acknowledged=True)
     assert http.request('POST','/api/v1/setup/confirmation',headers,body)[0]==200
     headers['Authorization']='Bearer '+tokens.issue_automation_session()
-    assert http.request('POST','/api/v1/setup/confirmation',headers,body)[0]==403
-    assert len(resident.calls)==2
+    assert http.request('POST','/api/v1/setup/confirmation',headers,body)[0]==200
+    assert resident.calls[-1]['setup_origin']=='local-mcp-process'
+    assert len(resident.calls)==3
 
 
 @pytest.mark.parametrize('extra',[{'origin':'human'},{'caller':'admin'},{'capabilities':['setup:confirm']},{'token':'secret'}])

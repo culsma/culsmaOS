@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:culsma_console/features/layout/repository/layout_archive_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +27,8 @@ void main() {
       await tester.pumpWidget(
         CulsmaConsole(controller: controller, initialView: 'settings'),
       );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Saved setups'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const ValueKey('position-1')));
       await tester.tap(find.byKey(const ValueKey('position-1')));
@@ -52,6 +57,7 @@ void main() {
       await tester.tap(find.byKey(const Key('save-layout')));
       await waitIdle(tester, controller);
       expect(controller.dirty, isFalse);
+      await saveWindowFrame(tester, 'saved-layout');
       expect(controller.draft!['revision'], 2);
       await tester.ensureVisible(find.byKey(const Key('check-layout')));
       await tester.tap(find.byKey(const Key('check-layout')));
@@ -79,7 +85,7 @@ void main() {
       });
       expect(inspected['valid'], isTrue);
       final submitted = await api.command('/api/v1/programs', {
-        'action': 'submit',
+        'action': 'start',
         'program_id': 'transfer.culs',
         'snapshot_id': inspected['snapshot_id'],
         'request_id': 'native-e2e-transfer',
@@ -142,7 +148,9 @@ void main() {
         CulsmaConsole(controller: controller, initialView: 'settings'),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Open station setup'));
+      await tester.tap(find.text('Saved setups'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('open-station-setup')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('New: Hamilton · offline layout planning'));
       await waitIdle(tester, controller);
@@ -244,12 +252,13 @@ void main() {
       expect(
         controller.profile!['layout_export_supported'],
         isTrue,
-        reason: 'Set CULSMA_HAMILTON_LABWARE_ROOT for native export E2E',
+        reason: 'Set CULSMA_HAMILTON_PRIVATE_LABWARE for native export E2E',
       );
       await tester.ensureVisible(find.byKey(const Key('export-native-layout')));
       await tester.tap(find.byKey(const Key('export-native-layout')));
       await waitIdle(tester, controller);
       expect(controller.exportedLayout, isNotNull, reason: controller.message);
+      await saveWindowFrame(tester, 'hamilton-layout');
       final archive = File(controller.exportedLayout!);
       final bytes = await archive.readAsBytes();
       expect(bytes.take(2).toList(), [80, 75]);
@@ -259,6 +268,8 @@ void main() {
         ))['active']['fingerprint'],
         before['active']['fingerprint'],
       );
+      await tester.ensureVisible(find.byKey(const ValueKey('carrier-plates')));
+      await saveWindowFrame(tester, 'hamilton-deck');
       await archive.parent.delete(recursive: true);
       controller.dispose();
     },
@@ -273,4 +284,23 @@ Future<void> waitIdle(WidgetTester tester, LayoutController controller) async {
   }
   await tester.pumpAndSettle();
   expect(controller.busy, isFalse);
+}
+
+Future<void> saveWindowFrame(WidgetTester tester, String name) async {
+  if (!const bool.fromEnvironment('E2E_SCREENSHOTS')) return;
+  await tester.pumpAndSettle();
+  final view = tester.binding.renderViews.single;
+  final image = await (view.debugLayer! as OffsetLayer).toImage(
+    Offset.zero & view.flutterView.physicalSize,
+  );
+  try {
+    final png = await image.toByteData(format: ui.ImageByteFormat.png);
+    final directory = await Directory.systemTemp.createTemp('culsma-ui-frame-');
+    final file = File('${directory.path}/$name.png');
+    await file.writeAsBytes(png!.buffer.asUint8List());
+    // The macOS app sandbox can write its own temporary directory.
+    print('CULSMA_UI_FRAME ${jsonEncode(file.path)}');
+  } finally {
+    image.dispose();
+  }
 }

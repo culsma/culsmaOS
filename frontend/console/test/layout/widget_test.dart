@@ -13,7 +13,7 @@ void main() {
         CulsmaConsole(controller: c, initialView: 'settings'),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Advanced layout editor'));
+      await tester.tap(find.text('Saved setups'));
       await tester.pumpAndSettle();
       final semantics = tester.ensureSemantics();
       await tester.ensureVisible(find.byKey(const ValueKey('position-1')));
@@ -41,7 +41,7 @@ void main() {
       CulsmaConsole(controller: c, initialView: 'settings'),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Advanced layout editor'));
+    await tester.tap(find.text('Saved setups'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('position-3')));
     await tester.tap(find.byKey(const ValueKey('position-3')));
@@ -67,7 +67,7 @@ void main() {
         CulsmaConsole(controller: c, initialView: 'settings'),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Advanced layout editor'));
+      await tester.tap(find.text('Saved setups'));
       await tester.pumpAndSettle();
       c.move(c.definition!.items(c.proposal!).first, '3');
       await tester.pumpAndSettle();
@@ -97,7 +97,7 @@ void main() {
         CulsmaConsole(controller: c, initialView: 'settings'),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Advanced layout editor'));
+      await tester.tap(find.text('Saved setups'));
       await tester.pumpAndSettle();
       expect(
         tester
@@ -153,7 +153,7 @@ void main() {
         CulsmaConsole(controller: c, initialView: 'settings'),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Advanced layout editor'));
+      await tester.tap(find.text('Saved setups'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const ValueKey('position-3')));
       await tester.tap(find.byKey(const ValueKey('position-3')));

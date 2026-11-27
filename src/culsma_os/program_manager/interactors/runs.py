@@ -8,15 +8,12 @@ class TaskInteractor:
     def __init__(self, repository: TaskRepository, preparation, state):
         self.repository, self.preparation, self.state = repository, preparation, state
         self.setup = None
-        self.profile_bindings = None
 
-    def submit(self, request: RunRequest, queue_submission=None) -> str:
+    def submit(self, request: RunRequest, queue_submission=None, *, setup_required=False) -> str:
         run_id = str(uuid4())
         checkpoint = self.prepare_checkpoint(request, run_id)
-        if request.profile_bindings is not None:
-            if self.profile_bindings is None: raise ValueError('INSTRUMENT_PROFILES_UNSUPPORTED')
-            self.profile_bindings.bind_run(run_id, request.profile_bindings)
-        return self.admit_checkpoint(run_id, checkpoint, queue_submission, request.setup_preferences)
+        return self.admit_checkpoint(run_id, checkpoint, queue_submission, request.setup_preferences,
+                                     setup_required=setup_required)
 
     def prepare_checkpoint(self, request, run_id):
         return self.preparation.prepare(request, run_id)
@@ -24,11 +21,12 @@ class TaskInteractor:
     def submit_simulation_continuation(self, run_id, checkpoint, station):
         return self.admit_checkpoint(run_id, checkpoint, simulation_station=station)
 
-    def admit_checkpoint(self, run_id, checkpoint, queue_submission=None, setup_preferences=None, *, simulation_station=None):
-        required = self.setup is not None and self.setup.enabled()
+    def admit_checkpoint(self, run_id, checkpoint, queue_submission=None, setup_preferences=None, *, simulation_station=None, setup_required=False):
+        available = self.setup is not None and self.setup.enabled()
+        required = setup_required or available
         self.state.create_run(run_id, checkpoint, queue_submission, setup_required=required,
             simulation_station=simulation_station)
-        if required:
+        if available:
             try:
                 self.setup.plan(run_id, setup_preferences)
             except ValueError as error:

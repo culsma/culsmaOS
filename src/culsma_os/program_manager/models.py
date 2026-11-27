@@ -1,3 +1,4 @@
+from culsma_os.driver_framework.execution_mode import ExecutionSelection
 from dataclasses import dataclass
 from typing import Protocol
 from culsma.pipeline.plan_nodes import PlanProgram
@@ -16,8 +17,7 @@ class RunRequest:
     plan: PlanProgram
     state: RuntimeState
     setup_preferences: dict | None = None
-    profile_bindings: dict | None = None
-    workflow_simulation: dict | None = None
+    workflow_simulation: dict | None = field(default=None, kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -149,8 +149,8 @@ class EffectResolution:
             )
         ):
             raise ValueError("HOST_RESOLUTION_UNREGISTERED")
-        if self.mode != "simulation":
-            raise ValueError("HOST_PHYSICAL_RESOLUTION_UNSUPPORTED")
+        if self.mode not in ("simulation", "physical"):
+            raise ValueError("HOST_RESOLUTION_MODE_UNSUPPORTED")
 
 
 @dataclass(frozen=True)
@@ -163,6 +163,7 @@ class HostBuildContext:
     station_root: Path | None = None
     device_state_dir: Path | None = None
     workspace_config_path: Path | None = None
+    execution_selection: "ExecutionSelection | None" = None
 
 
 class RunHostPort(Protocol):
@@ -322,9 +323,10 @@ class ResidentCommand:
     supply_origin: str | None = None
     developer_scenario: str | None = None
     profile_request: dict | None = None
-    profile_bindings: dict | None = None
-    workflow_enabled: bool | None = None
-    workflow_revision: int | None = None
+    workflow_enabled: bool | None = field(default=None, kw_only=True)
+    workflow_revision: int | None = field(default=None, kw_only=True)
+    floor_plan_request: dict | None = field(default=None, kw_only=True)
+    station_service_request: dict | None = field(default=None, kw_only=True)
 
 class ResidentAdmissionError(ValueError):
     def __init__(self, code, diagnostics=()):
@@ -370,8 +372,7 @@ class ConsoleProgramRequest:
 
     configuration_fingerprint: str | None = None
     source_scope: str = "programs"
-    profile_bindings: dict | None = None
-    workflow_revision: int | None = None
+    workflow_revision: int | None = field(default=None, kw_only=True)
 
 class ConsoleProgramError(ValueError):
     def __init__(self, code, kind='invalid_request', diagnostics=()):

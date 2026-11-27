@@ -7,6 +7,7 @@ import json
 import re
 from pathlib import Path
 import tarfile
+import tomllib
 import zipfile
 
 
@@ -17,6 +18,11 @@ class DistributionAudit:
                        'tests/acceptance/manifests/resident.json',
                        'tests/architecture/module-map.json', 'tests/conftest.py',
                        'tests/support/paths.py', 'tools/build_preview_dependencies.py',
+                       'tests/support/console/visible_panel.mjs', 'tests/modules/console/goldens/loading-layout-1280.png',
+                       'tools/windows/build.ps1', 'tools/windows/install.ps1',
+                       'frontend/console/windows/runner/main.cpp', 'frontend/console/windows/runner/resources/app_icon.ico',
+                       'frontend/console/windows/flutter/generated_plugin_registrant.cc',
+                       'frontend/console/windows/flutter/generated_plugins.cmake',
                        'examples/transfer/transfer.culs', 'examples/transfer/deck.json',
                        'tests/fixtures/driver_framework/opentrons/transfer.culs')
 
@@ -35,9 +41,11 @@ class DistributionAudit:
             if dict(entries['console_scripts']) != {'culsma-os': 'culsma_os.cli:CulsmaOSCLI.main'}:
                 raise ValueError('DISTRIBUTION_CONSOLE_OWNERSHIP_INVALID')
             if (not entries.has_section('culsma.program_executors')
-                    or entries.get('culsma.program_executors', 'opentrons-simulator', fallback=None)
-                    != 'culsma_os.bootstrap:LanguageProgramExecutorFactory'):
+                    or entries.get('culsma.program_executors', 'os-opentrons-simulator', fallback=None)
+                    != 'culsma_os.bootstrap:OpentronsProgramExecutorFactory'):
                 raise ValueError('DISTRIBUTION_HANDOFF_MISSING')
+            if entries.has_option('culsma.program_executors', 'opentrons-simulator'):
+                raise ValueError('DISTRIBUTION_EXECUTOR_OWNERSHIP_INVALID')
             code = {n: archive.read(n) for n in archive.namelist() if n.startswith('culsma_os/')}
             console_assets = ('web/index.html', 'web/app.js', 'web/programs.js', 'web/interaction.js', 'web/setup.js', 'web/setup-layout.js', 'web/setup-deck.js', 'web/layout-import.js', 'web/style.css',
                               'web/assets/culsma-logo.png', 'web/assets/culsma-os-wordmark.png')
@@ -67,16 +75,27 @@ class DistributionAudit:
                 member = archive.extractfile(prefix + 'src/' + path)
                 if member is None or member.read() != payload:
                     raise ValueError('DISTRIBUTION_CODE_MISMATCH')
-            contract = json.load(archive.extractfile(prefix + 'tools/distribution/manifest.json'))
+            project = tomllib.loads(archive.extractfile(prefix + 'pyproject.toml').read().decode())['project']
         dependencies = metadata.get_all('Requires-Dist') or []
-        core = contract['sources']['core']
-        required = core['distribution'] + '==' + core['artifact_version']
-        if required not in [value.replace(' ', '') for value in dependencies]:
+        # Wheel metadata must match the current source package, not the historical preview pin.
+        required = project['dependencies']
+        base_dependencies = [value for value in dependencies if ';' not in value or 'extra' not in value.split(';', 1)[1]]
+        if sorted(map(self.normalize_dependency, required)) != sorted(map(self.normalize_dependency, base_dependencies)):
             raise ValueError('DISTRIBUTION_DEPENDENCY_CONTRACT_INVALID')
         return {'status': 'passed', 'runtime_imported': False,
                 'scope': 'Archive structure only; does not claim runtime compatibility',
                 'runtime_files_identical': len(code), 'requires_dist': dependencies,
                 'artifacts': [{'name': p.name, 'sha256': sha256(p.read_bytes()).hexdigest()} for p in (wheel, source)]}
+
+    @staticmethod
+    def normalize_dependency(value):
+        """Ignore whitespace and specifier ordering emitted by wheel builders."""
+        compact = value.replace(' ', '')
+        match = re.fullmatch(r'([A-Za-z0-9_.-]+)(.*)', compact)
+        if match is None:
+            raise ValueError('DISTRIBUTION_DEPENDENCY_CONTRACT_INVALID')
+        name, constraints = match.groups()
+        return re.sub(r'[-_.]+', '-', name).lower() + ','.join(sorted(constraints.split(',')))
 
     @classmethod
     def main(cls):

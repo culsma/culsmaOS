@@ -69,7 +69,7 @@ class TestEvidenceContracts:
         assert journal.known_consumption('device') == {}
 
     @pytest.mark.parametrize('changes', [
-        {'mode': 'physical'},
+        {'mode': 'invalid'},
         {'payload': {'device_action': True, 'completion_kind': 'logical'}},
         {'payload': {'device_action': False, 'completion_kind': 'device'}},
     ])

@@ -8,12 +8,12 @@ from mcp import Client, StdioServerParameters
 
 
 class LoadingMCPClient:
-    async def execute(self,socket,run_id):
+    async def execute(self,socket,run_id,confirm=False):
         server=StdioServerParameters(command=sys.executable,args=['-m','culsma_os.cli','mcp','--socket',socket],env=dict(os.environ))
         async with Client(server,read_timeout_seconds=10) as client:
             tools=await client.list_tools()
             names=[tool.name for tool in tools.tools]
-            assert 'loading_plan' in names and not any('confirm' in name for name in names)
+            assert {'loading_plan', 'prepare_program', 'confirm_loading'} <= set(names)
             for name,arguments in [('station_status',{}),('list_runs',{}),('run_status',{'run_id':run_id})]:
                 observation=await client.call_tool(name,arguments)
                 assert not observation.is_error and isinstance(observation.structured_content,dict),observation
@@ -41,8 +41,28 @@ class LoadingMCPClient:
             assert stale_receipt['status']=='failed' and stale_receipt['error']=='SETUP_PLAN_STALE',stale_receipt
             forbidden=await client.call_tool('confirm_loading',{'run_id':run_id,'acknowledged':True})
             assert forbidden.is_error
+            if confirm:
+                refused=await client.call_tool('confirm_loading',{'run_id':run_id,'fingerprint':after['fingerprint'],
+                    'request_id':'mcp-not-confirmed','acknowledged':False})
+                assert refused.is_error
+                for action in ('begin', 'confirm'):
+                    name = 'begin_loading' if action == 'begin' else 'confirm_loading'
+                    arguments = {'run_id':run_id,'fingerprint':after['fingerprint'],'request_id':'mcp-'+action}
+                    if action == 'confirm': arguments['acknowledged'] = True
+                    sent=await client.call_tool(name,arguments)
+                    assert not sent.is_error, sent
+                    for _ in range(100):
+                        receipt=(await client.call_tool('loading_request_status',{'run_id':run_id,'request_id':'mcp-'+action})).structured_content
+                        if receipt['status']!='pending': break
+                        await asyncio.sleep(.02)
+                    assert receipt['status']=='completed',receipt
+                    repeated=await client.call_tool(name,arguments)
+                    assert not repeated.is_error and repeated.structured_content['status']=='completed',repeated
+                final=(await client.call_tool('loading_plan',{'run_id':run_id})).structured_content
+                assert final['confirmation']['physical_observation'] is False
+                assert any(e['origin']=='local-mcp-process' and e['action']=='confirm' for e in final['activity'])
             print(json.dumps({'before':before['fingerprint'],'after':after['fingerprint'],'tools':names}))
 
 
 if __name__=='__main__':
-    asyncio.run(LoadingMCPClient().execute(sys.argv[1],sys.argv[2]))
+    asyncio.run(LoadingMCPClient().execute(sys.argv[1],sys.argv[2],confirm='--confirm' in sys.argv[3:]))

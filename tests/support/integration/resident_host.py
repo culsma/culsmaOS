@@ -6,6 +6,7 @@ from pathlib import Path
 import ast
 import json
 import os
+import tempfile
 import socket
 import sqlite3
 import subprocess
@@ -65,7 +66,7 @@ class ResidentHarness(ResidentWaitBudget):
     def __init__(self, tmp_path, sessions=None, database=None, config=None):
         self.sessions = sessions or FakeSessionFactory()
         self.context = HostBuildContext(database or tmp_path/'os.sqlite3', 'fake', config, tmp_path/'artifacts')
-        self.endpoint = Path('/private/tmp')/('culsma-' + uuid4().hex[:16] + '.sock')
+        self.endpoint = Path(tempfile.gettempdir() if os.name == 'nt' else '/tmp')/('culsma-' + uuid4().hex[:16] + '.sock')
         self.settings = ResidentHostSettings(self.context, self.endpoint, 0.01)
         self.errors = []
         self.host = None
@@ -81,8 +82,20 @@ class ResidentHarness(ResidentWaitBudget):
 
     def start(self, expect='ready'):
         self.thread.start()
-        self.wait(lambda: self.client.execute({'action':'host-status'})['status'] == expect)
+        try:
+            self.wait(lambda: self.has_startup_status(expect))
+        except BaseException:
+            if self.host is not None:
+                self.host.request_stop()
+            self.thread.join(12)
+            raise
         return self
+
+    def has_startup_status(self, expected):
+        report = self.client.execute({'action':'host-status'})
+        if report['status'] == 'failed' and expected != 'failed':
+            raise AssertionError(f"Resident startup failed: {report['worker_error']}")
+        return report['status'] == expected
 
     def wait(self, predicate, timeout=10):
         deadline = time.monotonic() + self.wait_budget(timeout)

@@ -10,19 +10,19 @@ from culsma.runtime.state import init_state
 from culsma_os.bootstrap import OSApplicationFactory
 from culsma_os.program_manager.models import RunRequest
 from culsma_os.resource_manager.interactors import StationPathInteractor
-from tests.support.integration.resident_docking import ResidentDockingHarness, ObservedMotionFactory
+from tests.support.integration.resident_docking import opentrons_motion_database
 from tests.support.workspace_manager.labware_motion import MotionFixture
 
 
 class StationFixture:
     def query(self, context):
-        return OSApplicationFactory({}).build_device_inspector(context).execute()
+        return OSApplicationFactory().build_device_inspector(context).execute()
 
     def second(self, directory, context):
         return replace(context, database_path=directory/'second.sqlite3', artifacts_dir=directory/'second-artifacts')
 
     def emulate_legacy_store(self, context):
-        station=StationPathInteractor().database_path(context)
+        station=opentrons_motion_database(context)
         shared=StationPathInteractor().device_state_directory(context)/'motion-state.json'
         legacy=context.artifacts_dir/'motion-state.json'
         legacy.parent.mkdir(parents=True,exist_ok=True)

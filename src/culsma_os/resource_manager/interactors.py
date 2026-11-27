@@ -28,12 +28,18 @@ class ResourceInteractor:
     def settle(self, attempt_id, evidence):
         if (
             evidence.outcome in {"completed", "rejected"}
-            and evidence.mode == "simulation"
+            and evidence.mode in ("simulation", "physical")
         ):
             self.repository.release(attempt_id)
 
     def abandon_preparation(self, permit):
         self.repository.abandon_reserved(permit.attempt_id)
+
+    def settle_stop(self, attempt, stop):
+        if (stop.get('attempt_id'), stop.get('run_id'), stop.get('mode'), stop.get('state')) != (
+                attempt.attempt_id, attempt.run_id, attempt.mode, 'stopped'):
+            raise ValueError('RESOURCE_STOP_MISMATCH')
+        self.repository.release(attempt.attempt_id)
 
     def occupied(self):
         return self.repository.occupied()
@@ -54,10 +60,18 @@ class ConsumableInteractor:
         self.loads = loads
         self.simulation_run_id = None
 
+    def session_configuration(self, device_id):
+        # During startup the last admitted run may still describe a different tip rack.
+        snapshot = getattr(self.device, 'configured_snapshot', None)
+        if snapshot is not None and snapshot.device_id == device_id:
+            return snapshot
+        return self.device.get(device_id)
+
     def require(self, device_id, requirements):
         capacities = self.capacities(device_id)
         consumed = self.current_consumption(device_id)
-        if self.loads and any(r['status']=='applying' for r in self.loads.records()):
+        if (getattr(self.session_configuration(device_id), 'mode', 'simulation') == 'simulation'
+                and self.loads and any(r['status']=='applying' for r in self.loads.records())):
             raise ValueError('SUPPLY_REPLACEMENT_UNRESOLVED')
         if not isinstance(requirements, dict):
             raise ValueError("OS_RESOURCE_REQUIREMENTS_INVALID")
@@ -71,7 +85,10 @@ class ConsumableInteractor:
                 raise ValueError("OS_CONSUMABLES_INSUFFICIENT")
 
     def active_loads(self, device_id):
-        if getattr(getattr(self.device, 'readiness', None), 'simulation_scope', 'station') == 'run':
+        # The replacement API records simulated loads only; these cannot change
+        # physical stock when the same workstation is used in hardware mode.
+        if (getattr(self.session_configuration(device_id), 'mode', 'simulation') != 'simulation'
+                or getattr(getattr(self.device, 'readiness', None), 'simulation_scope', 'station') == 'run'):
             return {}
         values={}
         for row in self.loads.records(device_id) if self.loads else ():
@@ -79,7 +96,7 @@ class ConsumableInteractor:
         return values
 
     def capacities(self, device_id):
-        values=dict(self.device.get(device_id).consumable_capacities)
+        values=dict(self.session_configuration(device_id).consumable_capacities)
         for key,row in self.active_loads(device_id).items():
             if key in values:values[key]=len(row['positions'])
         return values
@@ -87,17 +104,20 @@ class ConsumableInteractor:
     def current_consumption(self,device_id):
         if getattr(getattr(self.device, 'readiness', None), 'simulation_scope', 'station') == 'run':
             if self.simulation_run_id is None:
-                return {key:0 for key in self.device.get(device_id).consumable_capacities}
+                return {key:0 for key in self.session_configuration(device_id).consumable_capacities}
             return self.evidence.known_run_consumption(device_id, self.simulation_run_id)
-        totals=self.evidence.known_consumption(device_id);loads=self.active_loads(device_id)
+        totals = (self.evidence.known_consumption(device_id, mode="physical")
+            if getattr(self.session_configuration(device_id), "mode", "simulation") == "physical"
+            else self.evidence.known_consumption(device_id))
+        loads=self.active_loads(device_id)
         current={key:totals.get(key,0)-(loads[key]['baseline'] if key in loads else 0)
-            for key in self.device.get(device_id).consumable_capacities}
+            for key in self.session_configuration(device_id).consumable_capacities}
         if any(v<0 for v in current.values()):raise ValueError('SUPPLY_ACCOUNTING_STALE')
         return current
 
     def restore(self,port,device_id):
         loads=self.active_loads(device_id)
-        active={key:value for key,value in loads.items() if key in self.device.get(device_id).consumable_capacities}
+        active={key:value for key,value in loads.items() if key in self.session_configuration(device_id).consumable_capacities}
         if active:
             restore=getattr(port,'restore_supply_loads',None)
             if restore is None:raise ValueError('SUPPLY_RESTORE_UNSUPPORTED')
@@ -110,15 +130,15 @@ class StationUsageInteractor:
         self.repository = repository
 
     def record(self, evidence, device_id):
-        if evidence.mode != "simulation":
+        if evidence.mode not in ("simulation", "physical"):
             raise ValueError("STATION_USAGE_MODE_UNSUPPORTED")
         if any(not isinstance(k, str) or type(v) is not int or v < 0 for k, v in evidence.consumed_resources.items()):
             raise ValueError("STATION_USAGE_INVALID")
         if evidence.consumed_resources:
-            self.repository.record_usage(evidence.evidence_id, device_id, evidence.consumed_resources)
+            self.repository.record_usage(evidence.evidence_id, device_id, evidence.consumed_resources, mode=evidence.mode)
 
-    def known(self, device_id, excluded_evidence_ids=()):
-        return self.repository.usage(device_id, excluded_evidence_ids)
+    def known(self, device_id, excluded_evidence_ids=(), mode="simulation"):
+        return self.repository.usage(device_id, excluded_evidence_ids, mode=mode)
 
 
 class RunReservationInteractor:
@@ -180,7 +200,7 @@ class RunReservationInteractor:
             stored = self.repository.release_proof(run_id)
             current = self.safety.release_proof(run_id)
             if (stored is None or current is None or stored.get("run_id") != run_id
-                    or stored.get("mode") != "simulation" or type(stored.get("revision")) is not int
+                    or stored.get("mode") != current["mode"] or type(stored.get("revision")) is not int
                     or stored.get("evidence_ids") != current["evidence_ids"]
                     or stored.get("reason") != current["reason"]
                     or stored.get("body_outcome", current["body_outcome"]) != current["body_outcome"]):
@@ -238,11 +258,18 @@ class ResourceInspectionInteractor:
 
     def consumables(self, device, evidence, resources, unresolved):
         totals = dict(evidence.known_consumption)
+        reserved = dict(evidence.reserved_consumption)
+        for name, amount in reserved.items():
+            totals[name] = totals.get(name, 0) + amount
         local_ids = set(evidence.evidence_ids)
         for record in resources['station_usage']:
-            if record['device_id'] == device.device_id and record['evidence_id'] not in local_ids:
+            if (record['device_id'] == device.device_id and record.get('mode', 'simulation') == device.mode
+                    and record['evidence_id'] not in local_ids):
                 for name, amount in record['consumption'].items():
                     totals[name] = totals.get(name, 0) + amount
+                    # Stop observations use their own stable ledger identity.
+                    if record['evidence_id'].endswith(':stop'):
+                        reserved[name] = reserved.get(name, 0) + amount
         # Parent ownership can span a different run store: do not infer idleness from local attempts alone.
         occupied = bool(resources['permits'] or resources['locks'] or resources['station_reservations']
                         or resources['station_locks'])
@@ -251,7 +278,7 @@ class ResourceInspectionInteractor:
                          or resources['station_accounting'] != 'recorded')
         loads={}
         for row in resources.get('supply_loads',[]):
-            if row['device_id']==device.device_id and row['status']=='applied':loads[row['resource_id']]=row
+            if device.mode == 'simulation' and row['device_id']==device.device_id and row['status']=='applied':loads[row['resource_id']]=row
         result={}
         for name,capacity in device.consumable_capacities.items():
             load=loads.get(name);baseline=load['baseline'] if load else 0
@@ -259,13 +286,15 @@ class ResourceInspectionInteractor:
             active=totals.get(name,0)-baseline
             unknown=uncertain or active<0
             if device.mode == 'simulation' and device.simulation_scope != 'station':
-                result[name] = {'configured_capacity': capacity, 'known_consumed': totals.get(name, 0),
+                result[name] = {'configured_capacity': capacity, 'known_consumed': totals.get(name, 0) - reserved.get(name, 0),
+                    'unconfirmed_reserved': reserved.get(name, 0), 'accounted_consumption': totals.get(name, 0),
                     'scope': device.simulation_scope, 'status': 'history_only',
                     'loaded_capacity': None, 'current_load_id': None, 'current_load_consumed': None,
                     'remaining_upper_bound': None, 'available_from_records': None,
                     'guidance': 'Historical consumption across experiments. Read the experiment loading plan for this run; this total is not current stock.'}
                 continue
-            result[name]={'configured_capacity':capacity,'loaded_capacity':loaded,'known_consumed':totals.get(name,0),
+            result[name]={'configured_capacity':capacity,'loaded_capacity':loaded,'known_consumed':totals.get(name,0)-reserved.get(name,0),
+                'unconfirmed_reserved':reserved.get(name,0),'accounted_consumption':totals.get(name,0),
                 'current_load_id':load['request_id'] if load else 'initial','current_load_consumed':active,
                 'remaining_upper_bound':max(0,loaded-active),
                 'available_from_records':None if unknown else max(0,loaded-active),'status':'unknown' if unknown else 'recorded'}
@@ -303,7 +332,7 @@ class SupplyReplacementInteractor:
         counts=row['consumables'].get(resource) if row else None
         if counts is None or counts.get('status')!='recorded' or type(counts.get('known_consumed')) is not int:
             raise ValueError('SUPPLY_ACCOUNTING_UNAVAILABLE')
-        consumed=counts['known_consumed']
+        consumed=counts.get('accounted_consumption', counts['known_consumed'])
         previous=view['current_load']['baseline'] if view['current_load'] else 0
         if consumed-previous!=len(view['stock']['used']):
             raise ValueError('SUPPLY_ACCOUNTING_MISMATCH')

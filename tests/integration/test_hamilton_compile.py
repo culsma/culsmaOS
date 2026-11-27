@@ -25,8 +25,8 @@ class TestHamiltonCompile:
                 and not evidence.physical_execution_supported
             )
             hsl = evidence.result.artifacts[0].content.decode("ascii")
-            assert hsl.count("CulsmaOEM::Channel_Aspirate_002(") == 2
-            assert hsl.count("CulsmaOEM::Channel_Dispense_002(") == 2
+            assert hsl.count("CulsmaPipetting::Channel_Aspirate_002(") == 2
+            assert hsl.count("CulsmaPipetting::Channel_Dispense_002(") == 2
         finally:
             sys.path.pop(0)
 

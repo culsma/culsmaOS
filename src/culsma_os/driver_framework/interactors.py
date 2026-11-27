@@ -28,7 +28,7 @@ class DriverGatewayInteractor:
         self.receipt_mapper = receipt_mapper
         self.reservations = reservations
         self.feedback = FeedbackContractInteractor(device)
-        self.profile_bindings = None
+        self.legacy_method_selections = None
 
     def prepare_vendor(self, operation, operation_id, *arguments):
         try:
@@ -41,11 +41,16 @@ class DriverGatewayInteractor:
 
     def prepare(self, effect_id, intent, context, bindings, completion_unit="operation"):
         self.device.validate_ready(context)
-        if self.profile_bindings is not None: self.profile_bindings.require_unprofiled(context.run_id)
+        if self.legacy_method_selections is not None:
+            self.legacy_method_selections.require_unbound(context.run_id)
         self.feedback.require_unit(context, completion_unit)
         self.require_selection(intent, context)
         self.validate_material(context, bindings)
-        vendor_plan = self.prepare_vendor(self.port.prepare, intent.step_id, intent, bindings)
+        with_material = getattr(self.port, "prepare_with_material", None)
+        if callable(with_material):
+            vendor_plan = self.prepare_vendor(with_material, intent.step_id, intent, bindings, context.expected_material)
+        else:
+            vendor_plan = self.prepare_vendor(self.port.prepare, intent.step_id, intent, bindings)
         return PreparedDevicePlan(
             effect_id, intent, context, vendor_plan,
             self.feedback.freeze(self.port.describe(vendor_plan), context, completion_unit, (intent.step_id,))
@@ -53,7 +58,8 @@ class DriverGatewayInteractor:
 
     def prepare_processing(self, effect_id, intent, context, bindings):
         self.device.validate_ready(context)
-        if self.profile_bindings is not None: self.profile_bindings.require_unprofiled(context.run_id)
+        if self.legacy_method_selections is not None:
+            self.legacy_method_selections.require_unbound(context.run_id)
         self.feedback.require_unit(context, "operation")
         vendor_plan = self.prepare_vendor(self.port.prepare_processing, intent.step_id, intent, bindings)
         return PreparedDevicePlan(effect_id, intent, context, vendor_plan,
@@ -62,7 +68,8 @@ class DriverGatewayInteractor:
     def prepare_motion(self, effect_id, intent, context):
         self.device.get(context.device_id).require_motion()
         self.device.validate_ready(context)
-        if self.profile_bindings is not None: self.profile_bindings.require_unprofiled(context.run_id)
+        if self.legacy_method_selections is not None:
+            self.legacy_method_selections.require_unbound(context.run_id)
         self.feedback.require_unit(context, "operation")
         motion = cast(MotionDevicePort, self.port)
         vendor_plan = self.prepare_vendor(motion.prepare_labware_move, intent.step_id, intent)
@@ -91,7 +98,9 @@ class DriverGatewayInteractor:
         for op in intent.operations:
             if hasattr(op.intent, 'aliquots'):
                 self.require_selection(op.intent, context)
-        operations = self.profile_bindings.prepare_batch(context, intent.operations) if self.profile_bindings is not None else intent.operations
+        if self.legacy_method_selections is not None:
+            self.legacy_method_selections.require_unbound(context.run_id)
+        operations = intent.operations
         vendor = self.prepare_vendor(port.prepare_batch, intent.step_id, intent.step_id, operations)
         description = port.describe_batch(vendor)
         if description.get('member_step_ids') != list(identities):
@@ -132,11 +141,16 @@ class DriverGatewayInteractor:
         from culsma_os.device_manager.instruments.pipetting.models import TransferGroupIntent
         self.device.validate_ready(context)
         self.validate_material(context, bindings)
-        if self.profile_bindings is not None: self.profile_bindings.require_unprofiled(context.run_id)
+        if self.legacy_method_selections is not None:
+            self.legacy_method_selections.require_unbound(context.run_id)
         self.feedback.require_unit(context, "batch")
         for intent in intents:
             self.require_selection(intent, context)
-        vendor_plan = self.prepare_vendor(self.port.prepare_group, step_id, step_id, intents, bindings)
+        with_material = getattr(self.port, "prepare_group_with_material", None)
+        if callable(with_material):
+            vendor_plan = self.prepare_vendor(with_material, step_id, step_id, intents, bindings, context.expected_material)
+        else:
+            vendor_plan = self.prepare_vendor(self.port.prepare_group, step_id, step_id, intents, bindings)
         description = self.port.describe_group(vendor_plan)
         if (description.get("member_step_ids") != [i.step_id for i in intents]
                 or len(description.get("member_descriptions", [])) != len(intents)):
@@ -225,6 +239,18 @@ class DriverGatewayInteractor:
 
     def close(self):
         self.port.close()
+
+    def cancel_attempt(self, attempt):
+        from contextlib import nullcontext
+        with self.reservations.run_guard(attempt.run_id) if self.reservations else nullcontext():
+            self.device.require_session_configuration()
+            current = self.device.get(attempt.context['device_id'])
+            if (current.mode, current.configuration_revision) != (attempt.mode, attempt.context['configuration_revision']):
+                raise ValueError('DEVICE_CONFIGURATION_STALE')
+            cancel = getattr(self.port, 'cancel_attempt', None)
+            if not callable(cancel):
+                raise ValueError('DEVICE_CANCELLATION_UNSUPPORTED')
+            return cancel(attempt.attempt_id, attempt.mode, attempt.context['description'])
 
 
 class HamiltonCompilationInteractor:

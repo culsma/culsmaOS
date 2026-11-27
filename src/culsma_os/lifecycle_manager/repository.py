@@ -1,4 +1,5 @@
 """Process ownership and durable host binding, with no device knowledge."""
+from culsma_os.platform_support import ProcessFileLock, HostFileIO
 from pathlib import Path
 from typing import Protocol
 
@@ -26,10 +27,6 @@ class LocalHostLeaseRepository:
         self.handles = []
 
     def acquire(self):
-        try:
-            import fcntl
-        except ImportError as error:
-            raise ValueError('HOST_POSIX_REQUIRED') from error
         if self.handles:
             raise ValueError('HOST_LEASE_ALREADY_ACQUIRED')
         try:
@@ -38,7 +35,7 @@ class LocalHostLeaseRepository:
                 handle = path.open('a+')
                 self.handles.append(handle)
                 try:
-                    fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    ProcessFileLock.acquire(handle.fileno())
                 except BlockingIOError as error:
                     raise ValueError('HOST_ALREADY_RUNNING') from error
         except BaseException:
@@ -158,7 +155,6 @@ class FileStationSelectionRepository:
             raise StationSelectionError('STATION_SELECTION_FILE_INVALID') from error
 
     def select(self, profile_id, expected):
-        import fcntl
         import json
         import os
         import tempfile
@@ -166,9 +162,9 @@ class FileStationSelectionRepository:
         self.path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
         if self.path.parent.is_symlink():
             raise StationSelectionError('STATION_SELECTION_DIRECTORY_IS_LINK')
-        descriptor=os.open(self.path.with_suffix('.lock'),os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
+        descriptor=HostFileIO.open(self.path.with_suffix('.lock'),os.O_RDWR|os.O_CREAT|HostFileIO.O_NOFOLLOW,0o600)
         with os.fdopen(descriptor,'a+') as lock:
-            fcntl.flock(lock,fcntl.LOCK_EX)
+            ProcessFileLock.acquire(lock.fileno(), blocking=True)
             current=self.read()
             if current!=expected:
                 raise StationSelectionError('STATION_SELECTION_CONFLICT','conflict')

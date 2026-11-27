@@ -20,8 +20,16 @@ def test_configuration_adapter_and_authorization_boundaries():
     for path in (ROOT/'src/culsma_os').rglob('*.py'):
         if 'auth' in path.parts: continue
         tree=ast.parse(path.read_text())
-        assert not any(isinstance(node,ast.Call) and isinstance(node.func,ast.Name) and node.func.id=='CallerContext'
-            for node in ast.walk(tree)),path
+        callers = [node for node in ast.walk(tree) if isinstance(node, ast.Call)
+                   and isinstance(node.func, ast.Name) and node.func.id == 'CallerContext']
+        if callers:
+            # The remote identity adapter verifies credentials before issuing a caller.
+            assert path == ROOT/'src/culsma_os/remote_access/adapters/identity.py', path
+            adapter = next(node for node in tree.body if isinstance(node, ast.ClassDef)
+                           and node.name == 'FileRemoteIdentityAdapter')
+            execute = next(node for node in adapter.body if isinstance(node, ast.FunctionDef)
+                           and node.name == 'execute')
+            assert all(node in list(ast.walk(execute)) for node in callers), path
     repo=(ROOT/'src/culsma_os/workspace_manager/repositories/configuration.py').read_text()
     assert not any(name in repo for name in ['os_material','os_runs','os_station','os_devices'])
     assert not any(name in path.read_text() for path in (ROOT/'src/culsma_os/auth').glob('*.py')

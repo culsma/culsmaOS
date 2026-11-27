@@ -12,7 +12,7 @@ from tests.support.integration.shared_setup import SharedSetupHarness
 def test_workstation_selects_prepares_executes_and_reviews_without_replay(tmp_path, monkeypatch):
     culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    monkeypatch.setenv('CULSMA_HAMILTON_LABWARE_ROOT',str(driver/'reference/LabWare'))
+    monkeypatch.setenv('CULSMA_HAMILTON_PRIVATE_LABWARE',str(driver/'reference/LabWare'))
     (ROOT/'run-artifacts/ui-tests').mkdir(parents=True,exist_ok=True)
     shared = SharedSetupHarness(tmp_path,submit=False,programs=True)
     folder = shared.program_root / 'standard-curve'

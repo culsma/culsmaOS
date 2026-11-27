@@ -711,7 +711,7 @@ class BatchRunExecutionInteractor:
                 if evidence is None:
                     if self.operations.logical is None or not self.operations.logical.is_no_action(member):
                         raise ValueError('BATCH_MEMBER_EVIDENCE_MISSING')
-                    value = self.operations.logical.complete(run_id, member, 'simulation')
+                    value = self.operations.logical.complete(run_id, member, self.execution.host.execution_mode)
                 else:
                     self.material.bind(run_id, member, evidence.mode)
                     result = self.material.reconcile(member, evidence)

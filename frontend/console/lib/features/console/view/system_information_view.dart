@@ -328,9 +328,13 @@ class NativeSystemInformationView extends StatelessWidget {
         ]),
         section('runtime', 'Runtime environment', [
           facts({
-            'Execution mode': configuration['mode'],
+            'Execution mode':
+                configuration['execution_selection']?['mode'] ??
+                configuration['mode'],
             'Execution strategy': configuration['execution_strategy'],
-            'Simulation backend': configuration['agent']?['simulation_backend'],
+            'Simulation backend': configuration['execution_selection'] != null
+                ? configuration['execution_selection']['simulator']
+                : configuration['agent']?['simulation_backend'],
           }),
           const Text(
             'These declarations require a matching saved active configuration. Run evidence identifies the backend actually used. Intermediate hardware progress is not inferred from a batch receipt.',

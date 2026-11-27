@@ -25,6 +25,7 @@
         "list_programs",
         "inspect_program",
         "preview_program",
+        "prepare_program",
         "start_program",
         "submit_program",
         "control_run",
@@ -138,8 +139,9 @@
     },
     {
       "route": "/api/v1/setup/confirmation",
-      "exception": "operator_only",
-      "reason": "A person confirms physical loading; automation cannot assert inspection."
+      "tools": [
+        "confirm_loading"
+      ]
     },
     {
       "route": "/api/v1/console/renderer",
@@ -167,6 +169,21 @@
         "set_workflow_simulation",
         "station_status"
       ]
+    },
+    {
+      "route": "/api/v1/configuration/instruments",
+      "exception": "operator_only",
+      "reason": "Instrument settings remain a local console operation."
+    },
+    {
+      "route": "/api/v1/configuration/floor-plan",
+      "exception": "operator_only",
+      "reason": "Floor-plan editing remains a local console operation."
+    },
+    {
+      "route": "/api/v1/remote-access",
+      "exception": "operator_only",
+      "reason": "Pairing and remote access are managed by the local operator."
     }
   ]
 }

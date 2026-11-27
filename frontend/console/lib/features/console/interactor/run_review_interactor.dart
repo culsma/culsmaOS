@@ -44,6 +44,19 @@ class NativeRunReviewInteractor {
         : '$label — load ${volume(vessel['volume_uL'])}';
   }
 
+  String loadingInstructions(Map item) => [
+    '${item['number']} · ${item['title']}',
+    item['carrier_address'],
+    if (item['placement']?['track'] != null)
+      'Physical track ${item['placement']['track']}',
+    if (item['supply'] == true)
+      '${item['required'] ?? 'See checklist for quantity'} required · ${item['model'] ?? ''}',
+    if (item['fixture'] == true && item['instructions'] != null)
+      item['instructions'].toString(),
+    for (final vessel in item['containers'] as List? ?? [])
+      containerInstruction(vessel),
+  ].join('\n');
+
   /// Driver labels describe models; semantic names describe what to load.
   List<Map<String, dynamic>> loadingItems(Map plan) {
     final result = <Map<String, dynamic>>[];
@@ -90,6 +103,16 @@ class NativeRunReviewInteractor {
         'supply': true,
         'placement': supply,
         'carrier_address': carrierAddress(plan, supply),
+        'number': 'P${result.length + 1}',
+      });
+    }
+    for (final fixture in plan['installed_fixtures'] as List? ?? []) {
+      result.add({
+        ...Map<String, dynamic>.from(fixture),
+        'fixture': true,
+        'title': fixture['label'],
+        'model_label': fixture['model'],
+        'carrier_address': carrierAddress(plan, fixture['placement']),
         'number': 'P${result.length + 1}',
       });
     }

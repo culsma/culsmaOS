@@ -173,9 +173,9 @@ class RunSetupInteractor:
                     result = self.begin_loading(run_id, request['fingerprint'])
                 else:
                     result = self.confirm(run_id, request['fingerprint'], request.get('acknowledged', False))
-            except (ValueError, KeyError) as error:
+            except Exception as error:
                 self.repository.settle_request(request['request_id'], error=str(error),
-                    result={'diagnostics': getattr(error, 'diagnostics', [])})
+                    result={'error_type': type(error).__name__, 'diagnostics': getattr(error, 'diagnostics', [])})
             else:
                 self.repository.settle_request(request['request_id'], result=result)
 
@@ -234,10 +234,10 @@ class RunSetupPreviewInteractor:
     def preview(self, compiled, workflow=None):
         self.configuration.verify(self.context)
         identity = self.configuration.fingerprint
-        # The current resident runtime only admits simulation devices. This is an
-        # execution capability, not a claim that hardware was discovered or connected.
+        # Report the configured execution mode; this is not a hardware observation.
+        mode = self.host.execution_mode
         base = {'configuration_fingerprint': identity, 'physical_observation': False,
-                'execution_options': {'simulation': True, 'hardware': False},
+                'execution_options': {'simulation': mode == 'simulation', 'hardware': mode == 'physical'},
                 'scope': 'Declared loading and device capability checks; vendor preparation, live stock and physical outcomes remain checked at execution.'}
         if workflow is not None:
             base["workflow_simulation"] = workflow
@@ -254,6 +254,8 @@ class RunSetupPreviewInteractor:
             if self.program_check is not None:
                 check = self.program_check.inspect(compiled, catalogue, plan, workflow)
                 result['device_check'] = check
+                mode = check.get('execution_mode', mode)
+                result['execution_options'] = {'simulation': mode == 'simulation', 'hardware': mode == 'physical'}
                 if check['status'] != 'passed':
                     result.update(status='blocked', diagnostic='SETUP_DEVICE_PREFLIGHT_REJECTED',
                                   diagnostics=check['diagnostics'])

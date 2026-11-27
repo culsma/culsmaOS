@@ -15,7 +15,7 @@ from .interactors.preflight import ProgramPreflightInteractor
 
 
 class ProgramPreviewScopeFactory:
-    def build(self, snapshot, catalogue, loading, positions):
+    def build(self, snapshot, catalogue, loading, positions, *, transfer_assessor=None):
         connection = sqlite3.connect(':memory:')
         space = SpaceInteractor(SqliteSpaceRepository(connection),
             {k: WorkspaceAddress(**v) for k, v in loading['bindings'].items()},
@@ -28,7 +28,7 @@ class ProgramPreviewScopeFactory:
         motion = LabwareMotionInteractor(motion_repository, space, snapshot)
         transfer = TransferPreparationInteractor(space, device, None, snapshot.device_id,
             (CentrifugeTransferInteractor(), MagneticTransferInteractor()),
-            preparation=InstrumentPreparationFactory.build_pipetting())
+            preparation=InstrumentPreparationFactory.build_pipetting(), transfer_assessor=transfer_assessor)
         processing = ProcessingPreparationInteractor(space, device, None, snapshot.device_id,
             devices=InstrumentPreparationFactory.build_processing(motion=motion))
         preflight = ProgramPreflightInteractor(space, snapshot,

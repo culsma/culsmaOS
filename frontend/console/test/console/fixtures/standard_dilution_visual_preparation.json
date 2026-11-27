@@ -58,7 +58,7 @@
           },
           "model": "RGT_CONT_60ML_BC_A00",
           "display": {
-            "label": "60 mL reagent vessel \u00b7 8 aspiration positions",
+            "label": "60 mL reagent vessel · 8 aspiration positions",
             "kind": "reservoir"
           },
           "selection": "automatic",
@@ -96,7 +96,7 @@
           },
           "model": "RGT_CONT_60ML_BC_A00",
           "display": {
-            "label": "60 mL reagent vessel \u00b7 8 aspiration positions",
+            "label": "60 mL reagent vessel · 8 aspiration positions",
             "kind": "reservoir"
           },
           "selection": "automatic",
@@ -235,7 +235,7 @@
             "native_angle_deg": 0.0
           },
           "display": {
-            "label": "60 mL reagent vessel \u00b7 8 aspiration positions",
+            "label": "60 mL reagent vessel · 8 aspiration positions",
             "kind": "reservoir"
           },
           "containers": [
@@ -270,7 +270,7 @@
             "native_angle_deg": 0.0
           },
           "display": {
-            "label": "60 mL reagent vessel \u00b7 8 aspiration positions",
+            "label": "60 mL reagent vessel · 8 aspiration positions",
             "kind": "reservoir"
           },
           "containers": [
@@ -820,11 +820,11 @@
                   "first": "36",
                   "last": "36",
                   "sites": [
+                    "1",
+                    "2",
                     "3",
                     "4",
-                    "5",
-                    "1",
-                    "2"
+                    "5"
                   ],
                   "placements": [
                     {
@@ -849,10 +849,10 @@
                   "first": "37",
                   "last": "38",
                   "sites": [
-                    "3",
-                    "4",
                     "1",
-                    "2"
+                    "2",
+                    "3",
+                    "4"
                   ],
                   "placements": []
                 },

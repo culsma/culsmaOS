@@ -1,5 +1,6 @@
 """Composition only; device workers and configuration application stay resident-owned."""
 from pathlib import Path
+from culsma_os.bootstrap import OSApplicationFactory
 import hashlib
 from culsma_os.console_interaction.interactors import ViewStateReadInteractor, ViewRequestInteractor, RendererSessionInteractor
 from culsma_os.console_interaction.repository import SqliteViewInteractionRepository
@@ -58,17 +59,21 @@ class ConsoleApplicationFactory:
         path = settings.view_store_path or settings.socket_path.with_name(settings.socket_path.name + '.views.sqlite3')
         station_id = hashlib.sha256(str(settings.socket_path.resolve()).encode()).hexdigest()
         observer = ConsoleActivityInteractor(SqliteViewInteractionRepository(path, station_id))
-        for name in ('configuration','bindings','activation','programs','setup','setup_commands','labware','file_workspace','instrument_profiles'):
+        for name in ('configuration','bindings','activation','programs','setup','setup_confirmation','setup_commands','labware','file_workspace','instrument_profiles','station_service'):
             owner=getattr(application,name,None)
             if owner is not None:
                 owner.observer=observer
         return application
 
-    def build_desktop(self, settings, executable, resident_command=None, log_path=None):
+    def build_desktop(self, settings, executable, resident_command=None, log_path=None, *, remote_grants=None):
         from .interactors import ConsoleApplicationLifecycleInteractor
         from .adapters.desktop import NativeConsoleProcessAdapter, ResidentProcessAdapter
         from dataclasses import replace
         server = self.build(replace(settings,serve_frontend=False))
+        if remote_grants is not None:
+            from culsma_os.remote_access.desktop import DesktopRemoteAccess
+
+            server.remote_access = DesktopRemoteAccess(server.sessions.tokens, settings, 'desktop', remote_grants)
         return ConsoleApplicationLifecycleInteractor(server, server.sessions, NativeConsoleProcessAdapter(executable),
             ResidentProcessAdapter(resident_command, log_path, Path(log_path).parent/'stations') if resident_command else None)
 
@@ -107,8 +112,10 @@ class ConsoleApplicationFactory:
         from culsma_os.resource_manager.interactors import SupplyInteractionInteractor
         from culsma_os.developer_tools.interactors import DeveloperTestInteractor
         from culsma_os.lifecycle_manager.interactors import ConsoleWorkflowSimulationSettingInteractor
+        from culsma_os.workspace_manager.floor_plan import ConsoleFloorPlanInteractor
+        from culsma_os.device_manager.instruments.station_settings import ConsoleInstrumentSettings
         return self.observe_operations(settings, ConsoleHTTPServer(settings, ConsoleCommandInteractor(ResidentClientAdapter(settings.socket_path,timeout=3)),
-            StationConfigurationInteractor(tokens,repository,profiles),ConsoleSessionInteractor(tokens),
+            StationConfigurationInteractor(tokens,repository,profiles,OSApplicationFactory().execution_factory),ConsoleSessionInteractor(tokens),
             ConsoleProgramInteractor(tokens,source,ResidentClientAdapter(settings.socket_path,timeout=10),{"installation":self.installation_source(settings)}),
             ProgramBindingInteractor(tokens,repository,profiles,source),
             ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),ResidentClientAdapter(settings.socket_path,timeout=10)),
@@ -122,13 +129,17 @@ class ConsoleApplicationFactory:
             developer_tests=DeveloperTestInteractor(tokens,ResidentClientAdapter(settings.socket_path,timeout=10)),
             instrument_profiles=self.build_instrument_profiles(settings,tokens,repository),
             workflow_simulation=ConsoleWorkflowSimulationSettingInteractor(
-                tokens, ResidentClientAdapter(settings.socket_path,timeout=10))))
+                tokens, ResidentClientAdapter(settings.socket_path,timeout=10)),
+            instrument_settings=ConsoleInstrumentSettings(tokens, repository, ResidentClientAdapter(settings.socket_path,timeout=10)),
+            floor_plan=ConsoleFloorPlanInteractor(tokens, ResidentClientAdapter(settings.socket_path,timeout=10))))
 
-    def build_mcp(self, settings, profiles=None):
+    def build_mcp(self, settings, profiles=None, *, tokens=None):
+        from culsma_os.lifecycle_manager.console_service import ConsoleStationServiceInteractor
         from culsma_os.lifecycle_manager.interactors import ConsoleWorkflowSimulationSettingInteractor
         from .adapters.mcp import MCPServerAdapter
         from .interactors import MCPHostInteractor
-        tokens = TokenInteractor(SessionCredentialRepository())
+        if tokens is None:
+            tokens = TokenInteractor(SessionCredentialRepository())
         resident = ResidentClientAdapter(settings.socket_path, timeout=10)
         source = ProgramSourceInteractor(FileProgramSourceRepository(settings.program_root,
             settings.program_store or Path('run-artifacts/console/programs'), settings.home_path), CompilationInteractor(), HostedRuntimeInteractor())
@@ -142,12 +153,14 @@ class ConsoleApplicationFactory:
         bridge = MCPServerAdapter(SetupInteractionInteractor(tokens,resident),
             ConsoleProgramInteractor(tokens,source,resident,{"installation":self.installation_source(settings)}),
             AutomationObservationInteractor(tokens,ConsoleCommandInteractor(resident)),view_reads,view_requests,SupplyInteractionInteractor(tokens,resident),self.build_files(settings,tokens,source),file_workspace=self.build_workspace(tokens,source),
-            configuration=StationConfigurationInteractor(tokens,repository,profiles),
+            configuration=StationConfigurationInteractor(tokens,repository,profiles,OSApplicationFactory().execution_factory),
             bindings=ProgramBindingInteractor(tokens,repository,profiles,source),
             activation=ConsoleActivationInteractor(tokens,ConfigurationDraftInteractor(repository,profiles),resident),
             labware=LabwareConfigurationInteractor(tokens,repository,resident),
             developer_tests=DeveloperTestInteractor(tokens,resident),
             station_selection=self.build_station_selection(settings,tokens),
             instrument_profiles=self.build_instrument_profiles(settings,tokens,repository),
-            workflow_simulation=ConsoleWorkflowSimulationSettingInteractor(tokens,resident))
+            workflow_simulation=ConsoleWorkflowSimulationSettingInteractor(tokens,resident),
+            station_service=ConsoleStationServiceInteractor(tokens,resident),
+            setup_confirmation=SetupConfirmationInteractor(tokens,resident))
         return MCPHostInteractor(tokens,self.observe_operations(settings,bridge))

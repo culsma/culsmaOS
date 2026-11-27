@@ -67,3 +67,18 @@ def test_generic_declarations_project_plan_and_bind_without_changing_language_ki
     assert material == before
     assert all(c['metadata'].get('kind') is None for c in material['containers'].values())
     assert all(b.carrier_id is None for b in snapshot.bindings)
+
+
+def test_standalone_well_has_actionable_loading_diagnostic(tmp_path):
+    source = tmp_path / 'standalone.culs'
+    source.write_text('let sample=well(capacity=2000uL,load=[content(kind=formulation,type=buffer,code="BUFFER"):100uL]); return sample;')
+    compiled = CompilationInteractor().compile([source])
+    host = HostedRuntimeInteractor()
+    checkpoint = host.create(compiled.plan, compiled.state, 'standalone')
+    with pytest.raises(SetupRequirementsError, match='SETUP_WELL_DECLARATION_REQUIRED') as error:
+        SetupRequirementsInteractor(host.codec).inspect(checkpoint)
+    diagnostic, = error.value.diagnostics
+    assert diagnostic['items'][0]['allocation_id']
+    assert 'container(...)' in diagnostic['action']
+    assert not diagnostic['physical_observation']
+    assert host.codec.loads(checkpoint)['confirmed'] == []

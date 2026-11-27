@@ -23,8 +23,8 @@ class ResidentProtocolFactory(ObservedMotionFactory):
         super().__init__(gate_kind)
         self.unknown_second = unknown_second
 
-    def build(self, context):
-        delegate, *description = OpentronsSessionFactory().build(context)
+    def build_selected(self, context, selection):
+        delegate, *description = OpentronsSessionFactory.build_selected(self, context, selection)
         session = delegate.session
         self.initial.append({'positions': session.motion.positions() if session.motion else None,
                              'commands': tuple(session.backend.protocol.commands())})

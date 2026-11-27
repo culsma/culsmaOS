@@ -42,7 +42,10 @@ class InstrumentExecutionPreparationInteractor:
                     or set(limits) != {'unit','minimum','maximum'} or condition.unit != limits['unit']
                     or any(type(limits[k]) not in (int,float) or not isfinite(limits[k]) for k in ('minimum','maximum'))
                     or not limits['minimum'] <= condition.value <= limits['maximum']):
-                raise ValueError(f'{prefix}_ENVIRONMENT_CONDITION_UNSUPPORTED')
+                detail = ""
+                if isinstance(condition, EnvironmentCondition) and type(condition.value) in (int, float):
+                    detail = f": Requested {condition.name}={condition.value:g} {condition.unit}."
+                raise ValueError(f'{prefix}_ENVIRONMENT_CONDITION_UNSUPPORTED{detail}')
 
     def select_module(self, intent, layout, device, physical_positions):
         available = device.processing_modules(intent)

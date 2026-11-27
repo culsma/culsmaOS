@@ -27,19 +27,21 @@ Future<void> main() async {
     final stationKey =
         connection.stationKey ??
         sha256.convert(utf8.encode(connection.origin.toString())).toString();
+    final supportRoot = Platform.isWindows
+        ? Platform.environment['LOCALAPPDATA']
+        : '${Platform.environment['HOME']}/Library/Application Support';
+    if (supportRoot == null || supportRoot.isEmpty) {
+      throw StateError('Application support directory is unavailable');
+    }
     final requests = FilePendingRequestRepository(
-      File(
-        '${Platform.environment['HOME']}/Library/Application Support/culsmaOS/$stationKey/pending-run.json',
-      ),
+      File('$supportRoot/culsmaOS/$stationKey/pending-run.json'),
     );
     final console = NativeConsoleInteractor(
       controller.api,
       controller,
       requests: requests,
       mutations: FileConsoleMutationRepository(
-        File(
-          '${Platform.environment['HOME']}/Library/Application Support/culsmaOS/$stationKey/pending-changes.json',
-        ),
+        File('$supportRoot/culsmaOS/$stationKey/pending-changes.json'),
       ),
     );
     final renderer = connection.rendererToken == null

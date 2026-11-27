@@ -1005,6 +1005,18 @@
     ],
     "catalogue": [
       {
+        "id": "Ariumlab_X_96PLT",
+        "label": "Ariumlab Levitation X-96PLT",
+        "category": "support",
+        "parents": []
+      },
+      {
+        "id": "Alpaqua_MagEx",
+        "label": "Alpaqua Magnum Ex",
+        "category": "support",
+        "parents": []
+      },
+      {
         "id": "SMP_CAR_32_EPIL_A01_2.0mLTubes.rck",
         "label": "32-position 2 mL microtube rack",
         "category": "labware",
@@ -4081,6 +4093,14 @@
         ]
       },
       {
+        "id": "ST_L.rck",
+        "label": "Standard 300 \u00b5L tip rack",
+        "category": "labware",
+        "parents": [
+          "CAR_5TIP"
+        ]
+      },
+      {
         "id": "HTF_L",
         "label": "Filter tip rack",
         "category": "labware",
@@ -4130,8 +4150,5 @@
     }
   ],
   "validation_scope": "Offline proposed placement only; not a VENUS LAY, compiler environment, calibration or physical verification.",
-  "sources": [
-    "https://support.illumina.com/content/dam/illumina-support/documents/documentation/system_documentation/mlstar/hamilton-ml-star-reference-guide-15070074-a.pdf"
-  ],
   "driver": "hamilton-layout"
 }

@@ -61,7 +61,7 @@ def test_cli_complete_docking_chain(tmp_path, entry):
     (tmp_path/'protocol.culs').write_text(SOURCE)
     artifacts = tmp_path/'cli-artifacts'
     completed = subprocess.run([sys.executable,'-m','culsma.cli' if entry == 'language' else 'culsma_os.cli',
-        'run',str(tmp_path/'protocol.culs'),'--driver','opentrons-simulator','--driver-config',str(tmp_path/'deck.json'),
+        'run',str(tmp_path/'protocol.culs'),'--driver','os-opentrons-simulator' if entry=='language' else 'opentrons-simulator','--driver-config',str(tmp_path/'deck.json'),
         '--artifacts-dir',str(artifacts)],capture_output=True,text=True,timeout=45)
     assert completed.returncode == 0, completed.stdout + completed.stderr
     result = json.loads((artifacts/'run.json').read_text())

@@ -1,6 +1,8 @@
 """Local native E2E: Flutter -> real HTTP owners -> official simulator. No cloud CI."""
 import json
 import os
+import shutil
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -15,9 +17,14 @@ from tests.support.console.http import ConsoleHTTPHarness, ConsoleProtocolHarnes
 
 
 class DesktopE2E:
-    def run(self, with_hamilton=False):
+    def run(self, with_hamilton=False, screenshots=None):
         with tempfile.TemporaryDirectory(prefix='culsma-native-e2e-') as directory:
             root = Path(directory)
+            events = root/'flutter-events.jsonl'
+            extra = []
+            if screenshots:
+                screenshots.mkdir(parents=True, exist_ok=True)
+                extra = ['--dart-define=E2E_SCREENSHOTS=true', '--file-reporter=json:'+str(events)]
             with patch.dict(os.environ, {'CULSMA_OS_STATION_ROOT': str(root/'stations')}), ConsoleProtocolHarness(root, 'transfer') as resident:
                 server = ConsoleApplicationFactory().build(ConsoleSettings(resident.endpoint, 0,
                     root/'drafts.sqlite3', ROOT/'examples/transfer', root/'programs'))
@@ -37,11 +44,31 @@ class DesktopE2E:
                          'expected_fingerprint':active['active']['fingerprint'],'request_id':'native-e2e-setup'})
                     assert status == 200, body
                     resident.wait(lambda: resident.client.execute({'action':'configuration-status'})['receipt']['status']=='applied',30)
-                    result = subprocess.run(['fvm','flutter','test','integration_test/layout_test.dart','-d','macos',
+                    command = ['fvm','flutter','test','--reporter=expanded','integration_test/layout_test.dart','-d','macos',
                         '--dart-define=E2E_ORIGIN='+server.url,
-                        '--dart-define=E2E_HAMILTON='+str(with_hamilton).lower()], cwd=ROOT/'frontend/console', timeout=240)
-                    if result.returncode:
-                        raise SystemExit(result.returncode)
+                        '--dart-define=E2E_HAMILTON='+str(with_hamilton).lower(), *extra]
+                    with subprocess.Popen(command, cwd=ROOT/'frontend/console', start_new_session=True) as process:
+                        try:
+                            exit_code = process.wait(timeout=240)
+                        except (subprocess.TimeoutExpired, KeyboardInterrupt):
+                            # fvm launches both the Flutter runner and a native window.
+                            os.killpg(process.pid, signal.SIGTERM)
+                            try:
+                                process.wait(timeout=5)
+                            except subprocess.TimeoutExpired:
+                                os.killpg(process.pid, signal.SIGKILL)
+                            raise
+                    if screenshots and events.exists():
+                        for line in events.read_text().splitlines():
+                            message = json.loads(line).get('message', '')
+                            if message.startswith('CULSMA_UI_FRAME '):
+                                source = Path(json.loads(message.removeprefix('CULSMA_UI_FRAME ')))
+                                if source.name not in ('saved-layout.png', 'hamilton-layout.png', 'hamilton-deck.png'):
+                                    raise ValueError(f'Unexpected frame name: {source.name}')
+                                shutil.move(source, screenshots/source.name)
+                                source.parent.rmdir()
+                    if exit_code:
+                        raise SystemExit(exit_code)
                     assert resident.client.execute({'action':'configuration-status'})['active']['origin']['revision'] == 2
                     runs = resident.client.execute({'action':'runs'})['runs']
                     assert len(runs) == 1 and runs[0]['status'] == 'completed', runs
@@ -51,5 +78,7 @@ class DesktopE2E:
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--with-hamilton', action='store_true', help='Also exercise the Hamilton profile and native export; requires CULSMA_HAMILTON_LABWARE_ROOT')
-    DesktopE2E().run(parser.parse_args().with_hamilton)
+    parser.add_argument('--with-hamilton', action='store_true', help='Also exercise the Hamilton profile and native export with the installed Hamilton driver')
+    parser.add_argument('--screenshots', type=Path, help='Save frames from the native layout tests here')
+    args = parser.parse_args()
+    DesktopE2E().run(args.with_hamilton, args.screenshots)

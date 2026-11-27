@@ -1,4 +1,5 @@
 """Real SDK -> MCP -> shared configuration database -> resident -> installed driver."""
+from tests.support.paths import station_layout_fixture
 import json
 import os
 from pathlib import Path
@@ -13,7 +14,7 @@ from tests.support.paths import ROOT
 def test_mcp_settings_change_the_same_station_and_drafts_as_http(tmp_path,monkeypatch):
     culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
     driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-    source=driver/'examples/test32-water-plate-heat/revision2/test32_water_plate_heat_deck_r2.lay'
+    source=station_layout_fixture()
     with native_station(tmp_path,monkeypatch) as shared:
         original=shared.context.config_path.read_bytes()
         home=tmp_path/'Home';programs=home/'projects';programs.mkdir(parents=True)

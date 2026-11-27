@@ -66,7 +66,12 @@ class BatchProjectionEffectInteractor(PreflightEffectInteractor):
             self.data['scope_id'], self.allocations, physical_positions=positions)
         if intent is not None:
             description = self.batch_conditions.describe(pending,intent,layout,positions) if self.batch_conditions is not None else {}
-            self.operations.append(BatchOperation(pending.effect_id, intent, layout.bindings, description))
+            expected_material = ()
+            if hasattr(intent, 'aliquots'):
+                context = planner.prepare_context(layout.run_id, layout, preflight.snapshot, pending.physical_material_state())
+                expected_material = context.expected_material
+            self.operations.append(BatchOperation(pending.effect_id, intent, layout.bindings, description,
+                                                  expected_material=expected_material))
         from .magnetic_intents import MagneticEnvironmentInteractor
         if self.batch_conditions is not None and MagneticEnvironmentInteractor.ends_field_scope(pending.prepared.runtime_step):
             self.operations.extend(self.batch_conditions.finish())

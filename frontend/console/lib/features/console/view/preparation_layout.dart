@@ -69,6 +69,7 @@ class NativePreparationLayoutState extends State<NativePreparationLayout> {
                   'number': item['number'],
                   'label': item['title'],
                   'kind': item['kind'],
+                  'instructions': widget.review.loadingInstructions(item),
                 },
             },
             onItem: (item) {
@@ -79,6 +80,17 @@ class NativePreparationLayoutState extends State<NativePreparationLayout> {
           const Text(
             'A graphical deck is not available for this driver. Use the location instructions below.',
           ),
+        if (selected != null)
+          for (final item in items.where((item) => item['id'] == selected))
+            Card(
+              key: const ValueKey('selected-loading-instructions'),
+              color: const Color(0xfffff3d2),
+              margin: const EdgeInsets.only(top: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(widget.review.loadingInstructions(item)),
+              ),
+            ),
         const SizedBox(height: 20),
         const Text(
           'Loading checklist',
@@ -160,7 +172,9 @@ class NativePreparationLayoutState extends State<NativePreparationLayout> {
                                     color: Color(0xff62798c),
                                   ),
                                 ),
-                              if (item['supply'] != true) ...[
+                              if (item['fixture'] == true)
+                                Text(item['instructions']?.toString() ?? ''),
+                              if (item['supply'] != true && item['fixture'] != true) ...[
                                 const SizedBox(height: 6),
                                 Text(item['model_label']),
                                 for (final vessel

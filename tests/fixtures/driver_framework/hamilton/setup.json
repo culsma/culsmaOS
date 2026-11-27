@@ -1,0 +1,84 @@
+{
+  "schema": "culsma_program_bundle_setup_v1",
+  "layout": {
+    "schema": "hamilton_layout_proposal_v1",
+    "deck_model": "STAR-54",
+    "carriers": {
+      "reagents": {
+        "model": "RGT_CAR_5R60_A00",
+        "track": "1"
+      },
+      "plates": {
+        "model": "CAR_5DWP",
+        "track": "4"
+      },
+      "tips_carrier": {
+        "model": "CAR_5TIP",
+        "track": "10"
+      }
+    },
+    "labware": {
+      "source_vessel": {
+        "model": "RGT_CONT_60ML_BC_A00",
+        "carrier": "reagents",
+        "site": "1"
+      },
+      "destination_plate": {
+        "model": "Ham_DW_Rgt_96_L",
+        "carrier": "plates",
+        "site": "1"
+      },
+      "tips": {
+        "model": "HTF_L",
+        "carrier": "tips_carrier",
+        "site": "1"
+      }
+    }
+  },
+  "bindings": {
+    "entry.s0::alloc": {
+      "labware": "source_vessel"
+    },
+    "entry.s1::alloc": {
+      "labware": "destination_plate",
+      "position": "1"
+    }
+  },
+  "execution": {
+    "environment_id": "offline-hamilton-transfer",
+    "channel": {
+      "id": "independent-channel-1",
+      "index": 1,
+      "min_volume_uL": 10,
+      "max_volume_uL": 300,
+      "volume_resolution_uL": 0.1
+    },
+    "liquid_class": "HighVolumeFilter_Water_DispenseJet_Empty",
+    "tips": {
+      "labware": "tips",
+      "available_positions": [
+        "1",
+        "2"
+      ]
+    },
+    "waste": {
+      "model": "ml_star2_universal_waste_8pos",
+      "carrier_origin_mm": [
+        1364.5,
+        102,
+        100
+      ],
+      "position": "1"
+    },
+    "pipetting": {
+      "aspiration_height_mm": 2.5,
+      "dispense_height_mm": 5,
+      "channel_use": 2,
+      "dispense_mode": 1
+    },
+    "capacities_uL": {
+      "source_vessel": 60000,
+      "destination_plate": 2000
+    }
+  }
+}

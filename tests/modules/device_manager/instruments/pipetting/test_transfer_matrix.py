@@ -191,7 +191,7 @@ class TestTransferMatrix:
         context=fixture.context(tmp_path,plan)
         artifacts=tmp_path/'cli-artifacts'
         command=[str(Path(sys.executable).parent/'culsma')] if entry=='language' else [sys.executable,'-m','culsma_os.cli']
-        result=subprocess.run([*command,'run',str(tmp_path/'protocol.culs'),'--driver','opentrons-simulator','--driver-config',str(context.config_path),'--artifacts-dir',str(artifacts),*(['--json'] if entry=='language' else [])],capture_output=True,text=True)
+        result=subprocess.run([*command,'run',str(tmp_path/'protocol.culs'),'--driver','os-opentrons-simulator' if entry=='language' else 'opentrons-simulator','--driver-config',str(context.config_path),'--artifacts-dir',str(artifacts),*(['--json'] if entry=='language' else [])],capture_output=True,text=True)
         assert result.returncode==0,result.stdout+result.stderr
         if entry=='language':
             assert json.loads(result.stdout)['report']['os']['status']=='completed'

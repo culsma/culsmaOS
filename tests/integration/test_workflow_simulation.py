@@ -119,7 +119,7 @@ def test_settings_control_real_console_start_and_record_synthetic_readout(tmp_pa
         inspector = factory.build_run_inspector(context)
         try:
             checkpoint = inspector.tasks.get(run_id).checkpoint
-            with pytest.raises(ValueError, match="RUN_SIMULATION_MODE_REQUIRED"):
+            with pytest.raises(ValueError, match="HOST_RESOLUTION_MODE_MISMATCH"):
                 HostedRuntimeInteractor(execution_mode="physical").advance(checkpoint)
         finally:
             inspector.close()

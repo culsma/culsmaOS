@@ -47,6 +47,7 @@ class ProgramPreflightInteractor:
             "configuration_revision": self.snapshot.configuration_revision,
             "projected_path_complete": result.ok,
             "checked_effects": effects.checked_effects,
+            "transfer_checks": effects.transfer_checks,
             "diagnostics": [d.to_dict() for d in diagnostics],
             "deferred_checks": ["vendor preparation and unadvertised parameter bounds", "live readiness and consumables", "physical outcomes and non-projected paths"],
         }
@@ -60,7 +61,12 @@ class ProgramPreflightInteractor:
         if planner is None:
             raise ValueError("PREFLIGHT_OPERATION_UNSUPPORTED")
         allocations = tuple(s for protocol in plan.plans for s in PlanStepTree.leaves(protocol.steps) if s.op == "AllocContainer")
+        assess = getattr(planner, 'assess_preflight', None)
+        if assess is not None:
+            _, checks = assess(pending, self.space, self.snapshot, scope_id, allocations, physical_positions)
+            return checks
         planner.preflight(pending, self.space, self.snapshot, scope_id, allocations, physical_positions=physical_positions)
+        return ()
 
 
 class PreflightEffectInteractor(ReplayEffectInteractor):
@@ -70,6 +76,7 @@ class PreflightEffectInteractor(ReplayEffectInteractor):
         self.preflight = preflight
         self.diagnostics = []
         self.checked_effects = 0
+        self.transfer_checks = []
         self.retained_conditions = ()
 
     def validate(self, pending):
@@ -81,8 +88,12 @@ class PreflightEffectInteractor(ReplayEffectInteractor):
                     self.retained_conditions, self.motion_projection = self.preflight.conditions.before_effect(
                         pending, self.retained_conditions, self.motion_projection)
                 self.motion_projection = self.preflight.motion.validate_preflight(pending, allocations, self.motion_projection)
-            self.preflight.validate_effect(pending, self.data["plan"], self.data["scope_id"],
+            checks = self.preflight.validate_effect(pending, self.data["plan"], self.data["scope_id"],
                 self.motion_projection[1] if self.motion_projection is not None else None)
+            for check in checks:
+                self.transfer_checks.append(check)
+                if check['status'] == 'incompatible':
+                    raise ValueError(check['message'])
             if self.preflight.conditions is not None and self.motion_projection is not None:
                 self.retained_conditions, self.motion_projection = self.preflight.conditions.after_effect(
                     pending, allocations, self.retained_conditions, self.motion_projection)

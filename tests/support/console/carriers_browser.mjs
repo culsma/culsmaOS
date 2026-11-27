@@ -1,3 +1,4 @@
+import {visiblePanelScreenshot} from './visible_panel.mjs';
 import {createRequire} from 'node:module';
 import {readFileSync,writeFileSync} from 'node:fs';
 const require=createRequire(`${process.env.CULSMA_OS_BROWSER_MODULES}/package.json`);
@@ -18,7 +19,7 @@ try {
  for(const width of [1440,390]) {
   await page.setViewportSize({width,height:1000});
   await page.waitForFunction(()=>{const viewport=document.querySelector('[data-region="carrier-proposal"] .setup-deck-scroll'),frame=viewport?.querySelector('[data-highlighted=true]');if(!frame)return false;const a=viewport.getBoundingClientRect(),b=frame.getBoundingClientRect();return b.left>=a.left && b.right<=a.right;});
-  const image=await settings.screenshot({path:`${output}/carrier-settings-${width}.png`,animations:'disabled'});
+  const image=await visiblePanelScreenshot(settings, {path:`${output}/carrier-settings-${width}.png`,animations:'disabled'}, settings.locator('[data-region="carrier-proposal"] .setup-deck-scroll'));
   const file=`${baselines}/carrier-settings-${width}.png`;
   if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1')writeFileSync(file,image);
   else {const ref=PNG.sync.read(readFileSync(file)),actual=PNG.sync.read(image);

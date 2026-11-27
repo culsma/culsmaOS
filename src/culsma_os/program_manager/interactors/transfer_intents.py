@@ -348,8 +348,13 @@ class CentrifugeTransferInteractor:
         quantities = selection.part.get("component_quantities", {})
         values = [*quantities.values(), *(e.get("quantity") for e in selection.part.get("component_entries", []))]
         if (type(volume) not in {int, float} or not isfinite(volume) or volume < 0
-                or any(not isinstance(q, dict) or q.get("dimension") != "volume" or q.get("status") == "unknown"
-                       or type(q.get("value")) not in {int, float} or not isfinite(q["value"]) or q["value"] < 0 for q in values)
+                or any(not isinstance(q, dict) or q.get("status") == "unknown"
+                       or type(q.get("value")) not in {int, float} or not isfinite(q["value"]) or q["value"] < 0
+                       # Partition records retain zero entries for constituents
+                       # allocated entirely to the other fraction.
+                       or (q.get("dimension") != "volume"
+                           and not (q.get("dimension") in {"mass", "count"} and q["value"] == 0))
+                       for q in values)
                 or (volume > 0 and not quantities)):
             raise ValueError("TRANSFER_CENTRIFUGE_LIQUID_REQUIRED")
         if volume == 0:

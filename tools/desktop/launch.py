@@ -98,11 +98,13 @@ class MacPreviewProduct:
                 os.environ.pop(name)
         paths=[str(site)]
         if self.profile=='hamilton-local':
-            if not (self.addon/'packages').is_dir() or not (self.addon/'LabWare').is_dir():
+            if not (self.addon/'packages').is_dir():
                 raise ValueError('HAMILTON_LOCAL_ADDON_NOT_INSTALLED')
             paths.append(str(self.addon/'packages'))
-            os.environ.update(CULSMA_HAMILTON_LABWARE_ROOT=str(self.addon/'LabWare'),
-                CULSMA_HAMILTON_LOCAL_LOADOUT=str(self.addon/'defaults/loadout.json'),
+            os.environ.pop('CULSMA_HAMILTON_LABWARE_ROOT', None)
+            os.environ['CULSMA_HAMILTON_HEAD96_LAYOUT_DIR'] = str(self.addon / 'layouts')
+            os.environ.pop('CULSMA_HAMILTON_PRIVATE_LABWARE', None)
+            os.environ.update(CULSMA_HAMILTON_LOCAL_LOADOUT=str(self.addon/'defaults/loadout.json'),
                 CULSMA_HAMILTON_LOCAL_MAGNETIC_LOADOUT=str(self.addon/'profiles/magnetic/loadout.json'),
                 CULSMA_HAMILTON_LOCAL_WORKSPACE=str(self.state/'local-model'))
             sys.path.insert(0,str(self.addon/'packages'))
@@ -119,7 +121,7 @@ class MacPreviewProduct:
             {'id':'opentrons-simulator','label':'Opentrons official simulator','driver':'opentrons-simulator',
              'required_paths':[str(self.resources/'defaults/deck.json'),str(self.resources/'packages/simulator')]},
             {'id':'hamilton-local','label':'Hamilton local simulation','driver':'hamilton-local',
-             'required_paths':[str(self.addon/name) for name in ('packages','LabWare','defaults/deck.json','defaults/loadout.json','defaults/transfer.culs')]},
+             'required_paths':[str(self.addon/name) for name in ('packages','defaults/deck.json','defaults/loadout.json','defaults/transfer.culs')]},
         ]
 
     def select_profile(self, profile):

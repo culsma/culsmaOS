@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../layout/model/layout_model.dart';
+import '../../layout/view/floor_plan_board.dart';
 import '../../layout/view/layout_page.dart';
 import 'settings_view.dart';
 import '../interactor/console_interactor.dart';
@@ -52,6 +53,7 @@ class WorkstationRecords extends StatefulWidget {
 
 class WorkstationRecordsState extends State<WorkstationRecords> {
   final keys = <String, GlobalKey>{};
+  String floorLevel = 'deck';
   @override
   void initState() {
     super.initState();
@@ -189,6 +191,7 @@ class WorkstationRecordsState extends State<WorkstationRecords> {
     final c = widget.console,
         envelope = c.station?['layout'] as Map<String, dynamic>?,
         deck = RecordedDeck.fromLayout(envelope);
+    final floorPlan = envelope?['floor_plan'] as Map<String, dynamic>?;
     Widget board = const Text(
       'The driver does not provide a supported layout projection.',
     );
@@ -240,6 +243,61 @@ class WorkstationRecordsState extends State<WorkstationRecords> {
         ),
         const SizedBox(height: 20),
 
+        if (floorPlan != null && (floorPlan['areas'] as List).isNotEmpty) ...[
+          Text(
+            'Station overview',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          if (floorPlan['configuration_current'] == false)
+            const Text(
+              'Station configuration changed. Check this layout in System Settings.',
+            ),
+          if ((floorPlan['areas'] as List).any(
+            (area) => (area['level'] ?? 'deck') != 'deck',
+          ))
+            DropdownButton<String>(
+              value: floorLevel,
+              items: [
+                for (final entry in floorLevels.entries)
+                  DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+              ],
+              onChanged: (level) => setState(() => floorLevel = level!),
+            ),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: c.readInstruments(envelope?['configuration_fingerprint']),
+            builder: (context, snapshot) => FloorPlanBoard(
+              plan: floorPlan,
+              deck: FloorPlanDeck.fromLayout(envelope),
+              level: floorLevel,
+              instruments: snapshot.connectionState == ConnectionState.done
+                  ? snapshot.data ?? const []
+                  : const [],
+            ),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              for (final item in (floorPlan['equipment'] as List).where(
+                (item) => (floorPlan['areas'] as List).any(
+                  (area) =>
+                      area['id'] == item['area_id'] &&
+                      (area['level'] ?? 'deck') == floorLevel,
+                ),
+              ))
+                Tooltip(
+                  message: item['handoff'] == null
+                      ? 'Station placement'
+                      : "${item['handoff']} · route unverified",
+                  child: Chip(
+                    avatar: Icon(floorPlanIcon(item['kind']), size: 16),
+                    label: Text(item['name']),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
         board,
         outsideEquipment(context, envelope),
         const SizedBox(height: 16),

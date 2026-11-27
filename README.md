@@ -11,7 +11,7 @@ outcomes remain explicit and block further execution of the affected run.
 
 [Install](#installation) · [Run an example](#quick-start) · [Example protocols](#example-protocols) · [Architecture](#architecture)
 
-**0.2.0 desktop preview** · Python 3.11–3.12 · [Apache-2.0](LICENSE) · [Archived 0.1.1 DOI](https://doi.org/10.5281/zenodo.23467661)
+**0.2.3 Python release** · Python 3.11–3.12 · [Apache-2.0](LICENSE) · [Archived 0.1.1 DOI](https://doi.org/10.5281/zenodo.23467661)
 
 ## Architecture
 
@@ -65,20 +65,18 @@ See the short [installation and MCP guide](docs/mac-preview.md) for first launch
 AI client configuration and the separate preview workspace. Physical instruments
 are not connected by this package.
 
-### Command-line preview (0.2.0)
+### Command-line installation (0.2.3)
 
 Use **Python 3.11 or 3.12**. The commands below use a macOS/Linux shell;
 installed-package validation has been performed on macOS. The resident service
 requires Unix-domain sockets.
 
-Install this preview from the [release artifacts](https://github.com/culsma/culsmaOS/releases/tag/0.2.0).
-The installation below selects the compatible language and simulator wheels
-automatically. PyPI publication is deferred.
+Install the [OS wheel](https://github.com/culsma/culsmaOS/releases/tag/0.2.3) with Culsma 1.0.11 and the independently published Opentrons simulator driver.
 
 ```sh
 git clone https://github.com/culsma/culsmaOS.git
 cd culsmaOS
-git checkout 0.2.0
+git checkout 0.2.3
 python3.11 -m venv .venv
 . .venv/bin/activate
 ```
@@ -87,8 +85,8 @@ Install the OS with its simulator profile:
 
 ```sh
 python -m pip install --constraint requirements/preview-constraints.txt \
-  --requirement requirements/preview-downloads.txt \
-  'culsma-os[simulator] @ https://github.com/culsma/culsmaOS/releases/download/0.2.0/culsma_os-0.2.0-py3-none-any.whl'
+  --requirement requirements/release-downloads.txt \
+  'culsma-os[simulator] @ https://github.com/culsma/culsmaOS/releases/download/0.2.3/culsma_os-0.2.3-py3-none-any.whl'
 python -m pip check
 culsma-os --help
 ```
@@ -122,6 +120,11 @@ culsma-os run examples/transfer/transfer.culs \
   --driver-config examples/transfer/deck.json \
   --artifacts-dir run-artifacts/quickstart
 ```
+
+To use the language CLI with OS execution, select
+`culsma run ... --driver os-opentrons-simulator`. The independent driver uses
+`--driver opentrons-simulator`; its execution does not create an OS run database.
+See [execution-provider selection](docs/development.md#explicit-standalone-and-os-program-executors).
 
 In simulation, messages such as `robot_settings.json not found. Loading defaults`
 and `Deck calibration not found` are expected when local settings are absent;

@@ -17,7 +17,14 @@ class TestConsoleArchitecture:
             calls = {node.func.attr for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)}
             assert not calls & {'advance', 'submit', 'resume', 'cancel', 'connect', 'build', 'register'}
         provider = (root/'providers.py').read_text()
-        assert 'OSApplicationFactory' not in provider and 'build_resident_host' not in provider
+        assert 'build_resident_host' not in provider
+        provider_tree = ast.parse(provider)
+        factories = [node for node in ast.walk(provider_tree) if isinstance(node, ast.Call)
+                     and isinstance(node.func, ast.Name) and node.func.id == 'OSApplicationFactory']
+        for factory in factories:
+            # Composition may obtain configuration declarations, never construct sessions.
+            assert any(isinstance(node, ast.Attribute) and node.value is factory
+                       and node.attr == 'execution_factory' for node in ast.walk(provider_tree))
         tree = ast.parse((ROOT/'src/culsma_os/program_manager/interactors/console.py').read_text())
         imports = [node.module or '' for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
         assert not any('adapters' in name or 'console' in name for name in imports)

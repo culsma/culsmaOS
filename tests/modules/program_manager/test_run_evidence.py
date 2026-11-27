@@ -124,3 +124,19 @@ def test_run_evidence_owner_boundaries():
     for module in ['event_journal/repositories/inspection.py','material_system/repositories/inspection.py']:
         source = (ROOT/'src/culsma_os'/module).read_text()
         assert not any(word in source for word in ['INSERT ', 'UPDATE ', 'CREATE TABLE', 'DELETE '])
+
+
+def test_report_faults_use_only_matching_failed_receipts_without_writes(records):
+    from culsma_os.program_manager.interactors.host import RunReportInteractor
+    fault = {'reason':'culsma.operation.completion_unconfirmed'}
+    records.attempt(); records.receipt(outcome='unknown',payload={'faults':[fault]})
+    records.attempt(effect='wrong',attempt='second')
+    records.receipt(effect='wrong',attempt='foreign',outcome='unknown',payload={'faults':[fault]})
+    records.attempt(effect='completed',attempt='third')
+    records.receipt(effect='completed',attempt='third',payload={'faults':[fault]})
+    before = tuple(records.writer.iterdump())
+    observed = records.reader.receipt_faults('run-1')
+    assert len(observed) == 1 and observed[0][0].attempt_id == 'attempt-z' and observed[0][1] == fault
+    report = RunReportInteractor(None,None,None,fault_reader=records.reader.receipt_faults)
+    assert report.receipt_faults('run-1') == observed
+    assert tuple(records.writer.iterdump()) == before

@@ -1,3 +1,4 @@
+import {visiblePanelScreenshot} from './visible_panel.mjs';
 import {createRequire} from 'node:module';
 import {readFileSync,writeFileSync} from 'node:fs';
 const require=createRequire(`${process.env.CULSMA_OS_BROWSER_MODULES}/package.json`);
@@ -10,6 +11,7 @@ try {
  const page=await browser.newPage({viewport:{width:1280,height:960}}),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
  await page.goto(url+'#configuration');
+ const editor=page.getByText('Advanced layout configuration',{exact:true});
  const advanced=page.getByText('Advanced · configuration presets and JSON',{exact:true});
  if(!await advanced.evaluate(node=>node.parentElement.open)) await advanced.click();
  await page.getByLabel('Installed profile',{exact:true}).selectOption('hamilton-layout');
@@ -33,7 +35,7 @@ try {
   await page.setViewportSize({width,height:960});
   await preview.getByLabel('Recorded object',{exact:true}).selectOption('DWP96_E1');
   await preview.getByLabel('Recorded object',{exact:true}).selectOption('DWP96_E4');
-  const actual=await review.screenshot({path:output.replace('.png',`-${width}.png`),animations:'disabled'});
+  const actual=await visiblePanelScreenshot(review, {path:output.replace('.png',`-${width}.png`),animations:'disabled'}, preview.locator('.setup-deck-scroll'));
   const baseline=`${baselines}/layout-import-${width}.png`;
   if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1') writeFileSync(baseline,actual);
   else {
@@ -46,6 +48,7 @@ try {
  }
  await page.setViewportSize({width:1280,height:960});
  await review.getByRole('button',{name:'Use converted layout as configuration',exact:true}).click();
+ await editor.click();
  await page.getByRole('button',{name:'Save changes',exact:true}).click();
  await page.waitForFunction(()=>document.getElementById('draft-state')?.textContent.includes('Saved revision 1'));
  await page.getByRole('button',{name:'Check saved changes',exact:true}).click();
@@ -60,6 +63,7 @@ try {
  await page.reload();
  if(!await advanced.evaluate(node=>node.parentElement.open)) await advanced.click();
  await page.getByRole('button',{name:'Load test32_water_plate_heat_deck_r2.lay · r1',exact:true}).click();
+ if(!await editor.evaluate(node=>node.parentElement.open))await editor.click();
  await page.locator('[data-region="station-settings"]').getByLabel('Recorded object',{exact:true}).selectOption('DWP96_CE');
  await page.locator('[data-region="station-settings"]').getByRole('cell',{name:'180°',exact:true}).waitFor();
  // Unsupported references still fail closed; accepting native instances is not a blanket bypass.

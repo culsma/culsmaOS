@@ -38,7 +38,7 @@ class MaterialInteractor:
     def reconcile(self, pending, evidence):
         if evidence.effect_id != pending.effect_id:
             raise ValueError("MATERIAL_EFFECT_MISMATCH")
-        if evidence.mode != "simulation" or evidence.outcome != "completed":
+        if evidence.mode not in ("simulation", "physical") or evidence.outcome != "completed":
             if evidence.outcome != "rejected":
                 self.repository.mark_uncertain(
                     evidence.run_id, pending.effect_id, evidence.evidence_id
@@ -102,7 +102,7 @@ class MaterialInteractor:
                 or len({(e.run_id, e.mode, e.payload.get("shared_evidence_id")) for e in evidences}) != 1
                 or not evidences[0].payload.get("shared_evidence_id")):
             raise ValueError("COLLECTIVE_MATERIAL_EVIDENCE_MISMATCH")
-        if any(e.mode != "simulation" or e.outcome != "completed" for e in evidences):
+        if any(e.mode not in ("simulation", "physical") or e.outcome != "completed" for e in evidences):
             for member, evidence in zip(pending.members, evidences):
                 self.repository.mark_uncertain(evidence.run_id, member.effect_id, evidence.evidence_id)
             return ReconciliationResult(False, reason="COLLECTIVE_EVIDENCE_INCOMPLETE")
@@ -132,7 +132,7 @@ class MaterialInteractor:
                 or len({(e.run_id, e.mode, e.payload.get("shared_evidence_id")) for e in evidences}) != 1
                 or not evidences[0].payload.get("shared_evidence_id")):
             raise ValueError("COLLECTIVE_MATERIAL_EVIDENCE_MISMATCH")
-        if any(e.mode != "simulation" or e.outcome != "completed" for e in evidences):
+        if any(e.mode not in ("simulation", "physical") or e.outcome != "completed" for e in evidences):
             self.mark_wave_uncertain(evidences[0].run_id, pending.members, evidences[0].payload["shared_evidence_id"])
             return ReconciliationResult(False, reason="COLLECTIVE_EVIDENCE_INCOMPLETE")
         proposals = []
@@ -153,20 +153,20 @@ class MaterialInteractor:
             receipt = self.repository.receipt(member.effect_id)
             semantic = self.codec.fingerprint(member.prepared.material_result.material_state)
             if (evidence is None or evidence.effect_id != member.effect_id or evidence.outcome != "completed"
-                    or evidence.mode != "simulation" or receipt is None or receipt.evidence_id != evidence.evidence_id
+                    or evidence.mode not in ("simulation", "physical") or receipt is None or receipt.evidence_id != evidence.evidence_id
                     or (receipt.semantic_state_fingerprint or receipt.proposed_state_fingerprint) != semantic):
                 return ReconciliationResult(False, reason="GROUP_REGISTRATION_INCOMPLETE")
             resolutions.append(EffectResolution(member.effect_id, evidence.evidence_id, receipt.registration_id,
                                                semantic, evidence.mode, "OS_MATERIAL_REGISTERED", evidence.payload))
         mode, state, _ = self.repository.get(evidences[0].run_id)
-        if mode != "simulation" or self.codec.fingerprint(state) != self.codec.fingerprint(pending.members[-1].prepared.material_result.material_state):
+        if mode != evidences[0].mode or self.codec.fingerprint(state) != self.codec.fingerprint(pending.members[-1].prepared.material_result.material_state):
             raise ValueError("COLLECTIVE_FINAL_STATE_MISMATCH")
         return ReconciliationResult(True, GroupEffectResolution(pending.effect_id, tuple(resolutions)))
 
 
     def reconcile_logical(self, pending, completion):
         proposal = pending.prepared.material_result
-        if (not isinstance(completion, LogicalCompletion) or completion.mode != "simulation"
+        if (not isinstance(completion, LogicalCompletion) or completion.mode not in ("simulation", "physical")
                 or completion.effect_id != pending.effect_id
                 or completion.payload.get("device_action") is not False
                 or completion.payload.get("completion_kind") != "logical"

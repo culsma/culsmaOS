@@ -21,6 +21,7 @@ class TestArchitecture:
             "event_journal",
             "recovery_manager",
             "lifecycle_manager",
+            "remote_access",  # Credential verification and bounded remote transport.
             "auth",  # Process-local credential owner for writable console use cases.
             "file_system",  # Authorized local installation directory reads.
             "console_interaction",  # Shared native presentation requests and receipts.
@@ -29,12 +30,25 @@ class TestArchitecture:
         assert {
             p.name for p in SRC.iterdir() if p.is_dir() and p.name != "__pycache__"
         } == allowed
+        # Explicit service/port owners introduced by resident, remote and settings APIs.
+        service_modules = {
+            'lifecycle_manager': {'console_service.py', 'service_ports.py', 'station_service.py'},
+            'recovery_manager': {'cancellation.py'},
+            'workspace_manager': {'floor_plan.py'},
+            'driver_framework': {'execution_mode.py'},
+            'remote_access': {'ports.py', 'desktop.py'},
+        }
+        function_owners = {
+            'device_manager/instruments/station_settings.py',
+            'workspace_manager/floor_plan.py',
+            'driver_framework/execution_mode.py',
+        }
         for path in SRC.rglob("*.py"):
             tree = ast.parse(path.read_text())
             relative = path.relative_to(SRC)
             public_functions = [node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
             if public_functions:
-                assert path.name == "interactors.py" or "interactors" in relative.parts, path
+                assert path.name == "interactors.py" or "interactors" in relative.parts or relative.as_posix() in function_owners, path
                 assert all(not node.name.startswith("_") for node in public_functions), path
             if len(relative.parts) > 1:
                 assert relative.parts[1] in {
@@ -46,6 +60,7 @@ class TestArchitecture:
                     "repositories",
                     "adapters",
                     "providers.py",
+                    *service_modules.get(relative.parts[0], set()),
                     *( {"instruments"} if relative.parts[0] == "device_manager" else set() ),
                     *( {"conditions.py"} if relative.parts[0] == "scheduler" else set() ),
                 }, path

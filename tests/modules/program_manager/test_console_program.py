@@ -189,3 +189,65 @@ def test_start_delegates_one_durable_command_with_reviewed_source(programs):
     assert len(programs.calls) == 1 and programs.calls[0]['action'] == 'start'
     assert programs.calls[0]['configuration_fingerprint'] == 'a'*64
     assert Path(programs.calls[0]['source']).read_text() == programs.source.read_text()
+
+
+def test_prepare_retains_reviewed_source_and_returns_preparation_effect(programs):
+    view=programs.interactor.execute(programs.credential,ConsoleProgramRequest('inspect','transfer.culs'))
+    result=programs.interactor.execute(programs.credential,ConsoleProgramRequest('prepare','transfer.culs',
+        view['snapshot_id'],'prepare-1',configuration_fingerprint='a'*64,workflow_revision=3))
+    assert result['effect']=='preparation_created'
+    assert programs.calls[0]['action']=='prepare'
+    assert programs.calls[0]['configuration_fingerprint']=='a'*64
+    assert programs.calls[0]['workflow_revision']==3
+
+
+@pytest.mark.parametrize('step', ['entry.s0::alloc', 'entry.s1'])
+def test_preview_rejects_retired_step_bindings(programs, step):
+    from culsma_os.console.adapters.mcp import MCPServerAdapter
+    adapter = SimpleNamespace(programs=programs.interactor, raw_credential=programs.credential)
+    with pytest.raises(TypeError, match='profile_bindings'):
+        MCPServerAdapter.preview_program(adapter, 'transfer.culs', profile_bindings={step: {}})
+    assert programs.calls == []
+
+
+@pytest.mark.parametrize('action', ['preview', 'prepare', 'submit', 'start'])
+def test_program_request_rejects_step_selections_at_boundaries(action):
+    import asyncio
+    from culsma_os.console.adapters.http import ConsoleHTTPHandler
+    from culsma_os.console.adapters.mcp import MCPServerAdapter
+    from culsma_os.program_manager.adapters.resident import ResidentProtocolAdapter
+    payload = {'action': action, 'profile_bindings': {'entry.s0::alloc': {}}}
+    with pytest.raises(ValueError, match='PROGRAM_REQUEST_INVALID'):
+        ConsoleHTTPHandler.program_request(None, payload)
+    with pytest.raises(ValueError, match='HOST_REQUEST_INVALID'):
+        ResidentProtocolAdapter.request(payload)
+    pytest.importorskip('mcp.server.mcpserver')
+    from mcp.server.mcpserver.exceptions import ToolError
+    server = MCPServerAdapter(None, None, None).make_server('test')
+    args = {'program_id': 'transfer.culs', 'profile_bindings': payload['profile_bindings']}
+    with pytest.raises(ToolError, match='PROFILE_RUN_BINDINGS_RETIRED'):
+        asyncio.run(server.call_tool(action + '_program', args))
+
+
+def test_legacy_bound_run_stops_before_device_dispatch(tmp_path):
+    import sqlite3
+    from culsma_os.device_manager.instruments.sqlite_repository import LegacyRunMethodCheck
+    path = tmp_path / 'runs.db'
+    check = LegacyRunMethodCheck(path)
+    check.require_unbound('new')
+    assert not path.exists()
+    with sqlite3.connect(path) as db:
+        db.execute('CREATE TABLE instrument_run_profiles(run_id TEXT PRIMARY KEY, payload TEXT NOT NULL)')
+        db.executemany('INSERT INTO instrument_run_profiles VALUES(?,?)', [('bound', '{"entry.s0":{}}'), ('plain', '{}')])
+    for run in ('plain', 'new'):
+        check.require_unbound(run)
+    with pytest.raises(ValueError, match='PROFILE_RUN_BINDINGS_RETIRED'):
+        check.require_unbound('bound')
+
+
+def test_batch_operation_has_no_method_slot():
+    from culsma_os.driver_framework.models import BatchOperation
+    with pytest.raises(TypeError, match='method'):
+        BatchOperation('step', None, (), method={})
+    with pytest.raises(TypeError):
+        BatchOperation('step', None, (), {}, {})

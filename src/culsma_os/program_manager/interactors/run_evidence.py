@@ -30,3 +30,11 @@ class RunEvidenceInteractor:
                     'consistency': 'single_evidence_material_snapshot',
                     'ordering': 'insertion_order_within_each_record_kind',
                     'attempts': attempts, 'logical_completions': logical}
+
+    def receipt_faults(self, run_id):
+        """Read matching failure receipts in one snapshot for the status report."""
+        with self.snapshot:
+            journal = self.journal.inspect_run(run_id)
+            return [(item.attempt, fault) for item in journal.operations
+                    if item.evidence is not None and item.evidence.outcome != 'completed'
+                    for fault in item.evidence.payload.get('faults', ())]

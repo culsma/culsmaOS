@@ -20,7 +20,7 @@ internal workspace. Public acceptance is self-contained and checks source bounda
 After installing the public release as described in the README:
 
 ```sh
-python -m pip install --requirement requirements/preview-downloads.txt \
+python -m pip install --requirement requirements/release-downloads.txt \
   --constraint requirements/preview-constraints.txt -e '.[simulator,dev]'
 python -m pytest -q
 ```
@@ -190,13 +190,13 @@ External AI uses MCP for program and loading operations, run controls and their
 receipts, supported simulated tip replacement, and requesting native views.
 The renderer reports whether a requested view was displayed; a display receipt
 is not execution evidence. Both paths use the same authorized backend Interactors.
-MCP cannot confirm physical loading on behalf of the operator.
+An authorized MCP client can convey the operator’s explicit loading confirmation through
+`confirm_loading`; it uses the same `SetupConfirmationInteractor` as the native button.
+The attestation is attributed to the authenticated client and never labelled as sensor evidence.
 
 ## Native Hamilton layout export
 
-The optional Hamilton configuration plugin supplies native layout export. Set
-`CULSMA_HAMILTON_LABWARE_ROOT` to a local directory containing the matching vendor
-labware definitions before starting the console. In Layout, save and check a
+The optional Hamilton configuration plugin supplies native layout export. The driver generates supported labware definitions from its bundled geometry profiles. In Layout, save and check a
 Hamilton setup, then choose **Export VENUS layout**. The desktop saves a ZIP in a
 new temporary directory and displays its path; copy it elsewhere to retain it.
 
@@ -209,13 +209,12 @@ scope is declared by the installed plugin.
 Local native E2E, including Hamilton layout export:
 
 ```sh
-CULSMA_HAMILTON_LABWARE_ROOT=/path/to/Hamilton/Labware \
-  python tools/test_desktop.py --with-hamilton
+python tools/test_desktop.py --with-hamilton
 ```
 
 ## Hamilton loading preparation
 
-The `hamilton-agent` device profile now stops at `awaiting_setup`. Its loading
+The `hamilton-venus` device profile now stops at `awaiting_setup`. Its loading
 plan includes automatic or pinned locations, initial contents and one checklist
 entry per physical labware. Candidates come from the declared driver layout;
 this does not detect loaded stock, invent carrier positions or verify calibration.
@@ -301,14 +300,16 @@ bare bundle is not a complete installed product startup.
 
 The MCP surface covers experiment files, inspection/start, loading plans, run
 controls, observations, presentation, System Settings and detached Developer
-exception tests. Physical loading confirmation remains an operator action.
+exception tests. Loading attestation requires operator confirmation and execution authorization,
+which an authorized MCP client can convey without an additional console click.
 
 | Tools | Responsibility |
 | --- | --- |
 | `station_status`, `list_runs`, `run_status` | Read existing OS observations |
-| `list_programs`, `inspect_program`, `preview_program`, `start_program`, `submit_program`, `control_run` | Review source, preview loading without admission, and request queue/control actions |
+| `list_programs`, `inspect_program`, `preview_program`, `prepare_program`, `start_program`, `submit_program`, `control_run` | Review source, preview loading without admission, and request queue/control actions |
 | `loading_plan`, `revise_loading_plan` | Read or revise the fingerprinted loading plan |
 | `begin_loading`, `loading_request_status` | Reserve for loading and inspect durable command outcomes |
+| `confirm_loading` | Convey explicit attestation for the exact plan fingerprint and submit for execution |
 | `read_document`, `create_document`, `save_document`, `receive_files` | Share the same experiment files and revision-conflict rules as the native editor |
 
 ### Shared console view control
@@ -327,7 +328,7 @@ is created lazily when a renderer registers. `ConsoleSettings.view_store_path` p
 a trusted composition override; no HTTP or MCP argument accepts a database path.
 Credentials remain process-local and in memory. Only an Auth-issued renderer
 credential can register, report or acknowledge its own session. MCP receives read
-and presentation capabilities, without renderer or physical-confirmation authority.
+and presentation capabilities plus explicit loading attestation, without renderer-reporting authority.
 
 `ConsoleShell` connects the current console views to this contract using bounded
 polling. It opens the existing views and highlights declared items, preserving unsaved
@@ -343,7 +344,8 @@ The three-layer module is `console_interaction/{interactors,repository,models}.p
 `ConsoleApplicationLifecycleInteractor` is the renamed console launcher; view control
 uses `ViewStateReadInteractor`, `ViewRequestInteractor` and `RendererSessionInteractor`.
 The protocol/browser acceptance is `tests/integration/test_console_view_interaction.py`;
-its isolated MCP subprocess and browser Golden check do not dispatch device actions.
+the browser Golden check leaves loading unconfirmed. The MCP confirmation integration test
+uses a labelled test backend and verifies execution only after confirmation.
 
 Single-clicking a protocol previews its source. In the native console, double-clicking
 checks the protocol and opens its loading review. Choosing **Run simulation** then sends
@@ -353,9 +355,29 @@ and are displayed as errors; unknown execution retains isolation. Retrying the s
 request returns the same run. `submit_program` remains available for explicit staged
 loading. Both paths retain source and configuration fingerprint checks.
 
+For staged loading use `prepare_program` with the reviewed source snapshot and configuration
+fingerprint. Its `preparation_created` receipt records an `awaiting_setup` preparation,
+not execution submission. Even a simulation stays unconfirmed. The resident stores this
+state atomically before the worker sees it; drivers without a loading gate reject this
+operation. The existing durable queue stores the preparation identity for recovery.
+
+Read `loading_plan`, display the experiment view on the host, then call `begin_loading`.
+After the operator has confirmed the current requirements and authorized execution, call
+`confirm_loading(run_id, fingerprint, request_id, acknowledged=true)`. Poll the original
+`loading_request_status` until completed, then observe `run_status`. A pending receipt is
+not execution acceptance. Stale plans and missing attestation are rejected. Repeating the
+same request ID returns its original receipt without executing again.
+
+The preview and active loading panel share `NativePreparationLayout`: P1/P2 markers,
+highlights, position/quantity tooltips and the same loading cards. All sites, including
+empty narrow carriers, display their native site IDs. The Hamilton driver orders the
+projection by native site coordinates, not definition record indices, and regenerates
+loading views of older configurations without changing their native execution addresses.
+Historical run plans remain recorded evidence and are not rewritten.
+
 Automatic loading is limited to simulation and records `simulation_fixture`, never
 operator attestation or sensor evidence. Physical loading still requires the existing
-operator console confirmation; MCP has no physical-confirmation capability. Neither
+operator attestation through the console or `confirm_loading`. Neither
 transport starts a second runtime or bypasses dispatch/resource gates.
 
 Progress and terminal outcomes appear at the top of the run pane, before the layout.
@@ -421,6 +443,20 @@ through the existing idle/fingerprint gate. Compatible leaf labware keeps its
 identity and site; canonical native transforms are regenerated. Colliding tracks,
 unsupported stacks, coordinate associations and adjusted native frames are blocked
 with reasons. Physical installation and experiment loading remain operator checks.
+
+### Workstation expansion areas
+
+Open **System Settings** to see the driver-declared rack or slot layout beside
+the expansion areas. Set the deck width and depth in millimetres. The rear-left
+corner is the origin. Add areas around the deck or on an upper or lower level.
+Click an empty spot in an area and choose **Add instrument**. Select an
+available workstation device or add equipment by type, then enter its footprint.
+Click a placed device to open its settings or drag it to move it. Use
+**Save draft → Check layout → Apply layout** to show the plan in
+Workstation. Existing relative layouts convert when the operator sets the deck
+bounds. Equipment without a configured instrument can be placed as an unbound
+item. A handoff label identifies a position for display. Robot transport
+requires a separately validated driver route.
 
 
 ### Home and protocol files
@@ -687,27 +723,277 @@ native liquid class, and explicitly rejects unsupported flow rates. The older
 `InstrumentMethodTranslationPort.translate_step_method` returns an immutable
 `TranslatedInstrumentMethod`, preserving the exact selection and driver-owned payload.
 
-Batch runs may now submit `profile_bindings` to `start_program` or `submit_program`:
-`{step_id: {device_id, module_id, profile_id, revision}}`. Inspect the exact source
-snapshot's `execution_steps` first. Admission captures full immutable revisions in
-Device Manager's run-profile table; later edits cannot change an admitted run.
-The batch gateway checks projected step coverage and driver-derived operation facts,
-then passes typed selections to the driver. Root execution evidence records the
-exact references, supplied parameters and effective native settings.
+Program execution uses station configuration and the projected material inventory.
+Hamilton selects the aspiration mode and height per stroke. Per-step method bindings
+are retired. A previously admitted run with saved method bindings requires a fresh
+submission so it cannot execute with different parameters.
 
-Hamilton consumes scoped pipetting selections in local magnetic batches and native
-combined HSL preparation, including passive magnetic workflows. Per-step heights
-share one layout, channel, tip cursor and batch outcome. Unsupported per-step changes
-to shared settings are rejected. Stepwise and collective paths still reject bound
-Profiles. Native generation is covered locally; the new Profile parameters still
-require official VENUS simulation. Local decoder height allowlists apply independently;
-passing them does not establish vendor or physical suitability.
+### Build and upgrade the complete Windows product
 
+Use clean Git snapshots of CulsmaOS, the Culsma language runtime, and the
+Hamilton driver. Record the full commit IDs in a JSON source manifest with the
+keys `os`, `culsma`, and
+`hamilton`. Record the language wheel version as `culsma_version`. Run
+`tools/windows/build.ps1` on the provisioned Windows builder with
+`-DriverSource`, `-LanguageSource`, `-SourceManifest`, and a new `-Output`.
+It builds the native console and three wheels, assembles the package, and
+runs the Windows, direct VENUS driver, and remote MCP checks.
+Distribute the archive only after that command succeeds. The archive checksum
+and the included `Product.json` identify the build and its inputs.
 
-`tools/test_mac_profile_runtime.py --app /Applications/CulsmaOS\ Preview.app
---output /path/outside/git/profile-result.json` uses the installed MCP server and
-resident. It preserves exact revisions while checking 2.5/4 mm and 2.5/3.5 mm
-transfer actions, complete magnetic workflows, and a pre-dispatch operation mismatch.
-Use the bundled interpreter with `Contents/Resources/packages/mcp` on `PYTHONPATH`.
-The active local decoder must explicitly permit those test heights; the probe does
-not alter its scope or any physical station. A deliberate failed run remains in history.
+On the station, close the desktop and run `Install.cmd`. The installer checks
+the existing resident and VENUS job store are idle, replaces the complete installed
+product, and retains the previous product directory for rollback. The station
+database, reviewed method registration, pairing credentials and experiments
+remain in their existing data locations. Use the existing desktop shortcut
+after the upgrade. For the first upgrade from a build that did not save an
+already enabled remote switch, use `Install.ps1 -RestoreRemoteAccess -Start`
+with the existing paired station account.
+
+The `hamilton-venus` configuration uses a `venus` object with the installed
+Web API `port` and an absolute `trace_directory`. An upgraded local Windows
+station reads its existing VENUS settings and job records from its data directory.
+When no initialization method is registered, the driver prepares one from its
+initialization resources and the configured deck layout. Normal OS shutdown
+waits for device execution and receipt collection before releasing the station.
+
+Before handing the upgraded station back, connect with the existing paired
+MCP client. Call `describe_station_service` and verify the reviewed
+initialization method, physical mode, a ready station, and no unsettled request.
+Check the prior initialization receipt by its request ID. Use the normal
+`initialize_station` tool for the next authorized operation. A cold VENUS
+executor can delay analysis briefly. The driver retries the preparation request
+only and sends load and start at most once per initialization.
+
+For an initialization left running or unknown after execution has stopped, use
+`cancel_station_service(request_id=<original initialization ID>)`, or
+`culsma-os device-service --socket <station.endpoint> --action cancel --request-id <ID>`.
+This retains the initialization record with state `cancelled`. The driver first
+releases its matching job reservation; OS then settles its own service record.
+Hamilton checks that VENUS is idle and interrupts the old software observation
+loop. This command is not an emergency hardware stop. A lost response can be
+reconciled with `station_service_status` using the same ID. Repeating cancellation
+does not start another method, and late status replies cannot restore the blocker.
+The MCP caller needs the existing `programs:execute` capability. A driver without
+cancellation support returns `STATION_SERVICE_CANCELLATION_UNSUPPORTED`.
+
+Ordinary experiments use the existing `control_run(..., action="cancel", ...)`.
+The driver cancels the original attempt. A durable cancellation intent prevents
+dispatch after restart. Separate stop observations release OS permits and station
+ownership while retaining the original receipts and material uncertainties.
+VENUS must be idle before a started job can be released. A busy or unavailable
+executor leaves an explicit cancellation-pending reason. Potentially used tips
+remain reserved at their planned maximum; inspection exposes `unconfirmed_reserved`
+separately from confirmed consumption. The desktop permits cancellation of an
+experiment that needs reconciliation, without enabling resume.
+
+Hamilton additionally handles the recorded cover-unlock `Process busy` cleanup
+fault after the method body has returned and VENUS is idle. It runs the bundled
+single-unlock HSL once with the original layout snapshot, retaining a separate
+recovery receipt. It never replays the experiment, recursively retries recovery,
+or upgrades the original experimental result to success. This code is locally
+tested; Windows packaging and physical station validation remain required.
+
+### Remote MCP for a Windows station
+
+Open **System Settings → Remote access** on the Windows station. Choose **Pair a
+device**, name the client, and save the credential shown once in the client's
+private credential store. Turn on **Allow remote MCP connections**. The station
+listens on `127.0.0.1:8768`. With RustDesk forwarding Mac `127.0.0.1:18768` to
+that address, configure the Mac MCP client for Streamable HTTP at
+`http://127.0.0.1:18768/mcp` with `Authorization: Bearer <token>`.
+
+To check the setup, initialize MCP and call `station_status`. Switch remote
+access off and check the connection closes. Switch it on and reconnect with the
+same credential. **Revoke** removes the paired device's authorization. The
+switch starts off on a new installation. The desktop restores the saved
+preference at startup and closes the listener when it exits. Paired credentials
+survive both actions. The station still requires
+local confirmation for physical loading.
+
+If port 8768 is already in use, close the prior standalone gateway before
+enabling the desktop-managed listener. For short-lived developer diagnostics, a
+separate gateway can still be launched from the station account:
+
+```powershell
+$StationPython = 'C:\path\to\CulsmaOS\runtime\python.exe'
+$StationState = Join-Path $env:LOCALAPPDATA 'CulsmaOS\windows-preview'
+$StationHome = Join-Path $env:USERPROFILE 'Culsma Hamilton'
+$Grants = Join-Path $StationState 'remote-grants'
+$ClientToken = Join-Path $StationState 'operator-remote-token'
+
+& $StationPython -I -m culsma_os.cli remote-grant --station-id hamilton --grants $Grants --subject operator --scope automation --hours 24 --token-file $ClientToken
+& $StationPython -I -m culsma_os.cli mcp --transport http --station-id hamilton --grants $Grants --socket (Join-Path $StationState 'station.endpoint') --drafts-db (Join-Path $StationState 'drafts.sqlite3') --program-store (Join-Path $StationState 'programs') --home $StationHome --program-root (Join-Path $StationHome 'projects')
+```
+
+Point the authenticated, encrypted tunnel to Windows `127.0.0.1:8768`.
+For a tunnel listening on Mac `127.0.0.1:18768`, use the Streamable HTTP MCP URL
+`http://127.0.0.1:18768/mcp` and send the automation credential as
+`Authorization: Bearer <token>`. Transfer the token privately to the operator.
+The station checks the grant on every request. Deleting the grant file or
+reaching its expiry revokes subsequent requests. The remote grant has the
+normal local MCP permissions. The local operator still confirms physical
+loading in the Windows console.
+
+#### Read-only client
+
+Use an OS build containing `remote-grant`, `remote-serve`, and `remote-mcp`.
+Start CulsmaOS on the station and confirm that the resident is ready. From the
+station user's PowerShell, set the paths for the installed Windows product and
+its state, then issue a named read grant and start the gateway.
+
+```powershell
+$StationPython = 'C:\path\to\CulsmaOS\runtime\python.exe'
+$StationState = Join-Path $env:LOCALAPPDATA 'CulsmaOS\windows-preview'
+$RemoteGrants = Join-Path $StationState 'remote-grants'
+$ClientToken = Join-Path $StationState 'operator-remote-token'
+
+& $StationPython -m culsma_os.cli remote-grant --station-id lab-station --grants $RemoteGrants --subject operator --hours 24 --token-file $ClientToken
+& $StationPython -m culsma_os.cli remote-serve --station-id lab-station --socket (Join-Path $StationState 'station.endpoint') --grants $RemoteGrants
+```
+
+The first command prints the grant file path for revocation. Transfer only the
+token file to the named operator through your approved secret-sharing method.
+Deleting the grant file on the station revokes access on the next request.
+Restrict the grant directory to the station owner and trusted administrators.
+
+The gateway binds to `127.0.0.1:8768` on the station. For `--connection tunnel`,
+start an authenticated, encrypted tunnel outside CulsmaOS. Set its local listener
+to the client machine's loopback and point the remote end to the station gateway.
+RustDesk TCP tunneling and a self-hosted tunnel can use the same MCP configuration
+when they provide the same local listener. For example, where an SSH route to
+the station already exists, use a local forward on the client:
+
+```sh
+ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:8768:127.0.0.1:8768 operator@station-host
+```
+
+Configure the MCP client to start a Python environment containing this OS build
+and its `mcp` extra. Example stdio configuration:
+
+```json
+{
+  "mcpServers": {
+    "culsma-remote": {
+      "command": "/absolute/path/to/python",
+      "args": [
+        "-m", "culsma_os.cli", "remote-mcp",
+        "--connection", "tunnel",
+        "--station-id", "lab-station",
+        "--url", "http://127.0.0.1:8768",
+        "--token-file", "/absolute/path/to/operator-remote-token"
+      ]
+    }
+  }
+}
+```
+
+For an HTTPS gateway with a trusted certificate, set `--connection https` and
+use its HTTPS origin as `--url`. The gateway must pass the station bearer header
+through and prevent caching. Forward only the remote read origin, on its
+dedicated port. Existing configurations can omit `--connection`; the client
+uses the URL scheme and the presence of `--access-token-file` to select the mode.
+
+Verify that `station_status` identifies the intended resident and that
+`list_runs` and `run_status` agree with its local console. A tunnel interruption
+returns a connection failure. Stopping the gateway leaves the resident running.
+This entry exposes three read tools.
+
+#### Cloudflare Tunnel and Access
+
+Use a dedicated station hostname and a named tunnel. Before publishing the
+hostname, create a self-hosted Access application for it with a Service Auth
+policy restricted to that station's named service token. Enable **Protect with
+Access** on the tunnel route so the connector also checks the application's
+Access token. Route the hostname to `http://127.0.0.1:8768` on the Windows station.
+Use the [Windows cloudflared service](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/local-management/as-a-service/windows/)
+or the dashboard instructions for a remotely managed tunnel. Disable caching for
+the station hostname and preserve the OS `Authorization` header.
+
+For a permanent installation, register the read gateway as a Windows Task
+Scheduler task under the account that owns the resident endpoint. Run the
+same `remote-serve` command shown above at that account's sign-in, with no
+execution time limit and a single instance. The connector can run as its own
+Windows service. The gateway only queries the existing resident, so the station
+must start its normal CulsmaOS resident for queries to succeed after a restart.
+
+On the MCP client, set `--connection cloudflare` and use the station's HTTPS
+origin as `--url`. Add
+`--access-token-file /absolute/path/to/access.json` alongside the OS
+`--token-file`. Store the Access service token in a private file readable only by
+the client account. The JSON keys are `client_id` and `client_secret`. Keep both
+credential files out of Git and place only their paths in the MCP configuration.
+
+From outside the station network, verify that a request without an Access
+credential is rejected. Then verify that a valid Access credential without
+the OS grant is also rejected, and that both credentials together allow the
+three read tools. Check access again after rotating or revoking credentials.
+
+### Local Hamilton follow-up — 2026-11-16 (not deployed)
+
+The current working tree adds `run_logs(run_id, attempt_id, stream, offset, limit)`
+to MCP. Read the attempt ID from run status/evidence. OS resolves that attempt in
+its own journal; the Hamilton driver verifies the generated method identity before
+reading the Agent. `receipt` is UTF-8 JSON, `trace` is the driver-described vendor
+encoding, and both are base64 byte pages (maximum 65536 bytes). This is read-only
+and uses the existing authenticated station-service capability; it never submits
+or retries an experiment. Output can be incomplete while the method is running.
+
+Setup projection now reports `SETUP_WELL_DECLARATION_REQUIRED` for an unbound
+standalone `well(...)`. Declare a plate-bound well or use `container(...)` with
+an explicit loading binding. This is an OS loading limitation, not a new language
+restriction. Unexpected setup/request/control exceptions are reported without
+terminating the worker; cancellation still uses the existing finalization and
+reservation-release proof. A device that has not confirmed stopping is not
+released solely because a UI request failed.
+
+The whole-site deck renderer needs a new native desktop build. OS backend changes,
+Hamilton driver changes and the Agent progress collector must travel together in
+the next full Windows product. No VENUS upgrade is required by these changes.
+
+`tools/windows/prepare_maintenance_patch.py` now resolves source refs to full commit
+IDs, includes complete committed source trees, supports explicitly selected OS,
+driver and Agent Python overlays, and records packaged hashes. It rejects omitted
+working source changes. This backend-only maintenance utility retains the installed
+UI and does not remove obsolete installed modules; use the full Windows build for
+this delivery. Its CLI requires an explicit output directory. Nothing in it uploads
+to AWS. Current edits are intentionally stopped before upload/build/deployment.
+
+Local verification for this follow-up: the focused OS regression passed 139 tests
+(7 optional MCP subprocess cases skipped in that test selection); the separate
+HTTP MCP registration/authentication/log-read cases ran successfully with the
+existing SDK environment. Hamilton/Agent regression passed 145 tests, including
+saved physical trace replay (offline, not a new physical run). Flutter loading
+and whole-site golden tests passed 8 tests; static analysis of both changed Dart
+files passed.
+
+The previously reported reference CLI conflict was fixed in the subsequent local
+follow-up: OS now registers `os-opentrons-simulator`; the standalone driver owns
+`opentrons-simulator`. Both can be installed together. The reference CLI tests
+now pass. The following migration applies to source builds after this change.
+
+### Explicit standalone and OS program executors
+
+| Command | Execution owner |
+| --- | --- |
+| `culsma run protocol.culs --driver opentrons-simulator --driver-config deck.json` | Standalone driver; no OS queue or run database |
+| `culsma run protocol.culs --driver os-opentrons-simulator --driver-config deck.json` | OS one-shot executor, with OS evidence and run database |
+| `culsma-os run protocol.culs --driver opentrons-simulator --driver-config deck.json` | OS CLI; unchanged device identity |
+
+The old OS language-CLI spelling must migrate to `os-opentrons-simulator`.
+This is an explicit execution-provider name, not a new device. `OpentronsProgramExecutorFactory`
+binds it to the existing `opentrons-simulator` device session. Resident/MCP
+configuration and the generic Hamilton program executor retain their existing
+names. The language loader still rejects genuine duplicate registrations rather
+than selecting a provider by installation order.
+
+Rebuild/reinstall the OS package to update its entry-point metadata; a Python
+source-only maintenance overlay cannot apply this change. Development editable
+installs also need their metadata regenerated. The distribution audit rejects an
+OS package that claims the standalone driver's registration. No standalone driver
+source or language dispatch semantics were changed by this fix.
+
+Local coexistence verification: 44 provider/distribution/language-CLI/reference
+centrifuge tests plus 32 other OS/standalone-name CLI regression cases passed
+(76 total). The tests use local simulation and existing installed dependencies;
+no hardware, AWS upload, remote build or installation was performed.

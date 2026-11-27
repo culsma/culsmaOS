@@ -207,7 +207,7 @@ class TestAgitationProcessing:
         app.close()
         artifacts = tmp_path / 'cli-artifacts'
         result = subprocess.run([sys.executable, '-m', 'culsma_os.cli' if entry == 'os' else 'culsma.cli', 'run',
-            str(tmp_path/'protocol.culs'), '--driver', 'opentrons-simulator', '--driver-config', str(context.config_path),
+            str(tmp_path/'protocol.culs'), '--driver', 'os-opentrons-simulator' if entry == 'language' else 'opentrons-simulator', '--driver-config', str(context.config_path),
             '--artifacts-dir', str(artifacts)], capture_output=True, text=True)
         assert result.returncode == 0, result.stdout + result.stderr
         artifact = json.loads((artifacts/'run.json').read_text())

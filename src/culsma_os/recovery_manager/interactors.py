@@ -20,6 +20,12 @@ class RecoveryInteractor:
         self.execution_batches = execution_batches
 
     def reconcile(self, run_id):
+        if (self.finalization is not None and self.finalization.cancellation is not None
+                and self.finalization.cancellation.stopped_fault_requires_cancellation(run_id)):
+            self.evidence.request_cancellation(run_id)
+        if self.finalization is not None and self.evidence.cancellation_requested(run_id):
+            result = self.finalization.finalize(run_id)
+            return RecoveryDecision(run_id, 'finalized' if result.status in ('cancelled', 'failed', 'completed') else 'wait', result.status)
         if self.execution_batches is not None:
             decision = self.execution_batches.reconcile(run_id)
             if decision is not None:
@@ -101,7 +107,8 @@ class RecoveryInteractor:
         attempt = self.evidence.find_attempt(pending.effect_id)
         if attempt is None:
             if self.logical is not None and all(self.logical.is_no_action(m) for m in pending.members):
-                resolution = self.logical.complete_group(run_id, pending, "simulation")
+                mode = getattr(self.execution.host, 'execution_mode', None) or 'simulation'
+                resolution = self.logical.complete_group(run_id, pending, mode)
                 self.state.mark_ready(run_id, resolution)
                 return RecoveryDecision(run_id, "continue", "LOGICAL_GROUP_REGISTERED")
             return RecoveryDecision(run_id, "queued", "NO_EXECUTION_INTENT")

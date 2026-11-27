@@ -9,7 +9,7 @@ def test_process_session_is_stable_but_not_valid_in_another_process_owner():
     token=first.issue_console_session()
     assert token==first.issue_console_session()
     caller=first.execute('Bearer '+token)
-    assert caller.capabilities==frozenset({'files:write','files:read','consumables:simulate','configuration:drafts','configuration:activate','programs:execute','setup:operate','setup:confirm','console:views:read','console:views:request'})
+    assert caller.capabilities==frozenset({'files:write','files:read','consumables:simulate','configuration:drafts','configuration:activate','programs:execute','setup:operate','setup:confirm','console:views:read','console:views:request','remote:manage'})
     with pytest.raises(ConsoleAccessError): second.execute('Bearer '+token)
     with pytest.raises((AttributeError,TypeError)): caller.subject='forged'
 
@@ -23,13 +23,13 @@ def test_authorized_entry_cannot_be_overridden_or_omit_capability():
             def execute(self,raw,request): pass
 
 
-def test_automation_session_has_separate_identity_and_cannot_confirm_physical_loading():
+def test_automation_session_has_separate_identity_and_can_attest_loading():
     tokens=TokenInteractor(SessionCredentialRepository())
     console=tokens.issue_console_session();automation=tokens.issue_automation_session()
     assert automation==tokens.issue_automation_session() and automation!=console
     caller=tokens.execute('Bearer '+automation)
     assert caller.subject=='local-mcp-process'
-    assert caller.capabilities==frozenset({'configuration:drafts','configuration:activate','files:write','files:read','consumables:simulate','programs:execute','setup:operate','console:views:read','console:views:request'})
+    assert caller.capabilities==frozenset({'configuration:drafts','configuration:activate','files:write','files:read','consumables:simulate','programs:execute','setup:operate','setup:confirm','console:views:read','console:views:request'})
     assert tokens.execute('Bearer '+console).subject=='local-console-process'
     with pytest.raises(ConsoleAccessError):
         TokenInteractor(SessionCredentialRepository()).execute('Bearer '+automation)

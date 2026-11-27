@@ -1,7 +1,9 @@
 """Isolated local resident and HTTP console; Hamilton execution is a labelled double."""
+from tests.support.paths import HAMILTON_TRANSFER
 import pytest
-from pathlib import Path
 import json
+import os
+from contextlib import ExitStack
 from culsma_os.bootstrap import OSApplicationFactory
 from culsma_os.console.providers import ConsoleApplicationFactory
 from culsma_os.console.models import ConsoleSettings
@@ -15,11 +17,11 @@ from tests.support.console.http import ConsoleHTTPHarness
 class SharedSetupHarness(ResidentHarness):
     def __init__(self,directory,submit=True,programs=False):
         super().__init__(directory)
-        culsma_driver_hamilton = pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
-        driver=Path(culsma_driver_hamilton.__file__).resolve().parents[2]
-        data=json.loads((driver/'examples/os-transfer-input/setup.json').read_text())
+        pytest.importorskip('culsma_driver_hamilton', reason='Optional Hamilton driver is not installed')
+        data=json.loads((HAMILTON_TRANSFER/'setup.json').read_text())
+        self.resources = ExitStack()
         self.source=directory/'transfer.culs'
-        self.source.write_text((driver/'examples/os-transfer-input/transfer.culs').read_text())
+        self.source.write_text((HAMILTON_TRANSFER/'transfer.culs').read_text())
         config=directory/'device.json'
         config.write_text(json.dumps({'schema':'culsma_hamilton_device_v1','device_id':'shared-console-test','mode':'simulation',
             'layout':data['layout'],'execution':data['execution'],'bindings':{},'well_positions':{},'agent':{}}))
@@ -43,25 +45,23 @@ class SharedSetupHarness(ResidentHarness):
             self.errors.append(error)
 
     def __enter__(self):
-        self.start()
         try:
+            self.start()
+            self.resources.callback(self.stop)
             server=ConsoleApplicationFactory().build(ConsoleSettings(self.endpoint,0,self.directory/'drafts.sqlite3',
                 self.program_root,self.directory/'program-store'))
-        except BaseException:
-            self.stop()
-            raise
-        self.http=ConsoleHTTPHarness(server).__enter__()
-        self.url=server.url
-        self.headers={'Origin':self.url,'Authorization':'Bearer '+server.sessions.execute()['access_token'],'Content-Type':'application/json'}
-        if not self.submit_on_start:
+            self.http=self.resources.enter_context(ConsoleHTTPHarness(server))
+            self.url=server.url
+            self.headers={'Origin':self.url,'Authorization':'Bearer '+server.sessions.execute()['access_token'],'Content-Type':'application/json'}
+            if not self.submit_on_start:
+                return self
+            receipt=self.client.execute({'action':'submit','source':str(self.source)})
+            self.run_id=receipt['run_id']
+            self.wait(lambda:self.status(self.run_id)['status']=='awaiting_setup')
             return self
-        receipt=self.client.execute({'action':'submit','source':str(self.source)})
-        self.run_id=receipt['run_id']
-        self.wait(lambda:self.status(self.run_id)['status']=='awaiting_setup')
-        return self
+        except BaseException:
+            self.resources.close()
+            raise
 
     def __exit__(self,*args):
-        try:
-            if self.http is not None: self.http.__exit__(*args)
-        finally:
-            self.stop()
+        return self.resources.__exit__(*args)

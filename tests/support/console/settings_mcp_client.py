@@ -14,7 +14,8 @@ async def execute(socket,home,programs,store,drafts,layout_source):
         tools={t.name:t for t in (await client.list_tools()).tools}
         required={'configuration_profiles','list_configurations','read_configuration','create_configuration','save_configuration','validate_configuration','export_configuration','export_vendor_layout','import_vendor_layout','review_program_bindings','configuration_status','apply_configuration','labware_catalogue','prepare_labware_change','test_device_fault'}
         assert required <= tools.keys(),tools.keys()
-        assert not any('confirm' in name or 'renderer' in name for name in tools)
+        assert {name for name in tools if 'confirm' in name} == {'confirm_loading'}
+        assert not any('renderer' in name for name in tools)
         views=tools['open_view'].input_schema['properties']['view']['enum']
         assert {'desktop','developer','editor','settings'}<=set(views)
         async def call(tool_name,**arguments):

@@ -1,3 +1,4 @@
+import {visiblePanelScreenshot} from './visible_panel.mjs';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 const require=createRequire(`${process.env.CULSMA_OS_BROWSER_MODULES}/package.json`);
@@ -6,7 +7,7 @@ const pixelmatch=(await import(`${process.env.CULSMA_OS_BROWSER_MODULES}/pixelma
 const [url,programRoot]=process.argv.slice(2),browser=await chromium.launch({executablePath:process.env.CULSMA_OS_CHROME,headless:true});
 async function golden(page,locator,name,width) {
  await page.setViewportSize({width,height:960});
- const png=await locator.screenshot({path:`run-artifacts/ui-tests/${name}-${width}.png`,animations:'disabled'});
+ const png=await visiblePanelScreenshot(locator, {path:`run-artifacts/ui-tests/${name}-${width}.png`,animations:'disabled'});
  const file=`tests/modules/console/goldens/${name}-${width}.png`;
  if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1')writeFileSync(file,png);
  else {const ref=PNG.sync.read(readFileSync(file)),img=PNG.sync.read(png);
@@ -19,7 +20,7 @@ try {
  const page=await browser.newPage({viewport:{width:1280,height:960}}),errors=[],commands=[];
  page.on('pageerror',e=>errors.push(e.message));
  page.on('request',r=>{if(r.method()==='POST' && ['start','submit','begin','confirm'].includes(r.postDataJSON()?.action))commands.push(r.postDataJSON().action);});
- await page.goto(url+'#station');
+ await page.goto(url+'#programs');
  const files=page.getByRole('complementary',{name:'Program files'});
  const file=files.getByRole('button',{name:'standard-curve/transfer.culs',exact:true});
  await file.click();
@@ -27,7 +28,7 @@ try {
  if(await file.getAttribute('aria-pressed')!=='true' || !await file.evaluate(node=>node===document.activeElement))throw new Error('File selection lost highlight or keyboard focus');
  if(commands.length)throw new Error('Single click started an experiment');
  await page.locator('.program-location').evaluate(node=>node.textContent='Culsma/projects');
- for(const width of [1280,390])await golden(page,page.locator('[data-region="workstation-main"]'),'experiment-preview',width);
+ for(const width of [1280,390])await golden(page,page.locator('[data-presentation="files"] .workstation-main'),'experiment-preview',width);
  await page.setViewportSize({width:1280,height:960});
  await files.getByRole('button',{name:'invalid.culs',exact:true}).click();
  await page.getByText('This protocol needs correction before it can run.',{exact:true}).waitFor();
@@ -58,10 +59,11 @@ try {
  const placement=await page.evaluate(()=>({
   outcome:document.querySelector('[data-region="run-outcome"]').getBoundingClientRect().top,
   material:document.querySelector('#run-panel-results').getBoundingClientRect().top,
-  layout:document.querySelector('[data-region="workstation-layout-host"]').getBoundingClientRect().top,
-  height:innerHeight
+  hasLayout:!!document.querySelector('#content [data-region="workstation-layout-host"]'),
+  surfaceTop:document.querySelector('#content').getBoundingClientRect().top,
+  surfaceBottom:document.querySelector('#content').getBoundingClientRect().bottom
  }));
- if(placement.outcome< -1 || placement.outcome>200 || placement.material>=placement.height || placement.material>=placement.layout)
+ if(placement.outcome<placement.surfaceTop || placement.outcome>=placement.material || placement.material>=placement.surfaceBottom || placement.hasLayout)
   throw new Error('Results were not immediately visible before the layout: '+JSON.stringify(placement));
  await page.locator('[data-region="workstation-run-host"]').getByText(runId,{exact:true}).evaluate(node=>node.textContent='example-run-id');
  for(const width of [1280,390])await golden(page,page.locator('[data-region="workstation-run-host"]'),'experiment-result',width);
@@ -72,7 +74,7 @@ try {
  await page.getByText('Runs and history',{exact:true}).click();
  await page.locator('[data-region="workstation-runs-host"]').getByRole('link',{name:runId,exact:true}).click();
  await page.getByRole('heading',{name:'Experiment result',exact:true}).waitFor();
- await navigation.getByRole('link',{name:'Workstation',exact:true}).click();
+ await navigation.getByRole('link',{name:'Files',exact:true}).click();
  mkdirSync(`${programRoot}/new-project`);
  writeFileSync(`${programRoot}/new-project/copied.culs`,readFileSync(`${programRoot}/transfer.culs`));
  await files.getByRole('button',{name:'Refresh files',exact:true}).click();

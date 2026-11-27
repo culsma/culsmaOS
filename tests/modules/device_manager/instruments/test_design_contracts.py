@@ -47,7 +47,7 @@ class InstrumentProfileDesignTests(unittest.TestCase):
                    'collections.abc', 'math', 'types', 'json', 'uuid', 'culsma_os.workspace_manager.models', 'culsma_os.device_manager.models', 'culsma_os.driver_framework.models', 'culsma_os.program_manager.models'}
         storage_imports = {'pathlib', 'contextlib', 'sqlite3'}
         for path in root.rglob('*.py'):
-            path_allowed = allowed | (storage_imports if path.name == 'sqlite_repository.py' else set()) | ({'re'} if path.name == 'profile_api.py' else set())
+            path_allowed = allowed | (storage_imports if path.name == 'sqlite_repository.py' else set()) | ({'re'} if path.name == 'profile_api.py' else set()) | ({'hashlib', 're'} if path.name == 'station_settings.py' else set())
             for node in ast.walk(ast.parse(path.read_text())):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
@@ -70,7 +70,8 @@ class InstrumentProfileDesignTests(unittest.TestCase):
                     # Persistence remains private to Device Manager/composition.
                     composition = module.endswith('.sqlite_repository') and (
                         path.relative_to(source).as_posix() == 'console/providers.py' and {a.name for a in node.names} == {'FileModuleProfileRepository'} or
-                        path.relative_to(source).as_posix() == 'bootstrap.py' and {a.name for a in node.names} == {'FileModuleProfileRepository', 'FileRunProfileBindingRepository'})
+                        path.relative_to(source).as_posix() == 'bootstrap.py' and {a.name for a in node.names} in (
+                            {'FileModuleProfileRepository'}, {'LegacyRunMethodCheck'}))
                     self.assertFalse(module.endswith(('.repository', '.sqlite_repository', '.selection')) and not composition, str(path))
                     if module.endswith('.interactors'):
                         relative = path.relative_to(source).as_posix()

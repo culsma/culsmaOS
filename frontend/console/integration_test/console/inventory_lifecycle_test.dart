@@ -39,24 +39,38 @@ void main() {
           File('${directory.path}/mutations.json'),
         ),
       );
-      Future<void> settle() async {
-        for (var i = 0; i < 200; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 30));
-          if (!c.busy) await c.refresh();
-          final status = c.runs[c.active?.entityId]?['status'];
-          if (['completed', 'failed', 'needs_reconciliation'].contains(status))
-            break;
+      // The live workstation can repaint during polling. Synchronize each action
+      // with the state it needs instead of waiting for every animation to stop.
+      Future<void> paint([Duration duration = Duration.zero]) =>
+          tester.pump(duration).timeout(const Duration(seconds: 5));
+
+      Future<void> waitForState(
+        String description,
+        bool Function() ready, {
+        Future<void> Function()? poll,
+      }) async {
+        final elapsed = Stopwatch()..start();
+        const limit = Duration(seconds: 30);
+        while (!ready()) {
+          if (elapsed.elapsed >= limit) {
+            fail(
+              'Timed out waiting for $description. '
+              'View: ${c.active?.view}, status: ${c.runs[c.active?.entityId]?['status']}, '
+              'message: ${c.message}',
+            );
+          }
+          await paint(const Duration(milliseconds: 100));
+          if (!ready() && poll != null) await poll().timeout(limit);
         }
-        await tester.pumpAndSettle();
+        await paint();
       }
 
       Future<void> reconnectAccessibility() async {
         const bridge = MethodChannel('culsma/test/accessibility');
         await bridge.invokeMethod('setEnabled', false);
-        await tester.pumpAndSettle();
+        await paint();
         await bridge.invokeMethod('setEnabled', true);
-        await tester.pumpAndSettle();
+        await paint();
       }
 
       var cancellationChecked = false;
@@ -64,18 +78,17 @@ void main() {
         await reconnectAccessibility();
         c.open('files');
         await c.files.navigate('programs', '');
-        await tester.pumpAndSettle();
+        await paint();
         final entry = find.byKey(
           const ValueKey('file-entry-programs-standard_dilution.culs'),
         );
         await tester.tap(entry);
-        await tester.pump(const Duration(milliseconds: 60));
+        await paint(const Duration(milliseconds: 60));
         await tester.tap(entry);
-        for (var i = 0; i < 100 && c.busy; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 30));
-        }
-        await tester.pumpAndSettle();
+        await waitForState(
+          'launch review',
+          () => !c.busy && c.launchReview != null,
+        );
         final before = (await api.read('/api/v1/station'))['runs'];
         expect(c.launchReview, isNotNull, reason: c.message);
         expect(c.pendingStart, isNull);
@@ -88,7 +101,7 @@ void main() {
           expect(c.launchReview, isNull);
           cancellationChecked = true;
           await c.launch('standard_dilution.culs');
-          await tester.pumpAndSettle();
+          await paint();
         }
         expect(find.text('Run simulation'), findsOneWidget);
         expect(
@@ -103,20 +116,32 @@ void main() {
         for (var poll = 0; poll < 3; poll++) {
           final refresh = c.refresh();
           expect(c.reviewBusy, isFalse);
-          await tester.pump();
+          await paint();
           expect(find.text('Ready to confirm'), findsOneWidget);
           expect(find.text('Checking the experiment…'), findsNothing);
           expect(find.byType(LinearProgressIndicator), findsNothing);
           expect(tester.getRect(button), beforePolling);
           expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
           await refresh;
-          await tester.pumpAndSettle();
+          await paint();
         }
         // Click while a real station read is pending, rather than dropping it.
         final refresh = c.refresh();
         await tester.tap(button);
         await refresh;
-        await settle();
+        await waitForState(
+          'a terminal experiment status',
+          () =>
+              c.active?.view == 'experiment' &&
+              [
+                'completed',
+                'failed',
+                'needs_reconciliation',
+              ].contains(c.runs[c.active?.entityId]?['status']),
+          poll: () async {
+            if (!c.busy) await c.refresh();
+          },
+        );
         expect(
           c.runs[c.active?.entityId]?['status'],
           expected,
@@ -149,20 +174,12 @@ void main() {
         await tester.tap(
           find.byKey(const Key('run-replace-tips')).hitTestable(),
         );
-        for (var i = 0; i < 50 && !c.supplies.editing; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 30));
-        }
-        await tester.pumpAndSettle();
+        await waitForState('tip box editor to open', () => c.supplies.editing);
         await reconnectAccessibility();
         await tester.tap(find.byType(CheckboxListTile));
-        await tester.pumpAndSettle();
+        await paint();
         await tester.tap(find.widgetWithText(FilledButton, 'Register new box'));
-        for (var i = 0; i < 100 && c.supplies.editing; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 30));
-        }
-        await tester.pumpAndSettle();
+        await waitForState('tip box registration', () => !c.supplies.editing);
         expect(c.supplies.editing, isFalse);
         expect((c.supplies.data!['stock']['available'] as List).length, 12);
       }
@@ -171,10 +188,10 @@ void main() {
         await layout.load();
         await c.refresh();
         await tester.pumpWidget(CulsmaConsole(controller: layout, console: c));
-        await tester.pumpAndSettle();
+        await paint();
         if (const bool.fromEnvironment('INDEPENDENT_SIMULATION')) {
           c.open('developer');
-          await tester.pumpAndSettle();
+          await paint();
           final beforeTests = (await api.read('/api/v1/station'))['runs'];
           for (final scenario in [
             'tip_unavailable',
@@ -182,11 +199,7 @@ void main() {
             'interrupted',
           ]) {
             await tester.tap(find.byKey(ValueKey('fault-test-$scenario')));
-            for (var i = 0; i < 100 && c.developer.busy; i++) {
-              await tester.pump(const Duration(milliseconds: 100));
-              await Future<void>.delayed(const Duration(milliseconds: 30));
-            }
-            await tester.pumpAndSettle();
+            await waitForState('fault test $scenario', () => !c.developer.busy);
             expect(c.developer.error, isNull);
             expect(c.developer.result?['supported'], isTrue);
             expect(find.text('INJECTED TEST RESULT'), findsOneWidget);
@@ -196,12 +209,12 @@ void main() {
             expect(c.developer.result?['station_changed'], isFalse);
             await tester.ensureVisible(find.text('Clear test result'));
             await tester.tap(find.text('Clear test result'));
-            await tester.pumpAndSettle();
+            await paint();
           }
           expect((await api.read('/api/v1/station'))['runs'], beforeTests);
 
           c.open('workstation');
-          await tester.pumpAndSettle();
+          await paint();
           expect(find.text('Replace tip box…'), findsNothing);
           for (var trial = 0; trial < 6; trial++) {
             await run('completed');

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -39,6 +39,7 @@ class LogicalCompletion:
 class AttemptObservation:
     attempt: AttemptRecord
     evidence: ExecutionEvidence | None
+    stop: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,7 @@ class DeviceEvidenceObservation:
     known_consumption: dict[str, int]
     evidence_ids: tuple[str, ...]
     accounting: str = 'recorded'
+    reserved_consumption: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

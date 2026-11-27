@@ -3,22 +3,22 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "culsma-os"
-version = "0.2.0"
+version = "0.2.3"
 description = "Evidence-aware laboratory execution host with a resident program queue"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 requires-python = ">=3.11,<3.13"
-dependencies = ["culsma==1.0.10"]
+dependencies = ["culsma>=1.0.11,<1.1"]
 [project.optional-dependencies]
 # Install the MCP bridge in its own environment; vendor simulators pin conflicting dependencies.
 mcp = ["mcp==2.3.0"]
-simulator = ["culsma-opentrons-simulator==0.1.0+g205e705e7dd8"]
+simulator = ["culsma-opentrons-simulator==0.1.0"]
 dev = ["pytest>=8,<9", "coverage==7.10.7", "pytest-cov==7.0.0"]
 [project.scripts]
 culsma-os = "culsma_os.cli:CulsmaOSCLI.main"
 [project.entry-points."culsma.program_executors"]
-opentrons-simulator = "culsma_os.bootstrap:LanguageProgramExecutorFactory"
+os-opentrons-simulator = "culsma_os.bootstrap:OpentronsProgramExecutorFactory"
 
 [tool.setuptools.packages.find]
 where = ["src"]

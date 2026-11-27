@@ -54,7 +54,7 @@ def test_every_native_api_surface_has_a_tool_or_an_explicit_authority_boundary()
         for route in re.findall(r"['\"](/api/v1/[^'\"]+)['\"]",path.read_text()):
             if route.startswith('/api/v1/runs/'):route='/api/v1/runs/{run_id}'
             assert route in rows,(path,route)
-    assert not any('confirm' in name for row in rows.values() for name in row.get('tools',[]))
+    assert rows['/api/v1/setup/confirmation']['tools'] == ['confirm_loading']
 
 
 def test_mcp_queries_resident_profiles_and_has_no_vendor_discovery_dependency():

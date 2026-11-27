@@ -1,6 +1,7 @@
 """Read-only access to server-selected roots; never follow links or special files."""
 import codecs
 import os
+from culsma_os.platform_support import HostFileIO as file_io
 from pathlib import Path
 import stat
 from typing import Protocol
@@ -37,6 +38,13 @@ class LocalFileReadRepository:
     def validate_path(self,path):
         if not isinstance(path,str) or len(path)>1024 or '\x00' in path or '\\' in path or path.startswith('/') or path and any(not part or part in {'.','..'} or part.startswith('.') for part in path.split('/')):
             raise FileReadError('FILE_PATH_INVALID')
+        if os.name == 'nt':
+            from culsma_os.platform_support import WindowsFileHandles
+            try:
+                for part in path.split('/') if path else ():
+                    WindowsFileHandles.component(part)
+            except OSError as error:
+                raise FileReadError('FILE_PATH_INVALID') from error
 
     def selected_path(self,root,path):
         self.validate_path(path)
@@ -49,17 +57,17 @@ class LocalFileReadRepository:
     def directory_descriptor(self,root,path):
         self.selected_path(root,path)
         self.initialize_home()
-        descriptor=os.open(self.paths[root],os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+        descriptor=file_io.open(self.paths[root],os.O_RDONLY|file_io.O_DIRECTORY|file_io.O_NOFOLLOW)
         try:
             for part in path.split('/') if path else ():
-                child=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=descriptor)
-                os.close(descriptor);descriptor=child
+                child=file_io.open(part,os.O_RDONLY|file_io.O_DIRECTORY|file_io.O_NOFOLLOW,dir_fd=descriptor)
+                file_io.close(descriptor);descriptor=child
             return descriptor
         except BaseException:
-            os.close(descriptor);raise
+            file_io.close(descriptor);raise
 
     def describe(self,root,path,name,info):
-        kind='directory' if stat.S_ISDIR(info.st_mode) else 'file' if stat.S_ISREG(info.st_mode) else 'link' if stat.S_ISLNK(info.st_mode) else 'special'
+        kind='link' if getattr(info, 'st_file_attributes', 0) & 0x400 else 'directory' if stat.S_ISDIR(info.st_mode) else 'file' if stat.S_ISREG(info.st_mode) else 'link' if stat.S_ISLNK(info.st_mode) else 'special'
         result={'name':name,'path':path,'kind':kind,'size':info.st_size if kind=='file' else None,'modified_ns':info.st_mtime_ns,'extension':Path(name).suffix.lower(),'openable':kind in {'file','directory'}}
         return result
 
@@ -67,7 +75,7 @@ class LocalFileReadRepository:
         descriptor=None
         try:
             descriptor=self.directory_descriptor(root,path);rows=[]
-            with os.scandir(descriptor) as entries:
+            with file_io.scandir(descriptor) as entries:
                 for entry in entries:
                     if entry.name.startswith('.'):continue
                     child=f'{path}/{entry.name}' if path else entry.name
@@ -82,14 +90,14 @@ class LocalFileReadRepository:
         except FileNotFoundError as e:raise FileReadError('FILE_NOT_FOUND','not_found') from e
         except OSError as e:raise FileReadError('FILE_LOCATION_UNAVAILABLE','unavailable') from e
         finally:
-            if descriptor is not None:os.close(descriptor)
+            if descriptor is not None:file_io.close(descriptor)
 
     def preview(self,root,path):
         directory,_,name=path.rpartition('/');descriptor=None
         self.selected_path(root,path)
         try:
             descriptor=self.directory_descriptor(root,directory)
-            child=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=descriptor)
+            child=file_io.open(name,os.O_RDONLY|file_io.O_NOFOLLOW|file_io.O_NONBLOCK,dir_fd=descriptor)
             with os.fdopen(child,'rb') as stream:
                 info=os.fstat(stream.fileno())
                 if not stat.S_ISREG(info.st_mode):raise FileReadError('FILE_PREVIEW_NOT_REGULAR','forbidden')
@@ -104,7 +112,7 @@ class LocalFileReadRepository:
         except FileNotFoundError as e:raise FileReadError('FILE_NOT_FOUND','not_found') from e
         except OSError as e:raise FileReadError('FILE_PREVIEW_UNAVAILABLE','unavailable') from e
         finally:
-            if descriptor is not None:os.close(descriptor)
+            if descriptor is not None:file_io.close(descriptor)
 
 
 class FileWorkspaceRepository(Protocol):
@@ -133,7 +141,7 @@ class LocalFileWorkspaceRepository:
         descriptor=None
         try:
             descriptor=self.reader.directory_descriptor('programs',parent)
-            child=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=descriptor)
+            child=file_io.open(name,os.O_RDONLY|file_io.O_NOFOLLOW|file_io.O_NONBLOCK,dir_fd=descriptor)
             with os.fdopen(child,'rb') as stream:
                 if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):raise FileReadError('FILE_PREVIEW_NOT_REGULAR')
                 data=stream.read(self.max_document_bytes+1)
@@ -145,7 +153,7 @@ class LocalFileWorkspaceRepository:
         except UnicodeError as error:raise FileReadError('FILE_DOCUMENT_NOT_TEXT') from error
         except OSError as error:raise FileReadError('FILE_LOCATION_UNAVAILABLE','unavailable') from error
         finally:
-            if descriptor is not None:os.close(descriptor)
+            if descriptor is not None:file_io.close(descriptor)
 
     def write_lock(self):
         from contextlib import contextmanager
@@ -154,11 +162,11 @@ class LocalFileWorkspaceRepository:
             self.ensure_root()
             descriptor=self.reader.directory_descriptor('programs','')
             try:
-                try:os.mkdir('.culsma-write-lock',mode=0o700,dir_fd=descriptor)
+                try:file_io.mkdir('.culsma-write-lock',mode=0o700,dir_fd=descriptor)
                 except FileExistsError as error:raise FileReadError('FILE_WORKSPACE_BUSY','conflict') from error
                 try:yield
-                finally:os.rmdir('.culsma-write-lock',dir_fd=descriptor)
-            finally:os.close(descriptor)
+                finally:file_io.rmdir('.culsma-write-lock',dir_fd=descriptor)
+            finally:file_io.close(descriptor)
         return acquire()
 
     def write_document(self,path,content,expected_revision):
@@ -178,22 +186,22 @@ class LocalFileWorkspaceRepository:
                 if expected_revision is not None and (current is None or current['revision']!=expected_revision):
                     raise FileReadError('FILE_REVISION_CONFLICT','conflict')
                 temporary='.save-'+uuid4().hex
-                child=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600,dir_fd=descriptor)
+                child=file_io.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL|file_io.O_NOFOLLOW,0o600,dir_fd=descriptor)
                 try:
                     with os.fdopen(child,'wb') as stream:
                         stream.write(content);stream.flush();os.fsync(stream.fileno())
                     if expected_revision is None:
-                        try:os.link(temporary,name,src_dir_fd=descriptor,dst_dir_fd=descriptor,follow_symlinks=False)
+                        try:file_io.link(temporary,name,src_dir_fd=descriptor,dst_dir_fd=descriptor,follow_symlinks=False)
                         except FileExistsError as error:raise FileReadError('FILE_ALREADY_EXISTS','conflict') from error
-                    else:os.replace(temporary,name,src_dir_fd=descriptor,dst_dir_fd=descriptor)
+                    else:file_io.replace(temporary,name,src_dir_fd=descriptor,dst_dir_fd=descriptor)
                 finally:
-                    try:os.unlink(temporary,dir_fd=descriptor)
+                    try:file_io.unlink(temporary,dir_fd=descriptor)
                     except FileNotFoundError:pass
                 return {'path':path,'revision':sha256(content).hexdigest()}
             except FileReadError:raise
             except OSError as error:raise FileReadError('FILE_WRITE_FAILED','unavailable') from error
             finally:
-                if descriptor is not None:os.close(descriptor)
+                if descriptor is not None:file_io.close(descriptor)
 
     def receive_files(self,entries):
         """Stage all bytes before publishing; collisions never overwrite existing files."""
@@ -215,29 +223,29 @@ class LocalFileWorkspaceRepository:
                         parent=relative;relative=f'{relative}/{part}' if relative else part
                         fd=self.reader.directory_descriptor('programs',parent)
                         try:
-                            try:os.mkdir(part,mode=0o700,dir_fd=fd);created_directories.append(relative)
+                            try:file_io.mkdir(part,mode=0o700,dir_fd=fd);created_directories.append(relative)
                             except FileExistsError:pass
-                        finally:os.close(fd)
-                        fd=self.reader.directory_descriptor('programs',relative);os.close(fd)
+                        finally:file_io.close(fd)
+                        fd=self.reader.directory_descriptor('programs',relative);file_io.close(fd)
                     fd=self.reader.directory_descriptor('programs',relative)
                     try:
-                        try:os.stat(parts[-1],dir_fd=fd,follow_symlinks=False)
+                        try:file_io.stat(parts[-1],dir_fd=fd,follow_symlinks=False)
                         except FileNotFoundError:pass
                         else:raise FileReadError('FILE_ALREADY_EXISTS','conflict')
-                    finally:os.close(fd)
+                    finally:file_io.close(fd)
                 for path,_ in entries:
                     parent,_,name=path.rpartition('/');fd=self.reader.directory_descriptor('programs',parent)
                     try:
                         # link is exclusive: even external writers cannot be overwritten.
-                        os.link(staging/path,name,dst_dir_fd=fd,follow_symlinks=False)
+                        file_io.link(staging/path,name,dst_dir_fd=fd,follow_symlinks=False)
                         created_files.append(path)
-                    finally:os.close(fd)
+                    finally:file_io.close(fd)
                 return {'paths':[path for path,_ in entries],'count':len(entries)}
             except BaseException as error:
                 for path in reversed(created_files):
                     fd=self.reader.directory_descriptor('programs',path.rpartition('/')[0])
-                    try:os.unlink(path.rpartition('/')[2],dir_fd=fd)
-                    finally:os.close(fd)
+                    try:file_io.unlink(path.rpartition('/')[2],dir_fd=fd)
+                    finally:file_io.close(fd)
                 for path in reversed(created_directories):
                     try:(self.root/path).rmdir()
                     except OSError:pass

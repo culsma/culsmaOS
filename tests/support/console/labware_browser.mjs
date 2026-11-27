@@ -91,7 +91,7 @@ try {
  await open(cleared);await select('tips','HT_L.rck');
  await dialog.getByText('Advanced identification',{exact:true}).click();await dialog.getByLabel('Labware identifier',{exact:true}).fill('HT_L_0003');await persist(original);
  await page.reload();await original.waitFor();
- await open(item('Inspect deck item DWP96_E4 · carrier CAR_HHS_3DWP_0001 · site 4'));await select('reservoir','Nun_100ml_96C_Rgt_L.rck');
+ await open(item('Inspect deck item DWP96_E4 · carrier CAR_HHS_3DWP_0001 · site 4'));await select('plate','Ham_DW_Rgt_96_L');
  await persist(item('Inspect deck item DWP96_E4 · carrier CAR_HHS_3DWP_0001 · site 4'));
  if(!(/Clear liquid capacity/.test(await page.locator('#operation-status').innerText())))throw new Error('Missing cleanup feedback: '+await page.locator('#operation-status').innerText());
  await open(item('Inspect deck item TIP_50ul_L_0001 · carrier CAR_5TIP_0001 · site 1'));await select('empty');

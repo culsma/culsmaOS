@@ -41,7 +41,7 @@ class ExternalSimulationHandoffInteractor:
     def begin(self, source_run_id, continuation, operation, sample_ids, return_bindings, observation_fields):
         station = self.station()
         source, material = self.source_material(source_run_id)
-        if not isinstance(continuation, RunRequest) or continuation.setup_preferences is not None or continuation.profile_bindings is not None:
+        if not isinstance(continuation, RunRequest) or continuation.setup_preferences is not None:
             raise ValueError("EXTERNAL_CONTINUATION_REQUEST_INVALID")
         if (not isinstance(operation, str) or not operation.strip()
                 or not isinstance(observation_fields, tuple) or not observation_fields

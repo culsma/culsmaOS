@@ -68,6 +68,8 @@ try {
  for(const width of [1280,390]) {
   await page.setViewportSize({width,height:960});
   await page.locator('#content .setup-deck-scroll').evaluate(node=>node.scrollLeft=0);
+  // Let Chromium paint the resized desktop and its bottom taskbar before comparison.
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   const actual=await page.screenshot({path:`${output}/desktop-${width}.png`,animations:'disabled',maskColor:'#e8edf3',mask:[page.locator('.status-strip'),page.locator('.program-location'),page.locator('#alert')]});
   const file=`${baselines}/desktop-${width}.png`;
   if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1')writeFileSync(file,actual);

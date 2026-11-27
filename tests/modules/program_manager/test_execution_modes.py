@@ -40,7 +40,7 @@ class TestExecutionModes:
         monkeypatch.setattr(ResidentClientAdapter, 'execute', forbidden)
         monkeypatch.setenv('CULSMA_OS_SOCKET', str(tmp_path / 'unused.sock'))
         artifacts = tmp_path / 'artifacts'
-        arguments = ['run', str(ProgramFixture.source), '--driver', 'opentrons-simulator',
+        arguments = ['run', str(ProgramFixture.source), '--driver', 'os-opentrons-simulator' if entry == 'language' else 'opentrons-simulator',
                      '--artifacts-dir', str(artifacts)]
         if entry == 'language':
             monkeypatch.setattr(sys, 'argv', ['culsma', *arguments, '--json'])

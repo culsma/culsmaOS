@@ -1,4 +1,6 @@
+from contextlib import ExitStack
 from hashlib import sha256
+from http.client import HTTPConnection
 from importlib.resources import files
 
 import pytest
@@ -66,6 +68,24 @@ class TestConsoleHTTP:
         for name in ['culsma-logo.png', 'culsma-os-wordmark.png']:
             packaged = files('culsma_os.console').joinpath('web', 'assets', name).read_bytes()
             assert sha256(packaged).digest() == sha256((ROOT/'assets'/name).read_bytes()).digest()
+        assert resident.calls == []
+
+    def test_browser_can_queue_its_initial_module_requests(self, tmp_path):
+        resident = ResidentReadFixture()
+        settings = ConsoleSettings(tmp_path/'host.sock', 0)
+        with ConsoleHTTPServer(settings, ConsoleCommandInteractor(resident)) as server, ExitStack() as clients:
+            requests = []
+            for path in server.RequestHandlerClass.static_resources:
+                if path.endswith('.js'):
+                    connection = HTTPConnection(*server.server_address, timeout=2)
+                    clients.callback(connection.close)
+                    connection.request('GET', path)
+                    requests.append(connection)
+            # A cold browser can request modules before the HTTP worker is scheduled.
+            with ConsoleHTTPHarness(server):
+                for connection in requests:
+                    response = connection.getresponse()
+                    assert response.status == 200 and response.read()
         assert resident.calls == []
 
     def test_missing_service_stays_missing(self, tmp_path):

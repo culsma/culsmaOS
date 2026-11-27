@@ -76,7 +76,26 @@ class FakeConsoleApi implements ConsoleApi {
   ) async {
     calls.add({'path': path, ...LayoutData.copy(body)});
     if (error != null) throw error!;
+    if (path == LayoutController.instrumentSettings &&
+        body['action'] == 'read') {
+      return {'instruments': []};
+    }
+    if (path == '/api/v1/configuration/floor-plan' &&
+        body['action'] == 'read') {
+      return {
+        'revision': 0,
+        'draft': {'areas': [], 'equipment': []},
+      };
+    }
     switch (body['action']) {
+      case 'execution_options':
+        return {
+          'selected': {'mode': 'simulation', 'simulator': 'opentrons'},
+          'implementations': [
+            {'mode': 'simulation', 'simulator': 'opentrons',
+              'label': 'Opentrons official simulator'},
+          ],
+        };
       case 'create':
         return {
           'draft': {

@@ -49,6 +49,8 @@ class LifecycleInteractor:
             raise ValueError("OS_NOT_STARTED")
         self.state.publish_pending_events()
         self.require_run_mode(self.tasks.get(run_id))
+        if self.evidence.cancellation_requested(run_id):
+            return self.finish_terminal(self.tasks.get(run_id))
         record = self.execution_strategy.execute(run_id)
         if record.status not in {"ready", "waiting"}:
             return self.finish_terminal(record)
@@ -108,8 +110,16 @@ class LifecycleInteractor:
 
     def cancel_run(self, run_id):
         from culsma_os.resource_manager.models import ResourceConflict
+        current = self.tasks.get(run_id)
+        if current.status in ('completed', 'failed', 'cancelled'):
+            return current
+        self.evidence.request_cancellation(run_id)
         record = self.tasks.request_cancel(run_id)
         try:
+            owner = self.reservations.get(run_id) if self.reservations else None
+            if owner is not None and owner.status == 'active' and owner.owner_id != self.reservations.owner_id:
+                self.device.require_session_configuration()
+                self.reservations.take_over(run_id)
             return self.finish_terminal(record)
         except ResourceConflict:
             return record
@@ -122,12 +132,17 @@ class RunFinalizationInteractor:
         self.tasks, self.state, self.safety = tasks, state, safety
         self.reservations, self.conditions = reservations, conditions
         self.resource, self.evidence = resource, evidence
+        self.cancellation = None
 
     def finalize(self, run_id):
         record = self.tasks.get(run_id)
+        if (record.status == 'needs_reconciliation' and self.cancellation is not None
+                and self.cancellation.stopped_fault_requires_cancellation(run_id)):
+            self.evidence.request_cancellation(run_id)
+            record = self.tasks.request_cancel(run_id)
         if record.status in {"completed", "failed", "cancelled"}:
             return record
-        if record.body_outcome is None and record.status != "cancel_requested":
+        if record.body_outcome is None and record.status != "cancel_requested" and not self.evidence.cancellation_requested(run_id):
             return record
         owner = self.reservations.get(run_id) if self.reservations else None
         if owner is not None and owner.status == "active":
@@ -141,7 +156,14 @@ class RunFinalizationInteractor:
         self.safety.repair_system_effects(run_id)
         from culsma_os.program_manager.models import RunFinalizationProof
         record = self.tasks.get(run_id)
-        if record.body_outcome is None and record.status == "cancel_requested":
+        if self.evidence.cancellation_requested(run_id) and self.cancellation is not None:
+            try:
+                self.cancellation.reconcile(run_id)
+            except Exception as error:
+                return self.state.mark_reconciliation_required(run_id, f'CANCELLATION_PENDING: {error}')
+            if self.safety.effects_release_proof(run_id) is not None:
+                record = self.state.begin_cancelled_finalization(run_id)
+        if record.body_outcome is None and (record.status == "cancel_requested" or self.evidence.cancellation_requested(run_id)):
             if self.safety.effects_release_proof(run_id) is None:
                 return record  # An in-flight action may still return and settle normally.
             record = self.state.begin_finalization(run_id, outcome="cancelled")
@@ -180,6 +202,9 @@ class RunFinalizationInteractor:
 
     def settle_confirmed_attempts(self, run_id):
         for attempt in self.evidence.attempts_for_run(run_id):
+            stop = self.evidence.find_stop(attempt.attempt_id)
+            if stop is not None:
+                self.resource.settle_stop(attempt, stop)
             receipt = self.evidence.find_evidence(attempt.effect_id)
             if receipt is not None:
                 self.resource.settle(attempt.attempt_id, receipt)
@@ -420,7 +445,7 @@ class ResidentConfigurationInteractor:
         from dataclasses import replace
         from pathlib import Path
         record = self.repository.receipt(request_id)
-        target = replace(context,config_path=Path(record['config_path']))
+        target = replace(context,config_path=Path(record['config_path']), execution_selection=None)
         active = {key:record[key] for key in ['config_path','base_fingerprint','driver','draft_id','revision','title','configuration_fingerprint']}
         active['fingerprint'] = self.calculate_fingerprint(target)
         self.repository.activate(request_id,active,record['expected_fingerprint'])
@@ -452,6 +477,8 @@ class ResidentConfigurationInteractor:
                  'config_path': str(context.config_path.resolve()) if context.config_path else None,
                  'station': context.station_id or os.environ.get('CULSMA_OS_STATION_ID', 'local'),
                  'station_root': str(station_root.resolve())}
+        if context.execution_selection is not None:
+            value['execution_selection'] = context.execution_selection.as_record()
         if context.workspace_config_path is not None:
             value['workspace_catalog'] = context.workspace_config_path.read_text()
             value['workspace_catalog_path'] = str(context.workspace_config_path.resolve())

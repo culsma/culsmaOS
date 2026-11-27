@@ -67,7 +67,7 @@ class MagneticEnvironmentInteractor:
             for scope in reversed(candidates):
                 exposed = ProcessingArgumentsInteractor().targets(state, [scope['sample']])
                 if set(exposed) == set(targets):
-                    return
+                    return exposed
             raise ValueError("PROCESSING_MAGNETIC_ENVIRONMENT_TARGETS")
         if (set(gate) - allowed
                 or set(env) != {"field"} or arg_string(env["field"]) != "magnetic_rack"
@@ -75,8 +75,9 @@ class MagneticEnvironmentInteractor:
                 or layers[0].get("env_targets") != gate.get("env_targets")):
             raise ValueError("PROCESSING_MAGNETIC_ENVIRONMENT_UNSUPPORTED")
         exposed = ProcessingArgumentsInteractor().targets(state, gate.get("env_targets", []))
-        if set(exposed) != set(targets):
+        if not set(targets).issubset(exposed):
             raise ValueError("PROCESSING_MAGNETIC_ENVIRONMENT_TARGETS")
+        return exposed
 
 class MagneticPreparationInteractor:
     def resolve_intent(self, pending):
@@ -98,16 +99,16 @@ class MagneticPreparationInteractor:
         if duration <= 0:
             raise ValueError("PROCESSING_DURATION_INVALID")
         targets = ProcessingArgumentsInteractor().targets(pending.before_material_state, [step.args["sample"]])
-        if len(targets) != 1:
-            raise ValueError("PROCESSING_MAGNETIC_SCOPE_UNSUPPORTED")
         if (proposal is None or not proposal.ok or proposal.delta.get("op") != "sep"
                 or proposal.delta.get("program_kind") != "magnetic_program"
-                or proposal.delta.get("source") != targets[0].container_id):
+                or proposal.delta.get("sources", [proposal.delta.get("source")])
+                != [target.container_id for target in targets]):
             raise ValueError("PROCESSING_MATERIAL_PROPOSAL_INVALID")
         named = proposal.delta.get("slots")
         if proposal.delta.get("mode") != "contents_state" and (not named or set(named) != {"0", "1"}):
             raise ValueError("PROCESSING_MATERIAL_PROPOSAL_INVALID")
         if not named or any(k in (step.gate or {}) for k in ("env", "env_layers", "env_targets")):
-            MagneticEnvironmentInteractor().validate(step, pending.before_material_state, targets)
+            # Material separation affects the sample; the declared field moves the entire exposed labware.
+            targets = MagneticEnvironmentInteractor().validate(step, pending.before_material_state, targets)
         physical = ProcessingArgumentsInteractor().physical_targets(pending, targets)
         return MagneticSeparationIntent(step.step_id, physical, duration)

@@ -9,12 +9,13 @@ from tests.support.paths import ROOT
 
 
 class TestDistribution:
-    def test_metadata_requires_exact_committed_snapshots(self):
+    def test_current_dependency_range_keeps_the_verified_preview_snapshot(self):
         project=tomllib.loads((ROOT/'pyproject.toml').read_text())['project']
         contract=json.loads((ROOT/'tools/distribution/manifest.json').read_text())
         core,simulator=contract['sources']['core'],contract['sources']['simulator']
-        assert project['dependencies']==[core['distribution']+'=='+core['artifact_version']]
-        assert project['optional-dependencies']['simulator']==[simulator['distribution']+'=='+simulator['artifact_version']]
+        assert project['dependencies'] == ['culsma>=1.0.11,<1.1']
+        # The immutable 0.2.0 preview manifest remains provenance, not today's package pin.
+        assert project['optional-dependencies']['simulator'] == ['culsma-opentrons-simulator==0.1.0']
         assert core['artifact_version'] == '1.0.10'
         assert core['source_version'] == core['artifact_version']
         assert core['source_tag'] == 'v1.0.10'
@@ -24,7 +25,7 @@ class TestDistribution:
     def test_console_names_remain_owned_by_each_package(self):
         project=tomllib.loads((ROOT/'pyproject.toml').read_text())['project']
         assert set(project['scripts'])=={'culsma-os'}
-        assert project['entry-points']['culsma.program_executors']['opentrons-simulator'].startswith('culsma_os.')
+        assert project['entry-points']['culsma.program_executors']['os-opentrons-simulator'].startswith('culsma_os.')
 
     def test_simulator_fixtures_are_fixed_and_owned_by_this_suite(self):
         fixture=ROOT/'tests/fixtures/driver_framework/opentrons'
@@ -43,12 +44,14 @@ class TestDistributionAudit:
         import zipfile
         directory=tmp_path/'dist';directory.mkdir()
         contract=json.loads((ROOT/'tools/distribution/manifest.json').read_text())
-        version='1.0.8' if problem=='dependency' else contract['sources']['core']['artifact_version']
+        requirement = 'culsma==1.0.8' if problem == 'dependency' else 'culsma<1.1,>=1.0.11'
         console='culsma' if problem=='console' else 'culsma-os'
         entries=f'[console_scripts]\n{console} = culsma_os.cli:CulsmaOSCLI.main\n'
         if problem!='handoff':
-            entries+='[culsma.program_executors]\nopentrons-simulator = culsma_os.bootstrap:LanguageProgramExecutorFactory\n'
-        metadata=f'Name: culsma-os\nVersion: 0.1.0\nRequires-Dist: culsma=={version}\n'
+            entries+='[culsma.program_executors]\nos-opentrons-simulator = culsma_os.bootstrap:OpentronsProgramExecutorFactory\n'
+        if problem=='executor-collision':
+            entries+='opentrons-simulator = culsma_os.bootstrap:LanguageProgramExecutorFactory\n'
+        metadata=f'Name: culsma-os\nVersion: 0.1.0\nRequires-Dist: {requirement}\n'
         with zipfile.ZipFile(directory/'culsma_os-0.1.0-py3-none-any.whl','w') as archive:
             archive.writestr('culsma_os-0.1.0.dist-info/METADATA',metadata)
             archive.writestr('culsma_os-0.1.0.dist-info/entry_points.txt',entries)
@@ -89,6 +92,13 @@ class TestDistributionAudit:
         assert result['status']=='passed' and result['runtime_imported'] is False
         assert result['runtime_files_identical']==1
 
+    def test_dependency_normalization_preserves_constraints(self, tmp_path):
+        audit, _ = self.archives(tmp_path)
+        assert audit.normalize_dependency('Culsma >=1.0.10, <1.1') == audit.normalize_dependency('culsma<1.1,>=1.0.10')
+        assert audit.normalize_dependency('culsma==1.0.10') != audit.normalize_dependency('culsma>=1.0.10,<1.1')
+        with pytest.raises(ValueError, match='DEPENDENCY_CONTRACT_INVALID'):
+            audit.normalize_dependency('')
+
     def test_missing_artifacts_reject(self,tmp_path):
         import pytest
         audit,directory=self.archives(tmp_path)
@@ -97,7 +107,7 @@ class TestDistributionAudit:
             audit.inspect(directory)
 
     @pytest.mark.parametrize('problem,diagnostic', [
-        ('console','CONSOLE_OWNERSHIP_INVALID'),('handoff','HANDOFF_MISSING'),
+        ('executor-collision','EXECUTOR_OWNERSHIP_INVALID'),('console','CONSOLE_OWNERSHIP_INVALID'),('handoff','HANDOFF_MISSING'),
         ('input','SOURCE_INPUT_MISSING'),('state','LOCAL_STATE_INCLUDED'),
         ('code','CODE_MISMATCH'),('dependency','DEPENDENCY_CONTRACT_INVALID'),
         ('design','INTERNAL_DESIGN_INCLUDED'),('rendered-design','INTERNAL_DESIGN_INCLUDED'),

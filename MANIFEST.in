@@ -2,15 +2,19 @@ include README.md index.html LICENSE CHANGELOG.md CITATION.cff THIRD_PARTY_NOTIC
 recursive-include assets *.png
 recursive-include examples *.culs *.json *.svg *.mmd *.md
 recursive-include tests *.py *.culs *.json *.md
+include tests/support/console/*.mjs tests/modules/console/goldens/*.png
 recursive-include docs *.md *.mmd *.json
 recursive-include diagrams *.svg *.png *.puml
 recursive-include tools *.py *.sh *.json
+include tools/windows/*.ps1
 recursive-include requirements *.txt
 prune run-artifacts
 prune build
 prune dist
 global-exclude __pycache__ *.py[cod] .DS_Store
 recursive-include frontend/console *.dart *.yaml *.lock *.json .fvmrc *.md *.ttf *.png *.swift *.plist *.xcconfig *.entitlements *.pbxproj *.xcscheme *.xcworkspacedata *.xib *.xcassets .gitignore LICENSE.txt
+recursive-include frontend/console/windows CMakeLists.txt *.cmake *.cpp *.cc *.h *.rc *.ico *.manifest
+prune frontend/console/windows/flutter/ephemeral
 prune frontend/console/.dart_tool
 prune frontend/console/.fvm
 prune frontend/console/build

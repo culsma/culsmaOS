@@ -3,6 +3,8 @@ from tests.support.paths import ROOT
 from pathlib import Path
 import ast
 import json
+import os
+import tempfile
 import socket
 import sqlite3
 import subprocess
@@ -49,6 +51,26 @@ class TestResidentHost:
                 assert conn.execute('SELECT count(*) FROM os_run_queue').fetchone()[0]==1
         finally:
             harness.stop()
+
+    def test_prepare_rejects_a_driver_without_loading_support(self, tmp_path):
+        harness=ResidentHarness(tmp_path).start()
+        try:
+            with pytest.raises(ValueError, match='SETUP_PREPARATION_UNSUPPORTED'):
+                harness.client.execute({'action':'prepare','source':str(ProgramFixture.source),'request_id':'prepare'})
+            assert harness.client.execute({'action':'runs'})['runs']==[]
+        finally:
+            harness.stop()
+
+    def test_preparation_is_persisted_awaiting_setup_before_worker_observes_it(self, tmp_path):
+        conn=sqlite3.connect(tmp_path/'os.sqlite3')
+        repository=SqliteTaskRepository(conn)
+        SqliteRunQueueRepository(conn)
+        host=HostedRuntimeInteractor()
+        tasks=TaskInteractor(repository,PreparationInteractor(host),RunStateInteractor(repository,host,None))
+        run_id=tasks.submit(ProgramFixture.request(),QueueSubmission('prepare','fingerprint','source'),setup_required=True)
+        assert tasks.get(run_id).status=='awaiting_setup'
+        assert conn.execute('SELECT startup FROM os_run_queue').fetchone()[0]=='manual'
+        conn.close()
 
     def test_atomic_admission_rolls_back_run_if_queue_insert_fails(self,tmp_path):
         conn=sqlite3.connect(tmp_path/'os.sqlite3')
@@ -217,7 +239,9 @@ class TestResidentHost:
     @pytest.mark.parametrize("profile", ["transfer", "processing/thermal-hold", "processing/orbital-shake", "processing/magnetic-flowthrough", "processing/thermocycler", "processing/incubation", "heater-shaker-docking"])
     def test_official_simulator_resident_cli(self,tmp_path,profile):
         pytest.importorskip('culsma_opentrons')
-        endpoint=Path('/private/tmp')/('culsma-cli-'+uuid4().hex[:12]+'.sock')
+        if os.name == 'nt' and profile == 'heater-shaker-docking':
+            pytest.skip('The Opentrons simulator motion driver uses POSIX flock; not part of the Windows Hamilton product')
+        endpoint=Path(tempfile.gettempdir() if os.name == 'nt' else '/tmp')/('culsma-cli-'+uuid4().hex[:12]+'.sock')
         database=tmp_path/'resident.sqlite3'
         process=subprocess.Popen([sys.executable,'-m','culsma_os.cli','serve','--socket',str(endpoint),
             '--host-db',str(database),'--driver-config',str(ROOT/'examples'/profile/'deck.json'),
@@ -266,7 +290,10 @@ class TestResidentHost:
             with sqlite3.connect(database) as conn:
                 assert conn.execute('SELECT count(*) FROM os_attempts').fetchone()[0]>=4
                 assert conn.execute('SELECT count(*) FROM os_run_queue').fetchone()[0]==2
-            process.terminate()
+            if os.name == 'nt':
+                client.execute({'action':'shutdown'})
+            else:
+                process.terminate()
             process.communicate(timeout=10)
             assert process.returncode==0
             assert not endpoint.exists()
@@ -311,3 +338,15 @@ class TestResidentHarnessBudgets:
         monkeypatch.setenv('CULSMA_OS_TEST_TIMEOUT_MULTIPLIER', value)
         with pytest.raises(ValueError, match='TEST_TIMEOUT_MULTIPLIER_INVALID'):
             harness_type.wait_budget(10)
+
+
+def test_resident_start_reports_worker_failure_and_joins_listener(tmp_path):
+    class UnavailableSession(FakeSessionFactory):
+        def build(self, context):
+            raise ValueError('test station unavailable')
+
+    harness = ResidentHarness(tmp_path, UnavailableSession())
+    with pytest.raises(AssertionError, match='Resident startup failed: test station unavailable'):
+        harness.start()
+    assert not harness.thread.is_alive()
+    assert not harness.endpoint.exists()

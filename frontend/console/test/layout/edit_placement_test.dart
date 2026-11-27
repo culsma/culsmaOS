@@ -156,7 +156,7 @@ void main() {
       CulsmaConsole(controller: c, initialView: 'settings'),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Advanced layout editor'));
+    await tester.tap(find.text('Saved setups'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('carrier-narrow')));
     await tester.pumpAndSettle();

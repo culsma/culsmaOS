@@ -6,7 +6,7 @@ from ..repositories.queue import RunQueueRepository
 
 
 class ResidentCommandInteractor:
-    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None, fault_tests=None, profile_queries=None, capabilities=None, workflow_setting=None, workflow_planner=None):
+    def __init__(self, compilation, tasks, queue: RunQueueRepository, inspector, semantics, codec, status, context, devices, configuration=None, setup_requests=None, layout=None, labware=None, setup_preview=None, supplies=None, fault_tests=None, profile_queries=None, capabilities=None, workflow_setting=None, workflow_planner=None, floor_plan=None, instrument_settings=None, station_service=None):
         self.compilation, self.tasks, self.queue = compilation, tasks, queue
         self.inspector, self.semantics, self.codec = inspector, semantics, codec
         self.status, self.context, self.devices, self.configuration = status, context, devices, configuration
@@ -20,8 +20,22 @@ class ResidentCommandInteractor:
         self.capabilities = capabilities
         self.workflow_setting = workflow_setting
         self.workflow_planner = workflow_planner
+        self.floor_plan = floor_plan
+        self.instrument_settings = instrument_settings
+        self.station_service = station_service
 
     def execute(self, request):
+        if request.action == 'station-service':
+            if self.station_service is None: raise ValueError('STATION_SERVICE_UNAVAILABLE')
+            return self.station_service.execute(request.station_service_request,self.require_idle_configuration)
+        if request.action == 'instrument-settings':
+            if self.instrument_settings is None:
+                raise ValueError('INSTRUMENT_SETTINGS_UNAVAILABLE')
+            return self.instrument_settings.execute(request.profile_request)
+        if request.action == 'floor-plan':
+            if self.floor_plan is None:
+                raise ValueError('FLOOR_PLAN_UNAVAILABLE')
+            return self.floor_plan.execute(request.floor_plan_request, self.require_idle_configuration)
         if request.action == 'workflow-simulation-setting':
             if self.workflow_setting is None:
                 raise ValueError('WORKFLOW_SIMULATION_SETTING_UNAVAILABLE')
@@ -58,7 +72,12 @@ class ResidentCommandInteractor:
                 value['workflow_simulation'] = self.workflow_setting.status()
             return {**value, 'capabilities': self.capabilities.describe()} if self.capabilities else value
         if request.action == 'layout-status' and self.layout is not None:
-            return self.layout.execute()
+            layout = self.layout.execute()
+            if self.floor_plan is not None:
+                plan = self.floor_plan.applied()
+                if plan is not None:
+                    layout['floor_plan'] = plan
+            return layout
         if request.action == 'device-status':
             return self.devices.execute()
         if request.action == 'shutdown':
@@ -93,15 +112,18 @@ class ResidentCommandInteractor:
             if self.workflow_setting is None:
                 return self.setup_preview.preview(compiled)
             return self.setup_preview.preview(compiled, workflow)
-        if request.action in {'submit','start'}:
+        if request.action in {'submit','start','prepare'}:
+            if self.station_service: self.station_service.require_settled()
             if self.supplies:self.supplies.require_settled()
             return self.submit(request)
         if request.action in {'pause', 'resume', 'cancel'}:
+            if request.action == 'resume' and self.station_service: self.station_service.require_settled()
             self.require_run(request.run_id)
             return self.queue.add_control(request.request_id or str(uuid4()), request.run_id, request.action)
         raise ValueError('HOST_COMMAND_UNSUPPORTED')
 
     def require_idle_configuration(self):
+        if self.station_service: self.station_service.require_settled()
         state = self.status.snapshot()
         if state['status'] not in {'ready','failed'}:
             raise ValueError('HOST_RECONFIGURING' if state['status']=='reconfiguring' else 'HOST_NOT_READY')
@@ -137,7 +159,7 @@ class ResidentCommandInteractor:
             return None
         setting = self.workflow_setting.status()
         # Manual submits keep the strict path. The console starts simulations explicitly.
-        enabled = setting["enabled"] and request.action in {"preview", "start"}
+        enabled = setting["enabled"] and request.action in {"preview", "start", "prepare"}
         return {"enabled": enabled, "mode": "simulation", "revision": setting["revision"],
                 "driver": self.context.driver_name,
                 "routes": self.workflow_planner.plan(plan, enabled)}
@@ -149,14 +171,14 @@ class ResidentCommandInteractor:
             raise ResidentAdmissionError('HOST_PLAN_UNSUPPORTED', (d.to_dict() for d in errors))
 
     def submit(self, request):
+        if request.action == 'prepare' and not getattr(self.setup_requests, 'setup_supported', False):
+            raise ValueError('SETUP_PREPARATION_UNSUPPORTED')
         compiled = self.compile(request)
         identity = ((compiled.plan,compiled.state,request.configuration_fingerprint) if request.configuration_fingerprint is not None
                     else (compiled.plan,compiled.state))
-        if request.profile_bindings is not None:
-            identity = (identity, request.profile_bindings)
         startup = 'automatic' if request.action == 'start' else 'manual'
-        if startup == 'automatic':
-            identity = (identity, startup)
+        if startup == 'automatic' or request.action == 'prepare':
+            identity = (identity, 'prepare' if request.action == 'prepare' else startup)
         if request.workflow_revision is not None:
             identity = (identity, 'workflow_revision', request.workflow_revision)
         submission = QueueSubmission(request.request_id or str(uuid4()),
@@ -172,11 +194,14 @@ class ResidentCommandInteractor:
         if request.workflow_revision is not None and (workflow is None or request.workflow_revision != workflow["revision"]):
             raise ValueError("WORKFLOW_SIMULATION_SETTING_STALE")
         self.validate_routes(compiled.plan, workflow)
-        run_id = self.tasks.submit(RunRequest(compiled.plan, compiled.state, profile_bindings=request.profile_bindings,
-            workflow_simulation=workflow if workflow and workflow["enabled"] else None), submission)
+        options = {'setup_required': True} if request.action == 'prepare' else {}
+        run_id = self.tasks.submit(RunRequest(compiled.plan, compiled.state,
+            workflow_simulation=workflow if workflow and workflow["enabled"] else None), submission, **options)
         return {**self.describe(run_id), 'request_id': submission.request_id, 'accepted': True}
 
     def close(self):
+        if self.station_service is not None:
+            self.station_service.close()
         if self.supplies:
             self.supplies.repository.connection.close()
             self.supplies.guard.close()
@@ -220,7 +245,7 @@ class ResidentWorkerInteractor:
                     self.application.client.cancel_run(run_id)
                 else:
                     raise ValueError('HOST_CONTROL_UNSUPPORTED')
-            except (ValueError, ResourceConflict) as error:
+            except Exception as error:
                 self.queue.settle_control(command['request_id'], str(error))
             else:
                 self.queue.settle_control(command['request_id'])
@@ -248,7 +273,7 @@ class ResidentWorkerInteractor:
             except KeyError:
                 try:
                     setup.plan(head.run_id)
-                except ValueError as error:
+                except Exception as error:
                     if head.startup == 'automatic':
                         setup.state.mark_failed(head.run_id, str(error))
                     else:
@@ -258,12 +283,15 @@ class ResidentWorkerInteractor:
             if head.startup == 'automatic' and record.status == 'awaiting_setup':
                 try:
                     setup.start_automatic(head.run_id)
-                except ValueError as error:
+                except Exception as error:
                     setup.state.mark_failed(head.run_id, str(error))
                 record = self.application.client.get_run(head.run_id)
             if record.status == 'awaiting_setup':
                 self.status.note_blocked(head.run_id, record.error or 'awaiting_setup')
                 return
+        if record.status == 'awaiting_setup':
+            self.status.note_blocked(head.run_id, 'SETUP_DEVICE_UNSUPPORTED')
+            return
         if record.status == 'paused':
             self.status.note_blocked(head.run_id, 'paused')
             return

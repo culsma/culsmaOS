@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import '../../../api/console_api.dart';
 import '../../layout/interactor/layout_controller.dart';
+import '../../layout/interactor/floor_plan_controller.dart';
 import '../model/console_model.dart';
 import '../repository/pending_request_repository.dart';
 import '../repository/mutation_repository.dart';
@@ -16,12 +17,15 @@ import 'file_browser_interactor.dart';
 import 'run_review_interactor.dart';
 import 'developer_interactor.dart';
 import 'editor_interactor.dart';
+import 'remote_access_interactor.dart';
 
 /// Native presentation coordinator. Backend Interactors own every experiment decision.
 class NativeConsoleInteractor extends ChangeNotifier {
   final ConsoleApi api;
+  late final RemoteAccessInteractor? remoteAccess;
   final review = NativeRunReviewInteractor();
   final LayoutController layout;
+  late final FloorPlanController floorPlan;
   final PendingRequestRepository? requests;
   late final NativeEditorInteractor editor;
   late final NativeDeveloperInteractor developer;
@@ -51,6 +55,12 @@ class NativeConsoleInteractor extends ChangeNotifier {
     ConsoleMutationRepository? mutations,
     String initialView = 'files',
   }) {
+    remoteAccess =
+        api is LocalConsoleApi &&
+            (api as LocalConsoleApi).connection.remoteAccess
+        ? RemoteAccessInteractor(api)
+        : null;
+    floorPlan = FloorPlanController(api)..addListener(notifyViewChanged);
     editor = NativeEditorInteractor(api)..addListener(notifyViewChanged);
     developer = NativeDeveloperInteractor(api)..addListener(notifyViewChanged);
     files = NativeFileBrowserInteractor(api)..addListener(notifyViewChanged);
@@ -66,6 +76,35 @@ class NativeConsoleInteractor extends ChangeNotifier {
       ..addListener(notifyViewChanged);
     open(initialView);
   }
+  String? _instrumentFingerprint;
+  Future<List<Map<String, dynamic>>>? _instruments;
+
+  Future<List<Map<String, dynamic>>>? readInstruments(
+    String? fingerprint, {
+    bool reload = false,
+  }) {
+    if (fingerprint == null) return null;
+    if (_instrumentFingerprint != fingerprint || reload) {
+      _instrumentFingerprint = fingerprint;
+      _instruments = _loadInstruments(fingerprint);
+    }
+    return _instruments;
+  }
+
+  Future<List<Map<String, dynamic>>> _loadInstruments(
+    String fingerprint,
+  ) async {
+    final result = await api.command(LayoutController.instrumentSettings, {
+      'action': 'read',
+      'configuration_fingerprint': fingerprint,
+    });
+    if (result['configuration_fingerprint'] != null &&
+        result['configuration_fingerprint'] != fingerprint) {
+      throw const FormatException('HOST_CONFIGURATION_STALE');
+    }
+    return List<Map<String, dynamic>>.from(result['instruments']);
+  }
+
   ConsoleWindowModel? get active =>
       windows.where((w) => w.id == activeId).firstOrNull;
   String? get stationProblem {
@@ -82,6 +121,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   bool get dirty =>
       editor.dirty ||
       layout.dirty ||
+      floorPlan.dirty ||
       labware.editing ||
       labware.pending != null ||
       labware.blocked ||
@@ -92,6 +132,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   bool get working =>
       busy ||
       layout.busy ||
+      floorPlan.busy ||
       labware.busy ||
       setup.busy ||
       supplies.busy ||
@@ -592,6 +633,7 @@ class NativeConsoleInteractor extends ChangeNotifier {
   };
   @override
   void dispose() {
+    floorPlan.dispose();
     disposed = true;
     timer?.cancel();
     editor.dispose();

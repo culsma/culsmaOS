@@ -508,9 +508,10 @@ from .models import ConfigurationError, StationConfigurationRequest
 class StationConfigurationInteractor(AuthorizedInteractor):
     required_capability = 'configuration:drafts'
 
-    def __init__(self, tokens, repository: StationConfigurationRepository, profiles):
+    def __init__(self, tokens, repository: StationConfigurationRepository, profiles, execution_factory=None):
         super().__init__(tokens)
         self.repository, self.profiles = repository, profiles
+        self.execution_factory = execution_factory
 
     def perform(self, request):
         import hashlib
@@ -519,6 +520,8 @@ class StationConfigurationInteractor(AuthorizedInteractor):
         from uuid import uuid4
         if not isinstance(request,StationConfigurationRequest):
             raise ConfigurationError('CONFIGURATION_REQUEST_INVALID')
+        if request.action in {'execution_options', 'select_execution'}:
+            return self.execution_selection(request)
         if request.action == 'import_layout':
             return self.import_layout(request)
         if request.action == 'profiles':
@@ -572,6 +575,37 @@ class StationConfigurationInteractor(AuthorizedInteractor):
                 raise ConfigurationError('CONFIGURATION_LAYOUT_EXPORT_UNAVAILABLE')
             result['layout_artifact'] = artifact
         return result
+
+
+    def execution_selection(self, request):
+        from types import SimpleNamespace
+        from culsma_os.driver_framework.execution_mode import ExecutionSelectionInteractor, ExecutionSelection
+        if not isinstance(request.draft_id, str) or type(request.revision) is not int or request.revision < 1:
+            raise ConfigurationError('CONFIGURATION_REVISION_REQUIRED')
+        record = self.repository.get(request.draft_id, request.revision).as_dict()
+        try:
+            if self.execution_factory is None:
+                raise ConfigurationError('EXECUTION_SELECTION_PROVIDER_UNAVAILABLE')
+            factory = self.execution_factory(record['driver'])
+            choices = ExecutionSelectionInteractor()
+            if request.action == 'execution_options':
+                current = choices.selection(factory, SimpleNamespace(execution_selection=None), record['configuration'])
+                return {'selected': current.as_record(),
+                        'implementations': [v.describe() for v in choices.implementations(factory)]}
+            selection = ExecutionSelection.from_record(request.configuration)
+            if self.repository.get(request.draft_id).revision != request.revision:
+                raise ConfigurationError('CONFIGURATION_REVISION_CONFLICT', 'conflict')
+            current = choices.selection(factory, SimpleNamespace(execution_selection=None), record['configuration'])
+            if selection == current:
+                choices.select(factory, selection)
+                return {'draft': record}
+            configuration = choices.prepare_configuration(factory, record['configuration'], selection)
+            return self.perform(StationConfigurationRequest('save', record['draft_id'], request.revision,
+                                record['title'], record['driver'], configuration))
+        except ConfigurationError:
+            raise
+        except ValueError as error:
+            raise ConfigurationError(str(error)) from error
 
 
     def import_layout(self, request):
@@ -791,6 +825,8 @@ class WorkspacePlanningInteractor:
                 'loadout': self.loading_checklist(items),
                 **({'layout': deepcopy(catalogue['layout'])} if catalogue.get('layout') is not None else {}),
                 'supplies': deepcopy(catalogue.get('supplies', [])),
+                **({'installed_fixtures': deepcopy(catalogue['installed_fixtures'])}
+                   if catalogue.get('installed_fixtures') else {}),
                 'scope': 'Declared layout and initial material only; not sensed inventory, calibration or collision proof'}
 
     def explain_conflict(self, code, demands, locations, fixed):

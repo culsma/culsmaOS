@@ -58,15 +58,23 @@ class ObservedMotionPort:
         return receipt
 
 
-class ObservedMotionFactory:
+def opentrons_motion_database(context):
+    from culsma_os.driver_framework.execution_mode import ExecutionSelectionInteractor, motion_state_database
+    from culsma_os.resource_manager.interactors import StationPathInteractor
+
+    selection = ExecutionSelectionInteractor().selection(OpentronsSessionFactory(), context)
+    return motion_state_database(StationPathInteractor().database_path(context), selection.mode, selection.simulator)
+
+
+class ObservedMotionFactory(OpentronsSessionFactory):
     def __init__(self, gate_kind=None, fault=None):
         self.gate_kind, self.fault = gate_kind, fault
         self.gated = False
         self.entered, self.release = threading.Event(), threading.Event()
         self.ports, self.dispatches, self.initial = [], [], []
 
-    def build(self, context):
-        delegate, *description = OpentronsSessionFactory().build(context)
+    def build_selected(self, context, selection):
+        delegate, *description = super().build_selected(context, selection)
         session = delegate.session
         self.initial.append({'positions':session.motion.positions(),
                              'commands':tuple(session.backend.protocol.commands())})
@@ -106,8 +114,7 @@ class ResidentDockingHarness(ResidentHarness):
 
     def rows(self, table):
         # Independent read-only audit connection; never use worker-owned SQLite objects.
-        from culsma_os.resource_manager.interactors import StationPathInteractor
-        database = StationPathInteractor().database_path(self.context) if table in {
+        database = opentrons_motion_database(self.context) if table in {
             'os_labware_positions','os_motion_registrations','os_station_motion_intents'} else self.context.database_path
         with sqlite3.connect(database) as connection:
             return connection.execute('SELECT * FROM '+table).fetchall()

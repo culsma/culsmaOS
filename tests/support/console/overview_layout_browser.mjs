@@ -1,3 +1,4 @@
+import {visiblePanelScreenshot} from './visible_panel.mjs';
 import {createRequire} from 'node:module';
 import {readFileSync,writeFileSync} from 'node:fs';
 const require=createRequire(`${process.env.CULSMA_OS_BROWSER_MODULES}/package.json`);
@@ -6,7 +7,14 @@ const pixelmatch=(await import(`${process.env.CULSMA_OS_BROWSER_MODULES}/pixelma
 const [url,output,baselines]=process.argv.slice(2),browser=await chromium.launch({executablePath:process.env.CULSMA_OS_CHROME,headless:true});
 try {
  const page=await browser.newPage({viewport:{width:1280,height:960}}),errors=[],posts=[];
- page.on('pageerror',error=>errors.push(error.message));page.on('request',r=>{if(r.method()==='POST' && r.postDataJSON()?.action!=='catalogue')posts.push(r.url());});
+ page.on('pageerror',error=>errors.push(error.message));
+ page.on('request',request=>{
+  if(request.method()!=='POST')return;
+  const path=new URL(request.url()).pathname,action=request.postDataJSON()?.action;
+  if(path==='/api/v1/configuration/labware' && action==='catalogue')return;
+  if(path==='/api/v1/console/renderer' && ['register','poll','heartbeat','close','inspect'].includes(action))return;
+  posts.push(path+' '+action);
+ });
  await page.goto(url+'#station');
  const layout=page.locator('[data-region="workstation-layout"]');
  await layout.locator('[data-carrier-id="CAR_HHS_3DWP_0001"]').waitFor();
@@ -20,7 +28,7 @@ try {
  for(const width of [1280,390]) {
   await page.setViewportSize({width,height:960});
   await layout.locator('.setup-deck-scroll').evaluate(node=>node.scrollLeft=0);
-  const actual=await layout.screenshot({path:`${output}/overview-layout-${width}.png`,animations:'disabled'}),file=`${baselines}/overview-layout-${width}.png`;
+  const actual=await visiblePanelScreenshot(layout, {path:`${output}/overview-layout-${width}.png`,animations:'disabled'}, layout.locator('.setup-deck-scroll')),file=`${baselines}/overview-layout-${width}.png`;
   if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1') writeFileSync(file,actual);
   else {const ref=PNG.sync.read(readFileSync(file)),img=PNG.sync.read(actual);
    if(ref.width!==img.width || ref.height!==img.height || pixelmatch(ref.data,img.data,null,img.width,img.height,{threshold:.1})>img.width*img.height*.001)
@@ -41,7 +49,7 @@ try {
   const stack=layout.locator('[data-carrier-id="CAR_5STACK_0003"] .setup-deck-stack');
   for(const node of await stack.locator('.setup-deck-site').all())if((await node.boundingBox()).height<24)throw new Error('Stacked item is squeezed');
   await viewport.evaluate(node=>node.scrollLeft=node.scrollWidth);
-  const right=await layout.screenshot({path:`${output}/overview-layout-${width}-right.png`,animations:'disabled'}),rightFile=`${baselines}/overview-layout-${width}-right.png`;
+  const right=await visiblePanelScreenshot(layout, {path:`${output}/overview-layout-${width}-right.png`,animations:'disabled'}, layout.locator('.setup-deck-scroll')),rightFile=`${baselines}/overview-layout-${width}-right.png`;
   if(process.env.CULSMA_OS_CAPTURE_GOLDEN==='1')writeFileSync(rightFile,right);
   else {const ref=PNG.sync.read(readFileSync(rightFile)),img=PNG.sync.read(right);if(ref.width!==img.width || ref.height!==img.height || pixelmatch(ref.data,img.data,null,img.width,img.height,{threshold:.1})>img.width*img.height*.001)throw new Error(`Right deck golden changed at ${width}`);}
   await viewport.evaluate(node=>node.scrollLeft=0);

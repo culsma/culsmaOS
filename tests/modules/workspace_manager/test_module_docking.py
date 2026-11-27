@@ -20,7 +20,7 @@ def test_dock_heat_undock_transfer(tmp_path, entry):
         (tmp_path/'protocol.culs').write_text(SOURCE)
         module = 'culsma.cli' if entry == 'language-cli' else 'culsma_os.cli'
         completed = subprocess.run([sys.executable,'-m',module,'run',str(tmp_path/'protocol.culs'),
-            '--driver','opentrons-simulator','--driver-config',str(tmp_path/'deck.json'),
+            '--driver','os-opentrons-simulator' if entry=='language-cli' else 'opentrons-simulator','--driver-config',str(tmp_path/'deck.json'),
             '--artifacts-dir',str(tmp_path/'cli-artifacts')],capture_output=True,text=True)
         assert completed.returncode == 0, completed.stdout + completed.stderr
         return

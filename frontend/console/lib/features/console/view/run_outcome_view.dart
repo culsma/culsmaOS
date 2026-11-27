@@ -71,7 +71,8 @@ class NativeRunOutcomeView extends StatelessWidget {
     final result = run['result'] as Map? ?? {};
     final workflow = result['os']?['workflow_simulation'] as Map?;
     final internal = workflow?['steps'] as List? ?? [];
-    final preparation = guidance['kind'] == 'preparation';
+    final awaitingSetup = run['status'] == 'awaiting_setup';
+    final preparation = awaitingSetup || guidance['kind'] == 'preparation';
     final currentSupply = console.supplies.data;
     final available = currentSupply?['stock']?['available'] as List?;
     final replace = actions.contains('replace_tips');
@@ -98,6 +99,8 @@ class NativeRunOutcomeView extends StatelessWidget {
                 run['status'] == 'completed' &&
                         result['os']?['mode'] == 'simulation'
                     ? 'Simulation completed'
+                    : awaitingSetup
+                    ? 'Awaiting execution confirmation'
                     : guidance['title'] ?? fallbackTitle(),
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
@@ -114,10 +117,12 @@ class NativeRunOutcomeView extends StatelessWidget {
           ),
         const SizedBox(height: 12),
         Text(
-          guidance['message'] ??
-              (run['status'] == 'completed'
-                  ? 'Review the recorded results below.'
-                  : 'Review the workstation and run controls below.'),
+          awaitingSetup
+              ? 'Prepare the highlighted positions below. This preparation has not been submitted for execution.'
+              : guidance['message'] ??
+                    (run['status'] == 'completed'
+                        ? 'Review the recorded results below.'
+                        : 'Review the workstation and run controls below.'),
         ),
         if (workflow != null)
           ListTile(
@@ -139,7 +144,7 @@ class NativeRunOutcomeView extends StatelessWidget {
                   : 'Planned · no result recorded',
             ),
           ),
-        NativeRunProgressPanel(run: run),
+        if (!awaitingSetup) NativeRunProgressPanel(run: run),
         NativeFaultContext(guidance: guidance),
         if (guidance['device_activity'] == 'none_recorded')
           const Padding(
@@ -248,7 +253,7 @@ class NativeRunOutcomeView extends StatelessWidget {
         NativeRunControlPanel(controller: console.controls, run: run),
         if (run['status'] == 'awaiting_setup')
           NativeSetupPanel(controller: console.setup, run: run),
-        NativeRunReportPanel(run: run),
+        if (!awaitingSetup) NativeRunReportPanel(run: run),
         const SizedBox(height: 24),
         details(result, id),
       ],

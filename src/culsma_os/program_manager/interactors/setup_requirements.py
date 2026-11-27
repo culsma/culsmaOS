@@ -14,11 +14,11 @@ from culsma_os.driver_framework.adapters.semantic import SemanticReplayDriver
 
 class SetupRequirementsError(ValueError):
     """A loading capability gap, with structured evidence for UI and MCP."""
-    def __init__(self, code, message, items=()):
+    def __init__(self, code, message, items=(), action=None):
         super().__init__(code + ': ' + message)
         self.diagnostics = [{'code': code, 'message': message, 'items': list(items),
             'basis': 'language_projection', 'physical_observation': False,
-            'action': 'This program needs an explicit device mapping for its separation outputs. No device operation has been dispatched.'}]
+            'action': action or 'This program needs an explicit device mapping for its separation outputs. No device operation has been dispatched.'}]
 
 
 class SetupRequirementsInteractor:
@@ -62,6 +62,14 @@ class SetupRequirementsInteractor:
                 row['processing_labware'] = sorted(effects.processing_placements[identity])
             if metadata.get('kind') == 'well':
                 namespace, carrier = arg_string(step.args.get('container_namespace')), arg_string(step.args.get('carrier_id'))
+                position = arg_string(step.args.get('carrier_position'))
+                if (arg_string(step.args.get('carrier_kind')) != 'plate'
+                        or not all(isinstance(value, str) and value for value in (namespace, carrier, position))):
+                    raise SetupRequirementsError('SETUP_WELL_DECLARATION_REQUIRED',
+                        'A standalone well has no declared plate or well position for physical loading.',
+                        [{'allocation_id': allocation, 'name': row['name']}],
+                        action='Declare a plate-bound well, or use container(...) with an explicit loading binding. '
+                               'No device operation has been dispatched.')
                 from culsma_os.workspace_manager.interactors import SpaceInteractor
                 row.update(carrier=namespace + ':' + carrier, well=arg_string(step.args.get('carrier_position')),
                            geometry=list(SpaceInteractor.declared_geometry(step)))

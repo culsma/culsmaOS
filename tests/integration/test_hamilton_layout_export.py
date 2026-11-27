@@ -23,9 +23,7 @@ def test_saved_layout_reaches_native_export_without_existing_lay(tmp_path, carri
     vendor = pytest.importorskip('culsma_driver_hamilton')
     from culsma_driver_hamilton.assembly import build_layout_exporter
     from culsma_driver_hamilton.interactors.configuration_profile_interactor import HamiltonConfigurationProfileInteractor
-    root = Path(vendor.__file__).resolve().parents[2]/'reference/LabWare'
-    if not root.exists(): pytest.skip('Private local vendor geometry fixtures unavailable')
-    profile = HamiltonConfigurationProfileInteractor(build_layout_exporter(root))
+    profile = HamiltonConfigurationProfileInteractor(build_layout_exporter())
     class Discovery:
         def discover(self): return {'hamilton-layout':profile}, ()
     fixture=ConfigurationFixture(tmp_path/'drafts.sqlite3')

@@ -141,7 +141,7 @@ class TestBufferExchange:
         plan,context,app=BufferExchangeFixture().build(tmp_path);app.close()
         artifacts=tmp_path/'cli'
         completed=subprocess.run([sys.executable,'-m','culsma_os.cli' if entry=='os' else 'culsma.cli','run',
-            str(tmp_path/'protocol.culs'),'--driver','opentrons-simulator','--driver-config',str(context.config_path),
+            str(tmp_path/'protocol.culs'),'--driver','os-opentrons-simulator' if entry=='language' else 'opentrons-simulator','--driver-config',str(context.config_path),
             '--artifacts-dir',str(artifacts)],capture_output=True,text=True)
         assert completed.returncode==0,completed.stdout+completed.stderr
         result=json.loads((artifacts/'run.json').read_text())

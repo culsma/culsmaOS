@@ -19,6 +19,34 @@ from tests.support.processing_engine.processing_centrifuge_separation import BAS
 
 
 class TestSeparation:
+    @pytest.mark.parametrize('retained', [100, 90])
+    @pytest.mark.parametrize('constituent', [
+        'content(kind=ContentKind.BIO_CELLULAR,type=ContentType.CELL_POPULATION,code="SOLUTE"):100cells',
+        'content(kind=ContentKind.BIO_MOLECULE_OR_VIRUS,type=ContentType.PROTEIN,code="SOLUTE"):1ug',
+    ])
+    def test_zero_nonvolume_constituent_does_not_block_supernatant(self, tmp_path, retained, constituent):
+        source = BASE.replace(':50uL]', ':50uL,' + constituent + ']')
+        source += ('sep(sample=s,program=centrifuge_program(drive=500g),component_fates={'
+                   'BUFFER:{supernatant:100%,pellet:0%},'
+                   f'SOLUTE:{{supernatant:{100-retained}%,pellet:{retained}%}}'
+                   '});' + TRANSFER)
+        fixture = SeparationContractFixture()
+        plan, _, app = fixture.open(tmp_path, source)
+        try:
+            result = app.execute(plan, init_state(plan))
+            if retained == 100:
+                assert result.ok, [d.to_dict() for d in result.diagnostics]
+                assert fixture.port.transfers[0].aliquots[0].volume_uL == 40
+                containers = result.state.artifacts['material_state']['containers'].values()
+                assert sorted(c['component_quantities'].get('SOLUTE', {}).get('value', 0)
+                              for c in containers) == [0, 100 if '100cells' in constituent else 0.001]
+            else:
+                assert not result.ok
+                assert any('TRANSFER_CENTRIFUGE_LIQUID_REQUIRED' in d.message for d in result.diagnostics)
+                assert not fixture.port.executions
+        finally:
+            app.close()
+
     @pytest.mark.parametrize('keep',[None,'supernatant','pellet'])
     def test_language_partition_and_following_transfer(self,tmp_path,keep):
         source=SOURCE if keep is None else SOURCE.replace('drive=500g','drive=500g,keep_source='+keep)

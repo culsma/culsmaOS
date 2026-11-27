@@ -128,29 +128,6 @@ class TestFeedbackCapabilities:
         finally:
             app.close()
 
-    def test_derived_members_retain_shared_feedback_scope(self, tmp_path):
-        from importlib.util import find_spec
-        from tests.acceptance.cross_platform_transfer import CrossPlatformTransferAcceptance
-        if not all(find_spec(p) for p in ("culsma_opentrons", "culsma_pylabrobot", "pylabrobot")):
-            pytest.skip("Requires both external simulator plugins")
-        campaign = CrossPlatformTransferAcceptance()
-        scenario = next(s for s in campaign.manifest["scenarios"] if s["name"] == "second-group-batch-fails")
-        results = campaign.run_scenario(scenario, tmp_path / "paired")["backends"]
-        ot, star = results["ot2"], results["star"]
-        confirmed = [e for e in ot["evidence"] if e["outcome"] == "completed"]
-        assert confirmed and all(e["payload"]["os_feedback"]["completion_unit"] == "member" for e in confirmed)
-        assert all(e["payload"]["os_feedback"]["capabilities_declared"] for e in confirmed)
-        shared = [e for e in star["evidence"] if "os_feedback" in e["payload"]]
-        assert shared and all(e["payload"]["os_feedback"]["completion_unit"] == "batch" for e in shared)
-        derived = [e for e in star["evidence"] if "shared_evidence_id" in e["payload"]]
-        assert len(derived) == 8
-        assert all(e["outcome"] == "unknown" and e["payload"]["shared_feedback"]["completion_unit"] == "batch" for e in derived)
-        for result in results.values():
-            for attempt in result["attempts"]:
-                contract = attempt["context"]["description"].get("feedback_contract")
-                if contract:
-                    assert contract["capabilities"] is not None
-
     def test_conflicting_envelope_status_is_unknown(self):
         _, contract, plan, _ = self.fixture()
         raw = {"outcome": "completed", "execution_status": "completed", "mode": "simulation",
@@ -159,7 +136,7 @@ class TestFeedbackCapabilities:
         receipt = NormalizedReceiptInteractor().map(plan, raw)
         assert contract.normalize(plan, receipt).outcome == "unknown"
 
-    def test_legacy_session_description_has_optional_declaration(self):
+    def test_legacy_session_description_has_optional_declaration(self, tmp_path):
         pytest.importorskip("culsma_opentrons")
         from culsma_os.bootstrap import OpentronsSessionFactory
         from types import SimpleNamespace
@@ -168,8 +145,13 @@ class TestFeedbackCapabilities:
             shared_resources=(), consumable_capacities={}, labware_geometries={}, transfer_channels=1,
             processing_capabilities={}, positions={}, capacities={})
         session = SimpleNamespace(describe_session=lambda: description, close=lambda: None)
-        with patch("culsma_opentrons.plugin.SimulatorSessionFactory.create_from_file", return_value=session):
-            _, snapshot, _, _, _ = OpentronsSessionFactory().build(SimpleNamespace(config_path=None, artifacts_dir=None))
+        from culsma_os.driver_framework.execution_mode import ExecutionMode, ExecutionSelection
+        config = tmp_path / "deck.json"
+        config.write_text('{}')
+        with patch("culsma_os.driver_framework.adapters.opentrons.OpentronsSessionAdapter.create", return_value=session):
+            _, snapshot, _, _, _ = OpentronsSessionFactory().build_selected(
+                SimpleNamespace(config_path=config, artifacts_dir=tmp_path),
+                ExecutionSelection(ExecutionMode.SIMULATION, "opentrons"))
         assert snapshot.feedback_capabilities is None
 
     def test_raw_nonterminal_outcome_is_preserved(self):

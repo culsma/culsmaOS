@@ -95,7 +95,7 @@ class NativeRunControlPanel extends StatelessWidget {
                 ),
               if (run['status'] == 'needs_reconciliation')
                 const Text(
-                  'Execution needs reconciliation. Isolation is retained; this console cannot restart or reconcile the experiment.',
+                  'The execution result is unresolved. Cancel can release the workstation after the device confirms it has stopped. The original experiment result is preserved.',
                 ),
             ],
           ),

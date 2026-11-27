@@ -48,9 +48,22 @@ class RunGuidanceInteractor:
         summary={'schema':'culsma_run_guidance_v1','kind':'information','actions':[],
                  'device_activity':'none_recorded' if before_execution else 'recorded' if attempts else 'unverified'}
         faults = self.faults(run, attempts)
+        if status == 'cancelled' and faults:
+            guidance = self.fault_guidance(summary, faults, False, True)
+            guidance['context']['recovery'] = 'The previous run is closed. Correct the loading and prepare a new run; completed or uncertain liquid transfers must not be replayed without review.'
+            guidance['next_steps'] = ['Review the interrupted step and any completed transfers. The old run remains recorded.',
+                'After device access is permitted, check the source liquid and replace or clear the affected tip; verify the destination contents.',
+                'Open the program from Files and prepare a new loading plan. Check the next unused tip and reconcile source and destination amounts before confirming execution.']
+            guidance['actions'] = ['open_workstation', 'open_files', 'refresh']
+            return guidance
         if status != 'completed' and faults:
             return self.fault_guidance(summary, faults, before_execution, status in {'needs_reconciliation','reconciliation_required','quarantined'} or bool(unresolved))
         if status=='completed':
+            verification = self.pipetting_verification(attempts)
+            if verification is not None:
+                return {**summary, 'title':'Device actions complete', 'liquid_verification':verification,
+                        'message':('Aspiration monitoring passed. Delivered liquid volume was not measured.' if verification == 'passed' else
+                                   'Device actions completed. Successful aspiration was not verified by physical monitoring.'), 'next_steps':[]}
             return {**summary,'title':'Experiment complete','message':'The experiment finished. Review the recorded results below.',
                     'next_steps':[]}
         if status in {'needs_reconciliation','reconciliation_required','quarantined'} or unresolved:
@@ -167,3 +180,14 @@ class RunGuidanceInteractor:
                 'context':{'execution':execution,'device_stop':stop,'operation':operation,
                            'location':location,'recovery':recovery},
                 'next_steps':next_steps, 'actions':['open_workstation','refresh']}
+
+    def pipetting_verification(self, attempts):
+        statuses = []
+        for attempt in attempts or ():
+            receipt = attempt.get('evidence') or {}
+            value = receipt.get('payload', {}).get('liquid_verification')
+            if isinstance(value, dict):
+                statuses.append(value.get('aspiration', 'unverified'))
+        if not statuses:
+            return None
+        return 'passed' if all(s == 'passed' for s in statuses) else 'unverified'

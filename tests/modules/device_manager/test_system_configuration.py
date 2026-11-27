@@ -219,7 +219,7 @@ class TestSystemConfiguration:
         app.close()
         artifacts = tmp_path/'cli-artifacts'
         command = [str(Path(sys.executable).parent/'culsma')] if entry == 'language' else [sys.executable, '-m', 'culsma_os.cli']
-        completed = subprocess.run([*command, 'run', str(tmp_path/'protocol.culs'), '--driver', 'opentrons-simulator', '--driver-config', str(context.config_path), '--artifacts-dir', str(artifacts)], capture_output=True, text=True)
+        completed = subprocess.run([*command, 'run', str(tmp_path/'protocol.culs'), '--driver', 'os-opentrons-simulator' if entry == 'language' else 'opentrons-simulator', '--driver-config', str(context.config_path), '--artifacts-dir', str(artifacts)], capture_output=True, text=True)
         assert completed.returncode == 0, completed.stdout+completed.stderr
         report = json.loads((artifacts/'run.json').read_text())
         assert report['user_result']['os']['status'] == 'completed'

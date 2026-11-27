@@ -11,7 +11,12 @@ class TestExecutionStrategyArchitecture:
             tree = ast.parse(path.read_text())
             for node in ast.walk(tree):
                 if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "ExecutionMode":
+                    if path == SRC / "driver_framework/execution_mode.py":
+                        # Physical/simulation selection is distinct from scheduler stepwise/batch.
+                        assert node.attr in {"PHYSICAL", "SIMULATION"}, node.attr
+                        continue
                     assert path == owner, path
+                    assert node.attr in {"STEPWISE", "BATCH"}, node.attr
                     strategy = next(item for item in tree.body if isinstance(item, ast.ClassDef) and item.name == "ExecutionStrategyInteractor")
                     assert node in list(ast.walk(strategy)), path
 

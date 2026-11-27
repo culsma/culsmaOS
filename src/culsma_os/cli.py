@@ -11,6 +11,7 @@ from culsma.cli import (
 from culsma_os.program_manager.models import CommandRequest, RunControlRequest, HostBuildContext
 from culsma_os.driver_framework.models import DriverLoadError
 from culsma_os.bootstrap import OSApplicationFactory
+from culsma_os.remote_access.models import RemoteConnectionMode
 
 
 class CulsmaOSCLI:
@@ -61,7 +62,7 @@ class CulsmaOSCLI:
         setup_target.add_argument('--host-db', type=Path)
         setup_target.add_argument('--socket', type=Path)
         setup.add_argument('--request-id')
-        setup.add_argument('--driver', default='hamilton-agent')
+        setup.add_argument('--driver', default='hamilton-venus')
         setup.add_argument('--driver-config', type=Path)
         setup.add_argument('--station-id')
         setup.add_argument('--artifacts-dir', type=Path, default=Path('run-artifacts'))
@@ -93,16 +94,41 @@ class CulsmaOSCLI:
         console.add_argument("--program-root", type=Path, help="Allow console selection of .culs files under this directory")
         console.add_argument("--home", type=Path, default=Path.home() / "Culsma", help="User Home directory; programs default to HOME/projects")
         console.add_argument("--program-store", type=Path, default=Path("run-artifacts/console/programs"))
-        mcp = commands.add_parser('mcp', help='Expose a local resident to an external AI over MCP stdio')
+        mcp = commands.add_parser('mcp', help='Expose the OS tools over MCP stdio or an authenticated tunnel')
+        mcp.add_argument('--transport', choices=('stdio', 'http'), default='stdio')
+        mcp.add_argument('--station-id', help='Required for HTTP transport')
+        mcp.add_argument('--grants', type=Path, help='Automation grant directory for HTTP transport')
+        mcp.add_argument('--port', type=int, default=8768, help='HTTP loopback port')
         mcp.add_argument("--file-root", type=Path, help="User workspace shown by Files; defaults to --home (~/Culsma)")
         mcp.add_argument('--socket',type=Path,required=True)
         mcp.add_argument('--program-root',type=Path)
         mcp.add_argument('--drafts-db',type=Path,help='Configuration store shared with the native console')
         mcp.add_argument("--home", type=Path, default=Path.home() / "Culsma", help="User Home directory; programs default to HOME/projects")
         mcp.add_argument('--program-store',type=Path,default=Path('run-artifacts/console/programs'))
+        remote_mcp = commands.add_parser('remote-mcp', help='Read one remote station over MCP stdio')
+        remote_mcp.add_argument('--station-id', required=True)
+        remote_mcp.add_argument('--connection', choices=list(RemoteConnectionMode),
+                                help='Remote connection mode (inferred if omitted)')
+        remote_mcp.add_argument('--url', required=True)
+        remote_mcp.add_argument('--token-file', type=Path, required=True)
+        remote_mcp.add_argument('--access-token-file', type=Path,
+                                help='Private JSON file with Cloudflare Access client_id and client_secret')
+        remote_serve = commands.add_parser('remote-serve', help='Serve remote reads on station loopback')
+        remote_serve.add_argument('--station-id', required=True)
+        remote_serve.add_argument('--socket', type=Path, required=True)
+        remote_serve.add_argument('--grants', type=Path, required=True)
+        remote_serve.add_argument('--port', type=int, default=8768)
+        remote_grant = commands.add_parser('remote-grant', help='Issue an expiring station read credential')
+        remote_grant.add_argument('--station-id', required=True)
+        remote_grant.add_argument('--grants', type=Path, required=True)
+        remote_grant.add_argument('--subject', required=True)
+        remote_grant.add_argument('--scope', choices=('read', 'automation'), default='read')
+        remote_grant.add_argument('--hours', type=int, default=24)
+        remote_grant.add_argument('--token-file', type=Path, required=True)
         desktop = commands.add_parser("desktop", help="Start the local desktop console and resident as one product")
         desktop.add_argument("--file-root", type=Path, help="User workspace shown by Files; defaults to --home (~/Culsma)")
         desktop.add_argument("--state-dir", type=Path, default=Path("run-artifacts/desktop"))
+        desktop.add_argument("--remote-access", action="store_true", help="Allow the native station console to manage remote MCP")
         endpoint = desktop.add_mutually_exclusive_group()
         endpoint.add_argument("--socket", type=Path, help="Attach to this existing resident instead of starting one")
         endpoint.add_argument("--resident-socket", type=Path, help="Private endpoint for a resident started by the desktop product")
@@ -112,7 +138,28 @@ class CulsmaOSCLI:
         desktop.add_argument("--home", type=Path, default=Path.home() / "Culsma", help="User Home directory; programs default to HOME/projects")
         desktop.add_argument("--drafts-db", type=Path)
         desktop.add_argument("--application", type=Path, help="Built Flutter executable; normally installed with the product")
+        service = commands.add_parser('device-service',help='Describe, initialize, observe or cancel a driver-provided station service')
+        service.add_argument('--socket',type=Path,required=True)
+        service.add_argument('--action',choices=['describe','initialize','status','cancel'],default='describe')
+        service.add_argument('--request-id')
+        service.add_argument('--method-id')
+        service.add_argument('--bundle-sha256')
+        service.add_argument('--acknowledge-clearance',action='store_true')
         args = parser.parse_args(argv)
+        if args.command in {'remote-mcp', 'remote-serve', 'remote-grant'}:
+            try:
+                CulsmaOSCLI.remote_access(args)
+            except (ValueError, OSError, ImportError) as error:
+                parser.exit(2, f'{error}\n')
+            return
+        if args.command == 'device-service':
+            from culsma_os.program_manager.adapters.resident import ResidentClientAdapter
+            value={'action':args.action,'request_id':args.request_id,'method_id':args.method_id,
+                'bundle_sha256':args.bundle_sha256,'acknowledge_clearance':args.acknowledge_clearance}
+            try: result=ResidentClientAdapter(args.socket).execute({'action':'station-service','station_service_request':value})
+            except (ValueError,OSError) as error: parser.exit(2,f'{error}\n')
+            print(json.dumps(result,ensure_ascii=False,default=str))
+            return
         if args.command == 'setup' and args.socket:
             from culsma_os.program_manager.adapters.resident import ResidentClientAdapter
             payload = {'action':'setup-'+args.action,'run_id':args.run_id,
@@ -138,9 +185,18 @@ class CulsmaOSCLI:
         if args.command == 'mcp':
             from culsma_os.console.models import ConsoleSettings
             from culsma_os.console.providers import ConsoleApplicationFactory
+            settings = ConsoleSettings(args.socket, port=args.port, drafts_path=args.drafts_db,
+                program_root=args.program_root, program_store=args.program_store,
+                home_path=args.home, file_root=args.file_root)
             try:
-                ConsoleApplicationFactory().build_mcp(ConsoleSettings(args.socket,drafts_path=args.drafts_db,program_root=args.program_root,
-                    program_store=args.program_store,home_path=args.home,file_root=args.file_root)).execute()
+                if args.transport == 'http':
+                    from culsma_os.remote_access.adapters.console_http import RemoteConsoleHTTP
+
+                    if not args.station_id or args.grants is None:
+                        raise ValueError('HTTP MCP requires --station-id and --grants')
+                    RemoteConsoleHTTP(settings, args.station_id, args.grants).serve(settings.port)
+                else:
+                    ConsoleApplicationFactory().build_mcp(settings).execute()
             except (ImportError,ValueError,OSError) as error:
                 parser.exit(2,f'{error}\n')
             return
@@ -150,7 +206,8 @@ class CulsmaOSCLI:
             from culsma_os.console.providers import ConsoleApplicationFactory
             state = args.state_dir.resolve()
             socket = (args.socket or args.resident_socket).resolve() if args.socket or args.resident_socket else state / 'station.sock'
-            application = args.application or Path(__file__).parent / 'console/native/culsma_console.app/Contents/MacOS/culsma_console'
+            native = 'console/native/windows/culsma_console.exe' if sys.platform == 'win32' else 'console/native/culsma_console.app/Contents/MacOS/culsma_console'
+            application = args.application or Path(__file__).parent / native
             if not application.is_file():
                 parser.exit(2, "DESKTOP_APPLICATION_NOT_INSTALLED: build the bundled console or supply --application\n")
             if not args.socket and args.driver_config is None:
@@ -162,7 +219,9 @@ class CulsmaOSCLI:
             settings = ConsoleSettings(socket, 0, args.drafts_db.resolve() if args.drafts_db else state / 'drafts.sqlite3',
                 args.program_root.resolve() if args.program_root else None, state / 'programs', args.home, file_root=args.file_root)
             try:
-                application = ConsoleApplicationFactory().build_desktop(settings, application.resolve(), resident_command, state / 'resident.log')
+                application = ConsoleApplicationFactory().build_desktop(
+                    settings, application.resolve(), resident_command, state / 'resident.log',
+                    remote_grants=state / 'remote-pairings' if args.remote_access else None)
                 result = application.execute()
             except (ValueError, OSError) as error:
                 parser.exit(2, f"{error}\n")
@@ -255,6 +314,33 @@ class CulsmaOSCLI:
             else format_terminal_result(result)
         )
         raise SystemExit(0 if result["output"]["ok"] else 1)
+
+
+    @staticmethod
+    def remote_access(args):
+        from culsma_os.remote_access.providers import RemoteAccessFactory
+
+        factory = RemoteAccessFactory()
+        if args.command == 'remote-mcp':
+            transport = factory.build_transport(args.url, args.token_file, mode=args.connection,
+                                                access_token_file=args.access_token_file)
+            factory.build_mcp(args.station_id, transport).serve()
+        elif args.command == 'remote-serve':
+            import logging
+
+            logging.basicConfig(level=logging.INFO)
+            with factory.build_read_server(args.station_id, args.grants, args.socket, args.port) as server:
+                try:
+                    server.serve_forever()
+                except KeyboardInterrupt:
+                    pass
+        else:
+            from culsma_os.remote_access.adapters.identity import FileRemoteIdentityAdapter
+            from culsma_os.remote_access.models import RemoteAccessSettings
+
+            settings = RemoteAccessSettings(args.station_id)
+            grant = FileRemoteIdentityAdapter(args.grants, settings.station_id, scope=args.scope)
+            print(grant.issue(args.subject, args.hours, args.token_file))
 
 
 if __name__ == "__main__":

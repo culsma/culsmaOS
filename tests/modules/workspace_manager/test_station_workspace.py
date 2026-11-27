@@ -7,7 +7,7 @@ import pytest
 from culsma.runtime.state import init_state
 from culsma_os.bootstrap import OSApplicationFactory
 from culsma_os.program_manager.models import RunRequest
-from culsma_os.resource_manager.interactors import StationPathInteractor
+from tests.support.integration.resident_docking import opentrons_motion_database
 from tests.support.integration.resident_docking import ResidentDockingHarness, ObservedMotionFactory
 from tests.support.workspace_manager.labware_motion import MotionFixture
 from tests.support.workspace_manager.station_workspace import StationFixture
@@ -279,7 +279,7 @@ def test_equal_coordinates_do_not_merge_independent_legacy_proof_histories(tmp_p
     plan,context,app=MotionFixture().build(tmp_path)
     try:assert app.execute(plan,init_state(plan)).ok
     finally:app.close()
-    with sqlite3.connect(StationPathInteractor().database_path(context)) as connection:
+    with sqlite3.connect(opentrons_motion_database(context)) as connection:
         repository=SqliteLabwarePositionRepository(connection,run_store=str(tmp_path/'foreign.sqlite3'))
         position=repository.get('opentrons')
         old=connection.execute('SELECT record FROM os_motion_registrations LIMIT 1').fetchone()[0]
